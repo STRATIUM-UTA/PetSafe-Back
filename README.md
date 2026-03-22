@@ -1,98 +1,99 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# PetSafe — Backend (Veterinaria)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend para el sistema PetSafe (veterinaria), desarrollado con **NestJS**, **TypeORM** y **PostgreSQL**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Requisitos
 
-## Description
+- Node.js (recomendado: LTS)
+- npm
+- PostgreSQL (local) o Docker
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Configuración rápida (PostgreSQL con Docker)
 
-## Project setup
+1) Levanta la base de datos:
 
-```bash
-$ npm install
-```
+`docker compose up -d`
 
-## Compile and run the project
+El compose está en [docker-compose.yml](docker-compose.yml).
 
-```bash
-# development
-$ npm run start
+2) Configura variables de entorno:
 
-# watch mode
-$ npm run start:dev
+Revisa [\.example.env](.example.env) y crea/ajusta [\.env](.env).
 
-# production mode
-$ npm run start:prod
-```
+Variables usadas:
 
-## Run tests
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `DB_NAME`
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
 
-```bash
-# unit tests
-$ npm run test
+3) Instala dependencias:
 
-# e2e tests
-$ npm run test:e2e
+`npm install`
 
-# test coverage
-$ npm run test:cov
-```
+4) Corre migraciones (incluye seed de usuarios):
 
-## Deployment
+`npm run migration:run`
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+5) Inicia el API:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+`npm run start:dev`
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+Por defecto:
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+- API: `http://localhost:3000/api`
 
-## Resources
+## Usuarios seed (migraciones)
 
-Check out a few resources that may come in handy when working with NestJS:
+La migración [src/migrations/1742518800011-SeedUsers.ts](src/migrations/1742518800011-SeedUsers.ts) crea:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- **ADMIN**: `admin@safepet.com` / `Admin123!`
+- **CLIENTE_APP**: `cliente@safepet.com` / `Cliente123!`
 
-## Support
+## Endpoints principales
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Auth
 
-## Stay in touch
+- `POST /api/auth/register` (crea un cliente + usuario + rol CLIENTE_APP)
+- `POST /api/auth/login`
+- `GET /api/auth/profile` (JWT)
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Autogestión (CLIENTE_APP)
 
-## License
+- `GET /api/me/profile` (JWT + role CLIENTE_APP)
+- `PATCH /api/me/update` (JWT + role CLIENTE_APP)
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Clientes
+
+- `GET /api/clientes?page=1&limit=10&nombres=&cedula=&correo=&mascotaNombre=`
+	- Soporta paginación + filtros (búsqueda parcial con `ILIKE`)
+	- **Ownership**: si el token no es de rol administrativo, solo devuelve “mi cliente”
+- `POST /api/clientes` (ADMIN/RECEPCIONISTA)
+- `GET /api/clientes/:id` (ADMIN/MVZ/RECEPCIONISTA/CLIENTE_APP; CLIENTE_APP solo su propio `id`)
+- `PATCH /api/clientes/:id` (ADMIN/RECEPCIONISTA)
+- `DELETE /api/clientes/:id` (ADMIN/RECEPCIONISTA)
+
+### Pacientes
+
+- `POST /api/pacientes` (CLIENTE_APP/ADMIN/RECEPCIONISTA)
+- `GET /api/pacientes` (CLIENTE_APP/ADMIN/MVZ/RECEPCIONISTA)
+- `GET /api/pacientes/:id` (CLIENTE_APP/ADMIN/MVZ/RECEPCIONISTA)
+
+## Colección Postman
+
+Se incluye una colección lista para importar en Postman:
+
+- [test/petsafe.postman_collection.json](test/petsafe.postman_collection.json)
+
+Incluye login seed (admin/cliente), endpoints protegidos por JWT y ejemplos de paginación/filtros/ownership.
+
+## Tests (e2e)
+
+Ejecuta:
+
+`npm run test:e2e`
+
+Nota: el proyecto usa ESM y los tests e2e corren con `node --experimental-vm-modules`.
