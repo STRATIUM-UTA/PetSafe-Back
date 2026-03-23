@@ -6,8 +6,8 @@ import type { TratamientoItem } from './tratamiento-item.entity.js';
 
 @Entity({ name: 'tratamientos' })
 export class Tratamiento extends BaseAuditEntity {
-  @Column({ name: 'atencion_id', type: 'uuid' })
-  atencionId!: string;
+  @Column({ name: 'atencion_id', type: 'int' })
+  atencionId!: number ;
 
   @ManyToOne('Atencion', 'tratamientos', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'atencion_id' })

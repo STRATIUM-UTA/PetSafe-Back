@@ -110,7 +110,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    especie_raza uuid;
+    especie_raza integer;
 BEGIN
     IF NEW.raza_id IS NULL THEN
         RETURN NEW;
@@ -135,17 +135,19 @@ END;
 $$;
 
 CREATE TABLE IF NOT EXISTS roles (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
     nombre varchar(80) NOT NULL,
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid
+    deleted_by_usuario_id integer
 );
 
 CREATE TABLE IF NOT EXISTS personas (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
     tipo_persona person_type_enum NOT NULL,
     nombres varchar(120) NOT NULL,
     apellidos varchar(120) NOT NULL,
@@ -158,12 +160,13 @@ CREATE TABLE IF NOT EXISTS personas (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid
+    deleted_by_usuario_id integer
 );
 
 CREATE TABLE IF NOT EXISTS usuarios (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    persona_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    persona_id integer NOT NULL,
     correo citext NOT NULL,
     password_hash varchar(255) NOT NULL,
     ultimo_login_at timestamp without time zone,
@@ -171,13 +174,14 @@ CREATE TABLE IF NOT EXISTS usuarios (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_usuarios_persona FOREIGN KEY (persona_id) REFERENCES personas(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS empleados (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    persona_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    persona_id integer NOT NULL,
     codigo varchar(40),
     cargo varchar(120),
     numero_registro_profesional varchar(80),
@@ -187,25 +191,26 @@ CREATE TABLE IF NOT EXISTS empleados (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_empleados_persona FOREIGN KEY (persona_id) REFERENCES personas(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS clientes (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    persona_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    persona_id integer NOT NULL,
     observaciones text,
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_clientes_persona FOREIGN KEY (persona_id) REFERENCES personas(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS usuarios_roles (
-    usuario_id uuid NOT NULL,
-    rol_id uuid NOT NULL,
+    usuario_id integer NOT NULL,
+    rol_id integer NOT NULL,
     assigned_at timestamp without time zone NOT NULL DEFAULT now(),
     PRIMARY KEY (usuario_id, rol_id),
     CONSTRAINT fk_usuarios_roles_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -213,54 +218,59 @@ CREATE TABLE IF NOT EXISTS usuarios_roles (
 );
 
 CREATE TABLE IF NOT EXISTS usuarios_refresh_tokens (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    usuario_id integer NOT NULL,
     token_hash varchar(255) NOT NULL,
     expires_at timestamp without time zone NOT NULL,
     revoked boolean NOT NULL DEFAULT false,
     revoked_at timestamp without time zone,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_refresh_tokens_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS especies_catalogo (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
     nombre varchar(80) NOT NULL,
     descripcion varchar(255),
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid
+    deleted_by_usuario_id integer
 );
 
 CREATE TABLE IF NOT EXISTS razas_catalogo (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    especie_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    especie_id integer NOT NULL,
     nombre varchar(100) NOT NULL,
     descripcion varchar(255),
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_razas_especie FOREIGN KEY (especie_id) REFERENCES especies_catalogo(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS colores_catalogo (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
     nombre varchar(80) NOT NULL,
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid
+    deleted_by_usuario_id integer
 );
 
 CREATE TABLE IF NOT EXISTS vacunas_catalogo (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
     nombre varchar(120) NOT NULL,
     especie vaccine_species_enum NOT NULL,
     es_revacunacion boolean NOT NULL DEFAULT false,
@@ -269,27 +279,29 @@ CREATE TABLE IF NOT EXISTS vacunas_catalogo (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid
+    deleted_by_usuario_id integer
 );
 
 CREATE TABLE IF NOT EXISTS catalogo_antiparasitarios (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
     nombre varchar(120) NOT NULL,
     tipo antiparasitic_type_enum NOT NULL,
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid
+    deleted_by_usuario_id integer
 );
 
 CREATE TABLE IF NOT EXISTS pacientes (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
     codigo varchar(40),
     nombre varchar(120) NOT NULL,
-    especie_id uuid NOT NULL,
-    raza_id uuid,
-    color_id uuid,
+    especie_id integer NOT NULL,
+    raza_id integer,
+    color_id integer,
     sexo patient_sex_enum NOT NULL,
     fecha_nacimiento date,
     peso_actual numeric(8,2),
@@ -302,7 +314,7 @@ CREATE TABLE IF NOT EXISTS pacientes (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT ck_pacientes_peso_actual CHECK (peso_actual IS NULL OR peso_actual > 0),
     CONSTRAINT fk_pacientes_especie FOREIGN KEY (especie_id) REFERENCES especies_catalogo(id) ON DELETE RESTRICT,
     CONSTRAINT fk_pacientes_raza FOREIGN KEY (raza_id) REFERENCES razas_catalogo(id) ON DELETE SET NULL,
@@ -310,22 +322,23 @@ CREATE TABLE IF NOT EXISTS pacientes (
 );
 
 CREATE TABLE IF NOT EXISTS pacientes_tutores (
-    paciente_id uuid NOT NULL,
-    cliente_id uuid NOT NULL,
+    paciente_id integer NOT NULL,
+    cliente_id integer NOT NULL,
     es_principal boolean NOT NULL DEFAULT false,
     parentesco_o_relacion varchar(80),
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     PRIMARY KEY (paciente_id, cliente_id),
     CONSTRAINT fk_pacientes_tutores_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
     CONSTRAINT fk_pacientes_tutores_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS pacientes_condiciones (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    paciente_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    paciente_id integer NOT NULL,
     tipo varchar(80) NOT NULL,
     nombre varchar(120) NOT NULL,
     descripcion text,
@@ -334,36 +347,38 @@ CREATE TABLE IF NOT EXISTS pacientes_condiciones (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_pacientes_condiciones_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS citas (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    paciente_id uuid NOT NULL,
-    mvz_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    paciente_id integer NOT NULL,
+    mvz_id integer NOT NULL,
     fecha_programada date NOT NULL,
     hora_programada time without time zone NOT NULL,
     motivo_programada appointment_reason_enum NOT NULL,
     notas text,
     estado_cita appointment_status_enum NOT NULL DEFAULT 'PROGRAMADA',
-    created_by_usuario_id uuid,
+    created_by_usuario_id integer,
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_citas_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE RESTRICT,
     CONSTRAINT fk_citas_mvz FOREIGN KEY (mvz_id) REFERENCES empleados(id) ON DELETE RESTRICT,
     CONSTRAINT fk_citas_created_by_usuario FOREIGN KEY (created_by_usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS cola_atenciones (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
     fecha date NOT NULL,
-    cita_id uuid,
-    paciente_id uuid NOT NULL,
-    mvz_id uuid NOT NULL,
+    cita_id integer,
+    paciente_id integer NOT NULL,
+    mvz_id integer NOT NULL,
     tipo_ingreso queue_entry_type_enum NOT NULL,
     hora_llegada timestamp without time zone NOT NULL,
     hora_programada time without time zone,
@@ -373,28 +388,29 @@ CREATE TABLE IF NOT EXISTS cola_atenciones (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_cola_atenciones_cita FOREIGN KEY (cita_id) REFERENCES citas(id) ON DELETE SET NULL,
     CONSTRAINT fk_cola_atenciones_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE RESTRICT,
     CONSTRAINT fk_cola_atenciones_mvz FOREIGN KEY (mvz_id) REFERENCES empleados(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS atenciones (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    cita_id uuid,
-    cola_atencion_id uuid,
-    paciente_id uuid NOT NULL,
-    mvz_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    cita_id integer,
+    cola_atencion_id integer,
+    paciente_id integer NOT NULL,
+    mvz_id integer NOT NULL,
     fecha_hora_inicio timestamp without time zone NOT NULL,
     fecha_hora_fin timestamp without time zone,
     estado encounter_status_enum NOT NULL DEFAULT 'ACTIVA',
     observaciones_generales text,
-    created_by_usuario_id uuid,
+    created_by_usuario_id integer,
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT ck_atenciones_fechas CHECK (fecha_hora_fin IS NULL OR fecha_hora_fin >= fecha_hora_inicio),
     CONSTRAINT ck_atenciones_estado_fin CHECK (
         (estado = 'ACTIVA' AND fecha_hora_fin IS NULL) OR
@@ -408,7 +424,7 @@ CREATE TABLE IF NOT EXISTS atenciones (
 );
 
 CREATE TABLE IF NOT EXISTS atenciones_motivo_consulta (
-    atencion_id uuid PRIMARY KEY,
+    atencion_id integer PRIMARY KEY,
     motivo_consulta text NOT NULL,
     antecedente_enfermedad_actual text,
     diagnosticos_anteriores_referidos text,
@@ -417,12 +433,12 @@ CREATE TABLE IF NOT EXISTS atenciones_motivo_consulta (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_atenciones_motivo_consulta_atencion FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS atenciones_anamnesis (
-    atencion_id uuid PRIMARY KEY,
+    atencion_id integer PRIMARY KEY,
     inicio_problema_texto text,
     cirugias_previas_texto text,
     como_empezo_problema_texto text,
@@ -444,13 +460,13 @@ CREATE TABLE IF NOT EXISTS atenciones_anamnesis (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT ck_atenciones_anamnesis_numero_deposiciones CHECK (numero_deposiciones IS NULL OR numero_deposiciones >= 0),
     CONSTRAINT fk_atenciones_anamnesis_atencion FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS atenciones_examen_clinico (
-    atencion_id uuid PRIMARY KEY,
+    atencion_id integer PRIMARY KEY,
     peso_kg numeric(8,2),
     temperatura_c numeric(5,2),
     pulso integer,
@@ -465,7 +481,7 @@ CREATE TABLE IF NOT EXISTS atenciones_examen_clinico (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT ck_atenciones_examen_peso CHECK (peso_kg IS NULL OR peso_kg > 0),
     CONSTRAINT ck_atenciones_examen_temperatura CHECK (temperatura_c IS NULL OR (temperatura_c >= 20 AND temperatura_c <= 50)),
     CONSTRAINT ck_atenciones_examen_pulso CHECK (pulso IS NULL OR pulso >= 0),
@@ -476,7 +492,7 @@ CREATE TABLE IF NOT EXISTS atenciones_examen_clinico (
 );
 
 CREATE TABLE IF NOT EXISTS atenciones_datos_medioambientales (
-    atencion_id uuid PRIMARY KEY,
+    atencion_id integer PRIMARY KEY,
     entorno_texto text,
     nutricion_texto text,
     estilo_vida_texto text,
@@ -486,12 +502,12 @@ CREATE TABLE IF NOT EXISTS atenciones_datos_medioambientales (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_atenciones_datos_medioambientales_atencion FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS atenciones_impresion_clinica (
-    atencion_id uuid PRIMARY KEY,
+    atencion_id integer PRIMARY KEY,
     diagnostico_presuntivo text,
     diagnostico_diferencial text,
     pronostico text,
@@ -500,12 +516,12 @@ CREATE TABLE IF NOT EXISTS atenciones_impresion_clinica (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_atenciones_impresion_clinica_atencion FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS atenciones_plan (
-    atencion_id uuid PRIMARY KEY,
+    atencion_id integer PRIMARY KEY,
     plan_clinico text,
     requiere_proxima_cita boolean NOT NULL DEFAULT false,
     fecha_sugerida_proxima_cita date,
@@ -514,7 +530,7 @@ CREATE TABLE IF NOT EXISTS atenciones_plan (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT ck_atenciones_plan_proxima_cita CHECK (
         (requiere_proxima_cita = false) OR
         (requiere_proxima_cita = true AND fecha_sugerida_proxima_cita IS NOT NULL)
@@ -523,8 +539,9 @@ CREATE TABLE IF NOT EXISTS atenciones_plan (
 );
 
 CREATE TABLE IF NOT EXISTS tratamientos (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    atencion_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    atencion_id integer NOT NULL,
     estado treatment_status_enum NOT NULL DEFAULT 'ACTIVO',
     fecha_inicio date NOT NULL,
     fecha_fin date,
@@ -533,14 +550,15 @@ CREATE TABLE IF NOT EXISTS tratamientos (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT ck_tratamientos_fechas CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio),
     CONSTRAINT fk_tratamientos_atencion FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS tratamientos_item (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    tratamiento_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    tratamiento_id integer NOT NULL,
     medicamento varchar(120) NOT NULL,
     dosis varchar(120) NOT NULL,
     frecuencia varchar(120) NOT NULL,
@@ -552,15 +570,16 @@ CREATE TABLE IF NOT EXISTS tratamientos_item (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT ck_tratamientos_item_duracion CHECK (duracion_dias > 0),
     CONSTRAINT fk_tratamientos_item_tratamiento FOREIGN KEY (tratamiento_id) REFERENCES tratamientos(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS vacunaciones_evento (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    atencion_id uuid NOT NULL,
-    vacuna_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    atencion_id integer NOT NULL,
+    vacuna_id integer NOT NULL,
     fecha_aplicacion date NOT NULL,
     proxima_fecha_sugerida date,
     observaciones text,
@@ -568,15 +587,16 @@ CREATE TABLE IF NOT EXISTS vacunaciones_evento (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_vacunaciones_evento_atencion FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON DELETE CASCADE,
     CONSTRAINT fk_vacunaciones_evento_vacuna FOREIGN KEY (vacuna_id) REFERENCES vacunas_catalogo(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS desparasitaciones_evento (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    atencion_id uuid NOT NULL,
-    producto_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    atencion_id integer NOT NULL,
+    producto_id integer NOT NULL,
     fecha_aplicacion date NOT NULL,
     proxima_fecha_sugerida date,
     observaciones text,
@@ -584,14 +604,15 @@ CREATE TABLE IF NOT EXISTS desparasitaciones_evento (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_desparasitaciones_evento_atencion FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON DELETE CASCADE,
     CONSTRAINT fk_desparasitaciones_evento_producto FOREIGN KEY (producto_id) REFERENCES catalogo_antiparasitarios(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS cirugias (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    atencion_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    atencion_id integer NOT NULL,
     tipo_cirugia varchar(120) NOT NULL,
     fecha_programada timestamp without time zone,
     fecha_realizada timestamp without time zone,
@@ -602,7 +623,7 @@ CREATE TABLE IF NOT EXISTS cirugias (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT ck_cirugias_fechas CHECK (
         fecha_programada IS NULL OR fecha_realizada IS NULL OR fecha_realizada >= fecha_programada
     ),
@@ -610,8 +631,9 @@ CREATE TABLE IF NOT EXISTS cirugias (
 );
 
 CREATE TABLE IF NOT EXISTS procedimientos (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    atencion_id uuid NOT NULL,
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
+    atencion_id integer NOT NULL,
     tipo_procedimiento varchar(120) NOT NULL,
     fecha_realizacion timestamp without time zone NOT NULL,
     descripcion text,
@@ -621,14 +643,15 @@ CREATE TABLE IF NOT EXISTS procedimientos (
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT fk_procedimientos_atencion FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS archivos_media (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id SERIAL PRIMARY KEY,
+    uuid uuid DEFAULT gen_random_uuid() UNIQUE,
     owner_type media_owner_type_enum NOT NULL,
-    owner_id uuid NOT NULL,
+    owner_id integer NOT NULL,
     tipo_media media_type_enum NOT NULL,
     provider storage_provider_enum NOT NULL,
     url text NOT NULL,
@@ -639,12 +662,12 @@ CREATE TABLE IF NOT EXISTS archivos_media (
     ancho integer,
     alto integer,
     metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
-    created_by_usuario_id uuid,
+    created_by_usuario_id integer,
     activo boolean NOT NULL DEFAULT true,
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone NOT NULL DEFAULT now(),
     deleted_at timestamp without time zone,
-    deleted_by_usuario_id uuid,
+    deleted_by_usuario_id integer,
     CONSTRAINT ck_archivos_media_size CHECK (size_bytes IS NULL OR size_bytes >= 0),
     CONSTRAINT ck_archivos_media_ancho CHECK (ancho IS NULL OR ancho >= 0),
     CONSTRAINT ck_archivos_media_alto CHECK (alto IS NULL OR alto >= 0),

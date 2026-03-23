@@ -5,8 +5,8 @@ import type { PacienteTutor } from '../pacientes/paciente-tutor.entity.js';
 
 @Entity({ name: 'clientes' })
 export class Cliente extends BaseAuditEntity {
-  @Column({ name: 'persona_id', type: 'uuid' })
-  personaId!: string;
+  @Column({ name: 'persona_id', type: 'int' })
+  personaId!: number ;
 
   @ManyToOne(() => Persona, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'persona_id' })
