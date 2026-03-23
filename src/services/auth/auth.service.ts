@@ -97,7 +97,7 @@ export class AuthService {
 
       // 5. Return JWT
       const payload: JwtPayload = {
-        sub: savedUsuario.id,
+        sub: savedUsuario.uuid,
         correo: savedUsuario.correo,
       };
 
@@ -137,7 +137,7 @@ export class AuthService {
     });
 
     const payload: JwtPayload = {
-      sub: usuario.id,
+      sub: usuario.uuid,
       correo: usuario.correo,
     };
 
@@ -154,7 +154,7 @@ export class AuthService {
 
   async getProfile(userId: string) {
     const usuario = await this.usuarioRepo.findOne({
-      where: { id: userId },
+      where: { uuid: userId },
       relations: ['persona', 'usuariosRoles', 'usuariosRoles.rol'],
     });
 

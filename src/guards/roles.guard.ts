@@ -38,7 +38,7 @@ export class RolesGuard implements CanActivate {
 
     // Query user roles from DB (always fresh)
     const userRoles = await this.usuarioRolRepo.find({
-      where: { usuarioId: userId },
+      where: { usuario: { uuid: userId } },
       relations: ['rol'],
     });
 

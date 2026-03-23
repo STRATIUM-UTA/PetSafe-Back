@@ -11,11 +11,14 @@ import { Usuario } from './usuario.entity.js';
 
 @Entity({ name: 'usuarios_refresh_tokens' })
 export class UsuarioRefreshToken {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  @PrimaryGeneratedColumn('increment')
+  id!: number;
 
-  @Column({ name: 'usuario_id', type: 'uuid' })
-  usuarioId!: string;
+  @Column({ type: 'uuid', unique: true, generated: 'uuid' })
+  uuid!: string;
+
+  @Column({ name: 'usuario_id', type: 'int' })
+  usuarioId!: number ;
 
   @ManyToOne(() => Usuario, (u) => u.refreshTokens, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usuario_id' })
@@ -55,8 +58,8 @@ export class UsuarioRefreshToken {
 
   @Column({
     name: 'deleted_by_usuario_id',
-    type: 'uuid',
+    type: 'int',
     nullable: true,
   })
-  deletedByUsuarioId!: string | null;
+  deletedByUsuarioId!: number | null;
 }
