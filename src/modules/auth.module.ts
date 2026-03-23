@@ -15,6 +15,8 @@ import { UsuarioRol } from '../entities/auth/usuario-rol.entity.js';
 import { UsuarioRefreshToken } from '../entities/auth/usuario-refresh-token.entity.js';
 import { Persona } from '../entities/personas/persona.entity.js';
 import { Cliente } from '../entities/personas/cliente.entity.js';
+import { UsuarioPasswordResetToken } from '../entities/auth/usuario-password-reset.entity.js';
+import { NotificationsModule } from './notifications.module.js';
 
 @Module({
   imports: [
@@ -23,9 +25,11 @@ import { Cliente } from '../entities/personas/cliente.entity.js';
       Role,
       UsuarioRol,
       UsuarioRefreshToken,
+      UsuarioPasswordResetToken,
       Persona,
       Cliente,
     ]),
+    NotificationsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

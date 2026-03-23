@@ -10,6 +10,7 @@ import { BaseAuditEntity } from '../../common/entities/base-audit.entity.js';
 import { Persona } from '../personas/persona.entity.js';
 import type { UsuarioRol } from './usuario-rol.entity.js';
 import type { UsuarioRefreshToken } from './usuario-refresh-token.entity.js';
+import type { UsuarioPasswordResetToken } from './usuario-password-reset.entity.js';
 
 @Entity({ name: 'usuarios' })
 export class Usuario extends BaseAuditEntity {
@@ -38,4 +39,7 @@ export class Usuario extends BaseAuditEntity {
 
   @OneToMany('UsuarioRefreshToken', 'usuario')
   refreshTokens!: UsuarioRefreshToken[];
+
+  @OneToMany('UsuarioPasswordResetToken', 'usuario')
+  passwordResetTokens!: UsuarioPasswordResetToken[];
 }
