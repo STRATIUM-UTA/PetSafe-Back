@@ -27,29 +27,29 @@ import type { Procedimiento } from './procedimiento.entity.js';
 
 @Entity({ name: 'atenciones' })
 export class Atencion extends BaseAuditEntity {
-  @Column({ name: 'cita_id', type: 'int', nullable: true })
-  citaId!: number | null;
+  @Column({ name: 'cita_id', type: 'uuid', nullable: true })
+  citaId!: string | null;
 
   @ManyToOne('Cita', { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'cita_id' })
   cita!: Cita | null;
 
-  @Column({ name: 'cola_atencion_id', type: 'int', nullable: true })
-  colaAtencionId!: number | null;
+  @Column({ name: 'cola_atencion_id', type: 'uuid', nullable: true })
+  colaAtencionId!: string | null;
 
   @ManyToOne('ColaAtencion', { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'cola_atencion_id' })
   colaAtencion!: ColaAtencion | null;
 
-  @Column({ name: 'paciente_id', type: 'int' })
-  pacienteId!: number ;
+  @Column({ name: 'paciente_id', type: 'uuid' })
+  pacienteId!: string;
 
   @ManyToOne('Paciente', { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'paciente_id' })
   paciente!: Paciente;
 
-  @Column({ name: 'mvz_id', type: 'int' })
-  mvzId!: number ;
+  @Column({ name: 'mvz_id', type: 'uuid' })
+  mvzId!: string;
 
   @ManyToOne('Empleado', { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'mvz_id' })
@@ -76,8 +76,8 @@ export class Atencion extends BaseAuditEntity {
   @Column({ name: 'observaciones_generales', type: 'text', nullable: true })
   observacionesGenerales!: string | null;
 
-  @Column({ name: 'created_by_usuario_id', type: 'int', nullable: true })
-  createdByUsuarioId!: number | null;
+  @Column({ name: 'created_by_usuario_id', type: 'uuid', nullable: true })
+  createdByUsuarioId!: string | null;
 
   @ManyToOne('Usuario', { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'created_by_usuario_id' })

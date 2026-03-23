@@ -19,12 +19,26 @@
 
     { "key": "cliente_id", "value": "", "type": "string" },
     { "key": "other_cliente_id", "value": "", "type": "string" },
-    { "key": "especie_id", "value": "", "type": "string" },
-    { "key": "raza_id", "value": "", "type": "string" },
-    { "key": "color_id", "value": "", "type": "string" },
     { "key": "paciente_id", "value": "", "type": "string" }
   ],
   "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET / (Hello)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            }
+          }
+        }
+      ]
+    },
     {
       "name": "Auth",
       "item": [
@@ -273,106 +287,6 @@
       ]
     },
     {
-      "name": "Catalogos",
-      "item": [
-        {
-          "name": "GET /especies",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
-            "url": "{{baseUrl}}/especies?page=1&limit=10"
-          }
-        },
-        {
-          "name": "POST /especies (admin)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Canino {{$timestamp}}\",\n  \"descripcion\": \"Especie creada desde Postman\"\n}"
-            },
-            "url": "{{baseUrl}}/especies"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json && json.uuid) {",
-                  "  pm.collectionVariables.set('especie_id', json.uuid);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "POST /razas (admin)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"especieId\": \"{{especie_id}}\",\n  \"nombre\": \"Mestizo {{$timestamp}}\",\n  \"descripcion\": \"Raza creada desde Postman\"\n}"
-            },
-            "url": "{{baseUrl}}/razas"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json && json.uuid) {",
-                  "  pm.collectionVariables.set('raza_id', json.uuid);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "POST /colores (admin)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Café {{$timestamp}}\"\n}"
-            },
-            "url": "{{baseUrl}}/colores"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json && json.uuid) {",
-                  "  pm.collectionVariables.set('color_id', json.uuid);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
       "name": "Pacientes",
       "item": [
         {
@@ -385,7 +299,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Firulais\",\n  \"especieId\": \"{{especie_id}}\",\n  \"razaId\": \"{{raza_id}}\",\n  \"colorId\": \"{{color_id}}\",\n  \"sexo\": \"MACHO\"\n}"
+              "raw": "{\n  \"nombre\": \"Firulais\",\n  \"especieId\": \"00000000-0000-0000-0000-000000000000\",\n  \"sexo\": \"MACHO\"\n}"
             },
             "url": "{{baseUrl}}/pacientes"
           },
@@ -395,6 +309,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
+                  "// Nota: este endpoint requiere IDs reales de catálogo (especieId/razaId/colorId).",
+                  "// Si tu BD ya tiene catálogos, reemplaza especieId en el body.",
                   "const json = pm.response.json();",
                   "if (json && json.id) {",
                   "  pm.collectionVariables.set('paciente_id', json.id);",

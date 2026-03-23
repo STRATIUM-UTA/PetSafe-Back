@@ -40,7 +40,7 @@ export class PacientesService {
   private async resolveClienteId(
     userId: string,
     manager?: any,
-  ): Promise<number> {
+  ): Promise<string> {
     const repo = manager
       ? manager.getRepository(Cliente)
       : this.clienteRepo;
@@ -49,7 +49,7 @@ export class PacientesService {
       .createQueryBuilder('c')
       .innerJoin('personas', 'p', 'p.id = c.persona_id')
       .innerJoin('usuarios', 'u', 'u.persona_id = p.id')
-      .where('u.uuid = :userId', { userId })
+      .where('u.id = :userId', { userId })
       .andWhere('c.deleted_at IS NULL')
       .select('c.id')
       .getOne();
@@ -90,8 +90,8 @@ export class PacientesService {
         'u',
         'u.persona_id = per.id AND u.deleted_at IS NULL',
       )
-      .where('p.uuid = :pacienteId', { pacienteId })
-      .andWhere('u.uuid = :userId', { userId })
+      .where('p.id = :pacienteId', { pacienteId })
+      .andWhere('u.id = :userId', { userId })
       .andWhere('p.deleted_at IS NULL')
       .getOne();
 
@@ -106,35 +106,13 @@ export class PacientesService {
   async create(dto: CreatePacienteDto, userId: string) {
     return this.dataSource.transaction(async (manager) => {
       const clienteId = await this.resolveClienteId(userId, manager);
-      const especieId = await this.resolveCatalogIdByUuid(
-        manager,
-        'especies_catalogo',
-        dto.especieId,
-        'Especie',
-      );
-      const razaId = dto.razaId
-        ? await this.resolveCatalogIdByUuid(
-            manager,
-            'razas_catalogo',
-            dto.razaId,
-            'Raza',
-          )
-        : null;
-      const colorId = dto.colorId
-        ? await this.resolveCatalogIdByUuid(
-            manager,
-            'colores_catalogo',
-            dto.colorId,
-            'Color',
-          )
-        : null;
 
       const paciente = manager.create(Paciente, {
         nombre: dto.nombre,
-        especieId,
+        especieId: dto.especieId,
         sexo: dto.sexo,
-        razaId,
-        colorId,
+        razaId: dto.razaId ?? null,
+        colorId: dto.colorId ?? null,
         fechaNacimiento: dto.fechaNacimiento
           ? new Date(dto.fechaNacimiento)
           : null,
@@ -155,7 +133,7 @@ export class PacientesService {
       });
       await manager.save(PacienteTutor, tutor);
 
-      return this.findOneInternal(saved.uuid, userId, manager);
+      return this.findOneInternal(saved.id, userId, manager);
     });
   }
 
@@ -183,7 +161,7 @@ export class PacientesService {
       .leftJoinAndSelect('p.especie', 'especie')
       .leftJoinAndSelect('p.raza', 'raza')
       .leftJoinAndSelect('p.color', 'color')
-      .where('u.uuid = :userId', { userId })
+      .where('u.id = :userId', { userId })
       .andWhere('p.deleted_at IS NULL');
 
     return paginate(query, qb, PAGINATE_CONFIG);
@@ -201,35 +179,10 @@ export class PacientesService {
 
       const updateData: Partial<Paciente> = {};
       if (dto.nombre !== undefined) updateData.nombre = dto.nombre;
-      if (dto.especieId !== undefined) {
-        updateData.especieId = await this.resolveCatalogIdByUuid(
-          manager,
-          'especies_catalogo',
-          dto.especieId,
-          'Especie',
-        );
-      }
+      if (dto.especieId !== undefined) updateData.especieId = dto.especieId;
       if (dto.sexo !== undefined) updateData.sexo = dto.sexo;
-      if (dto.razaId !== undefined) {
-        updateData.razaId = dto.razaId
-          ? await this.resolveCatalogIdByUuid(
-              manager,
-              'razas_catalogo',
-              dto.razaId,
-              'Raza',
-            )
-          : null;
-      }
-      if (dto.colorId !== undefined) {
-        updateData.colorId = dto.colorId
-          ? await this.resolveCatalogIdByUuid(
-              manager,
-              'colores_catalogo',
-              dto.colorId,
-              'Color',
-            )
-          : null;
-      }
+      if (dto.razaId !== undefined) updateData.razaId = dto.razaId ?? null;
+      if (dto.colorId !== undefined) updateData.colorId = dto.colorId ?? null;
       if (dto.fechaNacimiento !== undefined) {
         updateData.fechaNacimiento = dto.fechaNacimiento
           ? new Date(dto.fechaNacimiento)
@@ -248,7 +201,7 @@ export class PacientesService {
       if (dto.antecedentesGenerales !== undefined)
         updateData.antecedentesGenerales = dto.antecedentesGenerales ?? null;
 
-      await manager.update(Paciente, { uuid: pacienteId }, updateData);
+      await manager.update(Paciente, pacienteId, updateData);
 
       return this.findOneInternal(pacienteId, userId, manager);
     });
@@ -258,7 +211,7 @@ export class PacientesService {
 
   async softDelete(pacienteId: string, userId: string) {
     await this.verifyOwnership(pacienteId, userId);
-    await this.pacienteRepo.softDelete({ uuid: pacienteId });
+    await this.pacienteRepo.softDelete(pacienteId);
     return { message: 'Paciente eliminado correctamente' };
   }
 
@@ -270,10 +223,10 @@ export class PacientesService {
     userId: string,
   ) {
     return this.dataSource.transaction(async (manager) => {
-      const paciente = await this.verifyOwnership(pacienteId, userId, manager);
+      await this.verifyOwnership(pacienteId, userId, manager);
 
       const condicion = manager.create(PacienteCondicion, {
-        pacienteId: paciente.id,
+        pacienteId,
         tipo: dto.tipo,
         nombre: dto.nombre,
         descripcion: dto.descripcion ?? null,
@@ -298,18 +251,14 @@ export class PacientesService {
   ) {
     await this.verifyOwnership(pacienteId, userId);
 
-    const condicion = await this.condicionRepo
-      .createQueryBuilder('cond')
-      .innerJoin('cond.paciente', 'p')
-      .where('cond.uuid = :condicionId', { condicionId })
-      .andWhere('p.uuid = :pacienteId', { pacienteId })
-      .andWhere('cond.deleted_at IS NULL')
-      .getOne();
+    const condicion = await this.condicionRepo.findOne({
+      where: { id: condicionId, pacienteId },
+    });
     if (!condicion) {
       throw new NotFoundException('Condición no encontrada');
     }
 
-    await this.condicionRepo.softDelete({ id: condicion.id });
+    await this.condicionRepo.softDelete(condicionId);
     return { message: 'Condición eliminada correctamente' };
   }
 
@@ -348,8 +297,8 @@ export class PacientesService {
         'condiciones',
         'condiciones.deleted_at IS NULL',
       )
-      .where('p.uuid = :pacienteId', { pacienteId })
-      .andWhere('u.uuid = :userId', { userId })
+      .where('p.id = :pacienteId', { pacienteId })
+      .andWhere('u.id = :userId', { userId })
       .andWhere('p.deleted_at IS NULL')
       .getOne();
 
@@ -362,7 +311,7 @@ export class PacientesService {
 
   private toResponse(p: Paciente) {
     return {
-      id: p.uuid,
+      id: p.id,
       codigo: p.codigo,
       nombre: p.nombre,
       sexo: p.sexo,
@@ -374,36 +323,18 @@ export class PacientesService {
       alergiasGenerales: p.alergiasGenerales,
       antecedentesGenerales: p.antecedentesGenerales,
       especie: p.especie
-        ? { id: p.especie.uuid, nombre: p.especie.nombre }
+        ? { id: p.especie.id, nombre: p.especie.nombre }
         : null,
-      raza: p.raza ? { id: p.raza.uuid, nombre: p.raza.nombre } : null,
-      color: p.color ? { id: p.color.uuid, nombre: p.color.nombre } : null,
+      raza: p.raza ? { id: p.raza.id, nombre: p.raza.nombre } : null,
+      color: p.color ? { id: p.color.id, nombre: p.color.nombre } : null,
       condiciones:
         p.condiciones?.map((c) => ({
-          id: c.uuid,
+          id: c.id,
           tipo: c.tipo,
           nombre: c.nombre,
           descripcion: c.descripcion,
           activa: c.activa,
         })) ?? [],
     };
-  }
-
-  private async resolveCatalogIdByUuid(
-    manager: any,
-    table: 'especies_catalogo' | 'razas_catalogo' | 'colores_catalogo',
-    uuid: string,
-    label: string,
-  ): Promise<number> {
-    const rows = await manager.query(
-      `SELECT id FROM ${table} WHERE uuid = $1 AND deleted_at IS NULL LIMIT 1`,
-      [uuid],
-    );
-
-    if (!rows?.length) {
-      throw new NotFoundException(`${label} no encontrada`);
-    }
-
-    return Number(rows[0].id);
   }
 }

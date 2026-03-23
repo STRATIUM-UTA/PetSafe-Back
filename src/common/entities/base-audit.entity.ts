@@ -9,11 +9,8 @@ import {
 } from 'typeorm';
 
 export abstract class BaseAuditEntity {
-  @PrimaryGeneratedColumn('increment')
-  id!: number;
-
-  @Column({ type: 'uuid', unique: true, generated: 'uuid' })
-  uuid!: string;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
   @Column({ type: 'boolean', default: true })
   activo!: boolean;
@@ -39,8 +36,8 @@ export abstract class BaseAuditEntity {
 
   @Column({
     name: 'deleted_by_usuario_id',
-    type: 'int',
+    type: 'uuid',
     nullable: true,
   })
-  deletedByUsuarioId!: number | null;
+  deletedByUsuarioId!: string | null;
 }

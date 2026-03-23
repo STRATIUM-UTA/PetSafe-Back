@@ -31,7 +31,7 @@ export class ColoresService {
   }
 
   async findOne(id: string) {
-    const color = await this.repo.findOne({ where: { uuid: id } });
+    const color = await this.repo.findOne({ where: { id } });
     if (!color) throw new NotFoundException('Color no encontrado');
     return color;
   }
@@ -45,7 +45,7 @@ export class ColoresService {
   }
 
   async update(id: string, dto: UpdateColorDto) {
-    const color = await this.repo.findOne({ where: { uuid: id } });
+    const color = await this.repo.findOne({ where: { id } });
     if (!color) throw new NotFoundException('Color no encontrado');
 
     if (dto.nombre !== undefined) color.nombre = dto.nombre;
@@ -53,9 +53,9 @@ export class ColoresService {
   }
 
   async remove(id: string) {
-    const color = await this.repo.findOne({ where: { uuid: id } });
+    const color = await this.repo.findOne({ where: { id } });
     if (!color) throw new NotFoundException('Color no encontrado');
-    await this.repo.softDelete({ uuid: id });
+    await this.repo.softDelete(id);
     return { message: 'Color eliminado correctamente' };
   }
 }

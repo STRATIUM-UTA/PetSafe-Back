@@ -13,22 +13,22 @@ export class ColaAtencion extends BaseAuditEntity {
   @Column({ type: 'date' })
   fecha!: Date;
 
-  @Column({ name: 'cita_id', type: 'int', nullable: true })
-  citaId!: number | null;
+  @Column({ name: 'cita_id', type: 'uuid', nullable: true })
+  citaId!: string | null;
 
   @ManyToOne(() => Cita, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'cita_id' })
   cita!: Cita | null;
 
-  @Column({ name: 'paciente_id', type: 'int' })
-  pacienteId!: number ;
+  @Column({ name: 'paciente_id', type: 'uuid' })
+  pacienteId!: string;
 
   @ManyToOne(() => Paciente, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'paciente_id' })
   paciente!: Paciente;
 
-  @Column({ name: 'mvz_id', type: 'int' })
-  mvzId!: number ;
+  @Column({ name: 'mvz_id', type: 'uuid' })
+  mvzId!: string;
 
   @ManyToOne(() => Empleado, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'mvz_id' })

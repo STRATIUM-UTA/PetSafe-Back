@@ -10,15 +10,15 @@ import { Usuario } from '../auth/usuario.entity.js';
 
 @Entity({ name: 'citas' })
 export class Cita extends BaseAuditEntity {
-  @Column({ name: 'paciente_id', type: 'int' })
-  pacienteId!: number ;
+  @Column({ name: 'paciente_id', type: 'uuid' })
+  pacienteId!: string;
 
   @ManyToOne(() => Paciente, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'paciente_id' })
   paciente!: Paciente;
 
-  @Column({ name: 'mvz_id', type: 'int' })
-  mvzId!: number ;
+  @Column({ name: 'mvz_id', type: 'uuid' })
+  mvzId!: string;
 
   @ManyToOne(() => Empleado, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'mvz_id' })
@@ -50,8 +50,8 @@ export class Cita extends BaseAuditEntity {
   })
   estadoCita!: AppointmentStatusEnum;
 
-  @Column({ name: 'created_by_usuario_id', type: 'int', nullable: true })
-  createdByUsuarioId!: number | null;
+  @Column({ name: 'created_by_usuario_id', type: 'uuid', nullable: true })
+  createdByUsuarioId!: string | null;
 
   @ManyToOne(() => Usuario, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'created_by_usuario_id' })

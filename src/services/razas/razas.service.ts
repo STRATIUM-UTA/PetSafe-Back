@@ -39,7 +39,7 @@ export class RazasService {
 
   async findOne(id: string) {
     const raza = await this.repo.findOne({
-      where: { uuid: id },
+      where: { id },
       relations: ['especie'],
     });
     if (!raza) throw new NotFoundException('Raza no encontrada');
@@ -47,16 +47,16 @@ export class RazasService {
   }
 
   async create(dto: CreateRazaDto) {
-    const especie = await this.especieRepo.findOne({ where: { uuid: dto.especieId } });
+    const especie = await this.especieRepo.findOne({ where: { id: dto.especieId } });
     if (!especie) throw new NotFoundException('Especie no encontrada');
 
     const exists = await this.repo.findOne({
-      where: { nombre: dto.nombre, especieId: especie.id },
+      where: { nombre: dto.nombre, especieId: dto.especieId },
     });
     if (exists) throw new ConflictException('La raza ya existe para esta especie');
 
     const entity = this.repo.create({
-      especieId: especie.id,
+      especieId: dto.especieId,
       nombre: dto.nombre,
       descripcion: dto.descripcion ?? null,
     });
@@ -64,13 +64,13 @@ export class RazasService {
   }
 
   async update(id: string, dto: UpdateRazaDto) {
-    const raza = await this.repo.findOne({ where: { uuid: id } });
+    const raza = await this.repo.findOne({ where: { id } });
     if (!raza) throw new NotFoundException('Raza no encontrada');
 
     if (dto.especieId !== undefined) {
-      const especie = await this.especieRepo.findOne({ where: { uuid: dto.especieId } });
+      const especie = await this.especieRepo.findOne({ where: { id: dto.especieId } });
       if (!especie) throw new NotFoundException('Especie no encontrada');
-      raza.especieId = especie.id;
+      raza.especieId = dto.especieId;
     }
     if (dto.nombre !== undefined) raza.nombre = dto.nombre;
     if (dto.descripcion !== undefined) raza.descripcion = dto.descripcion ?? null;
@@ -79,9 +79,9 @@ export class RazasService {
   }
 
   async remove(id: string) {
-    const raza = await this.repo.findOne({ where: { uuid: id } });
+    const raza = await this.repo.findOne({ where: { id } });
     if (!raza) throw new NotFoundException('Raza no encontrada');
-    await this.repo.softDelete({ uuid: id });
+    await this.repo.softDelete(id);
     return { message: 'Raza eliminada correctamente' };
   }
 }

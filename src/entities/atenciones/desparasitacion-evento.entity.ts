@@ -5,8 +5,8 @@ import { AntiparasitarioCatalogo } from '../catalogos/antiparasitario-catalogo.e
 
 @Entity({ name: 'desparasitaciones_evento' })
 export class DesparasitacionEvento extends BaseAuditEntity {
-  @Column({ name: 'atencion_id', type: 'int' })
-  atencionId!: number ;
+  @Column({ name: 'atencion_id', type: 'uuid' })
+  atencionId!: string;
 
   @ManyToOne('Atencion', 'desparasitaciones', {
     onDelete: 'CASCADE',
@@ -14,8 +14,8 @@ export class DesparasitacionEvento extends BaseAuditEntity {
   @JoinColumn({ name: 'atencion_id' })
   atencion!: Atencion;
 
-  @Column({ name: 'producto_id', type: 'int' })
-  productoId!: number ;
+  @Column({ name: 'producto_id', type: 'uuid' })
+  productoId!: string;
 
   @ManyToOne(() => AntiparasitarioCatalogo, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'producto_id' })

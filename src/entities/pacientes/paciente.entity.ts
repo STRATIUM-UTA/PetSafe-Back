@@ -15,22 +15,22 @@ export class Paciente extends BaseAuditEntity {
   @Column({ type: 'varchar', length: 120 })
   nombre!: string;
 
-  @Column({ name: 'especie_id', type: 'int' })
-  especieId!: number ;
+  @Column({ name: 'especie_id', type: 'uuid' })
+  especieId!: string;
 
   @ManyToOne(() => EspecieCatalogo, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'especie_id' })
   especie!: EspecieCatalogo;
 
-  @Column({ name: 'raza_id', type: 'int', nullable: true })
-  razaId!: number | null;
+  @Column({ name: 'raza_id', type: 'uuid', nullable: true })
+  razaId!: string | null;
 
   @ManyToOne(() => RazaCatalogo, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'raza_id' })
   raza!: RazaCatalogo | null;
 
-  @Column({ name: 'color_id', type: 'int', nullable: true })
-  colorId!: number | null;
+  @Column({ name: 'color_id', type: 'uuid', nullable: true })
+  colorId!: string | null;
 
   @ManyToOne(() => ColorCatalogo, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'color_id' })

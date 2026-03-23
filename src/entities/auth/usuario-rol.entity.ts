@@ -11,11 +11,11 @@ import type { Role } from './role.entity.js';
 
 @Entity({ name: 'usuarios_roles' })
 export class UsuarioRol {
-  @PrimaryColumn({ name: 'usuario_id', type: 'int' })
-  usuarioId!: number ;
+  @PrimaryColumn({ name: 'usuario_id', type: 'uuid' })
+  usuarioId!: string;
 
-  @PrimaryColumn({ name: 'rol_id', type: 'int' })
-  rolId!: number ;
+  @PrimaryColumn({ name: 'rol_id', type: 'uuid' })
+  rolId!: string;
 
   @CreateDateColumn({
     name: 'assigned_at',

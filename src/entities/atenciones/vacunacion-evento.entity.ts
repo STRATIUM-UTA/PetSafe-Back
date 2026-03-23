@@ -5,15 +5,15 @@ import { VacunaCatalogo } from '../catalogos/vacuna-catalogo.entity.js';
 
 @Entity({ name: 'vacunaciones_evento' })
 export class VacunacionEvento extends BaseAuditEntity {
-  @Column({ name: 'atencion_id', type: 'int' })
-  atencionId!: number ;
+  @Column({ name: 'atencion_id', type: 'uuid' })
+  atencionId!: string;
 
   @ManyToOne('Atencion', 'vacunaciones', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'atencion_id' })
   atencion!: Atencion;
 
-  @Column({ name: 'vacuna_id', type: 'int' })
-  vacunaId!: number ;
+  @Column({ name: 'vacuna_id', type: 'uuid' })
+  vacunaId!: string;
 
   @ManyToOne(() => VacunaCatalogo, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'vacuna_id' })

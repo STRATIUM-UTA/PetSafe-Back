@@ -4,8 +4,8 @@ import { Persona } from './persona.entity.js';
 
 @Entity({ name: 'empleados' })
 export class Empleado extends BaseAuditEntity {
-  @Column({ name: 'persona_id', type: 'int' })
-  personaId!: number ;
+  @Column({ name: 'persona_id', type: 'uuid' })
+  personaId!: string;
 
   @ManyToOne(() => Persona, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'persona_id' })

@@ -17,8 +17,8 @@ export class ArchivoMedia extends BaseAuditEntity {
   })
   ownerType!: MediaOwnerTypeEnum;
 
-  @Column({ name: 'owner_id', type: 'int' })
-  ownerId!: number ;
+  @Column({ name: 'owner_id', type: 'uuid' })
+  ownerId!: string;
 
   @Column({
     name: 'tipo_media',
@@ -59,8 +59,8 @@ export class ArchivoMedia extends BaseAuditEntity {
   @Column({ type: 'jsonb', default: {} })
   metadata!: Record<string, unknown>;
 
-  @Column({ name: 'created_by_usuario_id', type: 'int', nullable: true })
-  createdByUsuarioId!: number | null;
+  @Column({ name: 'created_by_usuario_id', type: 'uuid', nullable: true })
+  createdByUsuarioId!: string | null;
 
   @ManyToOne(() => Usuario, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'created_by_usuario_id' })

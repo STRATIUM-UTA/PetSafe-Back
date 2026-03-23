@@ -12,8 +12,8 @@ import type { Atencion } from './atencion.entity.js';
 
 @Entity({ name: 'atenciones_motivo_consulta' })
 export class AtencionMotivoConsulta {
-  @PrimaryColumn({ name: 'atencion_id', type: 'int' })
-  atencionId!: number ;
+  @PrimaryColumn({ name: 'atencion_id', type: 'uuid' })
+  atencionId!: string;
 
   @OneToOne('Atencion', 'motivoConsulta', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'atencion_id' })
@@ -59,6 +59,6 @@ export class AtencionMotivoConsulta {
   })
   deletedAt!: Date | null;
 
-  @Column({ name: 'deleted_by_usuario_id', type: 'int', nullable: true })
-  deletedByUsuarioId!: number | null;
+  @Column({ name: 'deleted_by_usuario_id', type: 'uuid', nullable: true })
+  deletedByUsuarioId!: string | null;
 }

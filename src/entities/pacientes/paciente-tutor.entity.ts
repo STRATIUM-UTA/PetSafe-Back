@@ -12,11 +12,11 @@ import type { Cliente } from '../personas/cliente.entity.js';
 
 @Entity({ name: 'pacientes_tutores' })
 export class PacienteTutor {
-  @PrimaryColumn({ name: 'paciente_id', type: 'int' })
-  pacienteId!: number ;
+  @PrimaryColumn({ name: 'paciente_id', type: 'uuid' })
+  pacienteId!: string;
 
-  @PrimaryColumn({ name: 'cliente_id', type: 'int' })
-  clienteId!: number ;
+  @PrimaryColumn({ name: 'cliente_id', type: 'uuid' })
+  clienteId!: string;
 
   @Column({ name: 'es_principal', type: 'boolean', default: false })
   esPrincipal!: boolean;
@@ -45,8 +45,8 @@ export class PacienteTutor {
   })
   deletedAt!: Date | null;
 
-  @Column({ name: 'deleted_by_usuario_id', type: 'int', nullable: true })
-  deletedByUsuarioId!: number | null;
+  @Column({ name: 'deleted_by_usuario_id', type: 'uuid', nullable: true })
+  deletedByUsuarioId!: string | null;
 
   @ManyToOne('Paciente', 'tutores', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'paciente_id' })

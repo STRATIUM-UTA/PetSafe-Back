@@ -12,8 +12,8 @@ import type { Atencion } from './atencion.entity.js';
 
 @Entity({ name: 'atenciones_datos_medioambientales' })
 export class AtencionDatosMedioambientales {
-  @PrimaryColumn({ name: 'atencion_id', type: 'int' })
-  atencionId!: number ;
+  @PrimaryColumn({ name: 'atencion_id', type: 'uuid' })
+  atencionId!: string;
 
   @OneToOne('Atencion', 'datosMedioambientales', {
     onDelete: 'CASCADE',
@@ -52,6 +52,6 @@ export class AtencionDatosMedioambientales {
   })
   deletedAt!: Date | null;
 
-  @Column({ name: 'deleted_by_usuario_id', type: 'int', nullable: true })
-  deletedByUsuarioId!: number | null;
+  @Column({ name: 'deleted_by_usuario_id', type: 'uuid', nullable: true })
+  deletedByUsuarioId!: string | null;
 }

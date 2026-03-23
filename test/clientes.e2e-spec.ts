@@ -16,13 +16,13 @@ async function ensureRole(dataSource: DataSource, roleName: string) {
     `SELECT id FROM roles WHERE nombre = $1 AND deleted_at IS NULL LIMIT 1`,
     [roleName],
   );
-  if (existing?.length) return existing[0].id as number;
+  if (existing?.length) return existing[0].id as string;
 
   const inserted = await dataSource.query(
     `INSERT INTO roles (nombre, activo) VALUES ($1, true) RETURNING id`,
     [roleName],
   );
-  return inserted[0].id as number;
+  return inserted[0].id as string;
 }
 
 describe('Clientes + Me (e2e)', () => {
@@ -48,23 +48,23 @@ describe('Clientes + Me (e2e)', () => {
     await ensureRole(dataSource, 'CLIENTE_APP');
 
     // Seed an admin user for listing endpoints
+    const personaId = randomUUID();
+    const usuarioId = randomUUID();
     const adminEmail = randomEmail('admin');
 
-    const personaInserted = await dataSource.query(
-      `INSERT INTO personas (tipo_persona, nombres, apellidos, activo)
-       VALUES ('EMPLEADO', 'Admin', 'Test', true)
-       RETURNING id`,
+    await dataSource.query(
+      `INSERT INTO personas (id, tipo_persona, nombres, apellidos, cedula, telefono, direccion, genero, fecha_nacimiento, activo)
+       VALUES ($1, 'EMPLEADO', 'Admin', 'Test', NULL, NULL, NULL, NULL, NULL, true)
+       ON CONFLICT (id) DO NOTHING`,
+      [personaId],
     );
-    const personaId = personaInserted[0].id as number;
 
-    const usuarioInserted = await dataSource.query(
-      `INSERT INTO usuarios (persona_id, correo, password_hash, activo)
-       VALUES ($1, $2, 'x', true)
-       RETURNING id, uuid`,
-      [personaId, adminEmail],
+    await dataSource.query(
+      `INSERT INTO usuarios (id, persona_id, correo, password_hash, activo)
+       VALUES ($1, $2, $3, 'x', true)
+       ON CONFLICT (id) DO NOTHING`,
+      [usuarioId, personaId, adminEmail],
     );
-    const usuarioId = usuarioInserted[0].id as number;
-    const usuarioUuid = usuarioInserted[0].uuid as string;
 
     await dataSource.query(
       `INSERT INTO usuarios_roles (usuario_id, rol_id)
@@ -73,8 +73,7 @@ describe('Clientes + Me (e2e)', () => {
       [usuarioId, adminRoleId],
     );
 
-    // JWT sub is the external UUID in the refactored code.
-    adminToken = jwtService.sign({ sub: usuarioUuid, correo: adminEmail });
+    adminToken = jwtService.sign({ sub: usuarioId, correo: adminEmail });
   });
 
   afterAll(async () => {

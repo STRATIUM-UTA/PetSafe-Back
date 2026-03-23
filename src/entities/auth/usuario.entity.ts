@@ -13,8 +13,8 @@ import type { UsuarioRefreshToken } from './usuario-refresh-token.entity.js';
 
 @Entity({ name: 'usuarios' })
 export class Usuario extends BaseAuditEntity {
-  @Column({ name: 'persona_id', type: 'int' })
-  personaId!: number ;
+  @Column({ name: 'persona_id', type: 'uuid' })
+  personaId!: string;
 
   @ManyToOne(() => Persona, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'persona_id' })

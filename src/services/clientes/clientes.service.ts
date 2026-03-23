@@ -53,7 +53,7 @@ export class ClientesService {
       });
       const savedCliente = await manager.save(Cliente, cliente);
 
-      const created = await this.findOneInternal(savedCliente.uuid, manager);
+      const created = await this.findOneInternal(savedCliente.id, manager);
       return this.toResponse(created, null);
     });
   }
@@ -76,7 +76,7 @@ export class ClientesService {
 
     // Ownership restriction for CLIENTE_APP (or any non-admin role)
     if (!canManageAll) {
-      qb.andWhere('u.uuid = :actorUserId', { actorUserId });
+      qb.andWhere('u.id = :actorUserId', { actorUserId });
     }
 
     // Filters
@@ -168,7 +168,7 @@ export class ClientesService {
       .innerJoinAndSelect('c.persona', 'p')
       .leftJoin(Usuario, 'u', 'u.persona_id = p.id AND u.deleted_at IS NULL')
       .addSelect('u.correo', 'correo')
-      .where('c.uuid = :id', { id })
+      .where('c.id = :id', { id })
       .andWhere('c.deleted_at IS NULL')
       .andWhere('p.deleted_at IS NULL');
 
@@ -216,7 +216,7 @@ export class ClientesService {
 
   async getMyProfile(actorUserId: string) {
     const usuario = await this.usuarioRepo.findOne({
-      where: { uuid: actorUserId },
+      where: { id: actorUserId },
       relations: ['persona'],
     });
 
@@ -242,7 +242,7 @@ export class ClientesService {
   async updateMyProfile(actorUserId: string, dto: UpdateMyClienteDto) {
     return this.dataSource.transaction(async (manager) => {
       const usuario = await manager.findOne(Usuario, {
-        where: { uuid: actorUserId },
+        where: { id: actorUserId },
         relations: ['persona'],
       });
 
@@ -304,19 +304,18 @@ export class ClientesService {
     return this.dataSource.transaction(async (manager) => {
       const cliente = await this.findOneInternal(id, manager);
       const now = new Date();
-      const actorInternalId = await this.getInternalUserIdByUuid(actorUserId, manager);
 
       // Soft-delete cliente
       cliente.activo = false;
       cliente.deletedAt = now;
-      cliente.deletedByUsuarioId = actorInternalId;
+      cliente.deletedByUsuarioId = actorUserId;
       await manager.save(Cliente, cliente);
 
       // Soft-delete persona too (keeps DB consistent for list queries)
       const persona = cliente.persona;
       persona.activo = false;
       persona.deletedAt = now;
-      persona.deletedByUsuarioId = actorInternalId;
+      persona.deletedByUsuarioId = actorUserId;
       await manager.save(Persona, persona);
 
       return { ok: true };
@@ -331,7 +330,7 @@ export class ClientesService {
     const cliente = await repo
       .createQueryBuilder('c')
       .innerJoinAndSelect('c.persona', 'p')
-      .where('c.uuid = :id', { id })
+      .where('c.id = :id', { id })
       .andWhere('c.deleted_at IS NULL')
       .andWhere('p.deleted_at IS NULL')
       .getOne();
@@ -345,7 +344,7 @@ export class ClientesService {
 
   private async getUserRoleNames(userId: string): Promise<string[]> {
     const userRoles = await this.usuarioRolRepo.find({
-      where: { usuario: { uuid: userId } },
+      where: { usuarioId: userId },
       relations: ['rol'],
     });
     return userRoles.map((ur) => ur.rol.nombre);
@@ -353,7 +352,7 @@ export class ClientesService {
 
   private async getClienteIdByUserId(userId: string): Promise<string> {
     const usuario = await this.usuarioRepo.findOne({
-      where: { uuid: userId },
+      where: { id: userId },
     });
 
     if (!usuario) {
@@ -368,11 +367,11 @@ export class ClientesService {
       throw new NotFoundException('Cliente no encontrado');
     }
 
-    return cliente.uuid;
+    return cliente.id;
   }
 
   private async getCorreoByPersonaId(
-    personaId: number,
+    personaId: string,
     manager?: EntityManager,
   ): Promise<string | null> {
     const repo: Repository<Usuario> = manager
@@ -398,14 +397,14 @@ export class ClientesService {
 
   private toResponse(c: Cliente, correo?: string | null) {
     return {
-      id: c.uuid,
+      id: c.id,
       activo: c.activo,
       observaciones: c.observaciones,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       correo: correo ?? null,
       persona: {
-        id: c.persona.uuid,
+        id: c.persona.id,
         tipoPersona: c.persona.tipoPersona,
         nombres: c.persona.nombres,
         apellidos: c.persona.apellidos,
@@ -416,17 +415,5 @@ export class ClientesService {
         fechaNacimiento: c.persona.fechaNacimiento,
       },
     };
-  }
-
-  private async getInternalUserIdByUuid(
-    userUuid: string,
-    manager?: EntityManager,
-  ): Promise<number | null> {
-    const repo: Repository<Usuario> = manager
-      ? manager.getRepository(Usuario)
-      : this.usuarioRepo;
-
-    const usuario = await repo.findOne({ where: { uuid: userUuid } });
-    return usuario?.id ?? null;
   }
 }

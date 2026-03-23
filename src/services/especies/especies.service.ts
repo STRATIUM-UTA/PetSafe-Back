@@ -32,7 +32,7 @@ export class EspeciesService {
 
   async findOne(id: string) {
     const especie = await this.repo.findOne({
-      where: { uuid: id },
+      where: { id },
       relations: ['razas'],
     });
     if (!especie) throw new NotFoundException('Especie no encontrada');
@@ -51,7 +51,7 @@ export class EspeciesService {
   }
 
   async update(id: string, dto: UpdateEspecieDto) {
-    const especie = await this.repo.findOne({ where: { uuid: id } });
+    const especie = await this.repo.findOne({ where: { id } });
     if (!especie) throw new NotFoundException('Especie no encontrada');
 
     if (dto.nombre !== undefined) especie.nombre = dto.nombre;
@@ -61,9 +61,9 @@ export class EspeciesService {
   }
 
   async remove(id: string) {
-    const especie = await this.repo.findOne({ where: { uuid: id } });
+    const especie = await this.repo.findOne({ where: { id } });
     if (!especie) throw new NotFoundException('Especie no encontrada');
-    await this.repo.softDelete({ uuid: id });
+    await this.repo.softDelete(id);
     return { message: 'Especie eliminada correctamente' };
   }
 }
