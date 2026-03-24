@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { paginate, PaginateQuery, PaginateConfig } from 'nestjs-paginate';
@@ -10,6 +14,7 @@ import { Cliente } from '../../entities/personas/cliente.entity.js';
 import { CreatePacienteDto } from '../../dto/pacientes/create-paciente.dto.js';
 import { UpdatePacienteDto } from '../../dto/pacientes/update-paciente.dto.js';
 import { CreateCondicionDto } from '../../dto/pacientes/create-condicion.dto.js';
+import { RoleEnum } from '../../common/enums/index.js';
 
 const PAGINATE_CONFIG: PaginateConfig<Paciente> = {
   sortableColumns: ['id', 'nombre', 'codigo', 'createdAt'],
@@ -103,9 +108,14 @@ export class PacientesService {
 
   // ── CREATE ──────────────────────────────────────────
 
-  async create(dto: CreatePacienteDto, userId: string) {
+  async create(dto: CreatePacienteDto, userId: string, roles: string[]) {
     return this.dataSource.transaction(async (manager) => {
-      const clienteId = await this.resolveClienteId(userId, manager);
+      const clienteId = await this.resolveTargetClienteId(
+        dto,
+        userId,
+        roles,
+        manager,
+      );
 
       const paciente = manager.create(Paciente, {
         nombre: dto.nombre,
@@ -133,7 +143,7 @@ export class PacientesService {
       });
       await manager.save(PacienteTutor, tutor);
 
-      return this.findOneInternal(saved.id, userId, manager);
+      return this.findOneInternal(saved.id, userId, manager, roles);
     });
   }
 
@@ -268,7 +278,25 @@ export class PacientesService {
     pacienteId: string,
     userId: string,
     manager?: any,
+    roles: string[] = [],
   ) {
+    if (this.canAccessAnyPaciente(roles)) {
+      const repo = manager ? manager.getRepository(Paciente) : this.pacienteRepo;
+      const paciente = await repo.findOne({
+        where: { id: pacienteId },
+        relations: ['especie', 'raza', 'color', 'condiciones'],
+      });
+
+      if (!paciente || paciente.deletedAt) {
+        throw new NotFoundException('Paciente no encontrado');
+      }
+
+      paciente.condiciones =
+        paciente.condiciones?.filter((condicion) => !condicion.deletedAt) ?? [];
+
+      return this.toResponse(paciente);
+    }
+
     const repo = manager ? manager.getRepository(Paciente) : this.pacienteRepo;
 
     const paciente = await repo
@@ -307,6 +335,53 @@ export class PacientesService {
     }
 
     return this.toResponse(paciente);
+  }
+
+  private async resolveTargetClienteId(
+    dto: CreatePacienteDto,
+    userId: string,
+    roles: string[],
+    manager?: any,
+  ): Promise<string> {
+    if (this.canAssignPacienteToAnyCliente(roles)) {
+      if (!dto.clienteId) {
+        throw new BadRequestException(
+          'El clienteId es obligatorio para ADMIN y RECEPCIONISTA',
+        );
+      }
+
+      return this.ensureClienteExists(dto.clienteId, manager);
+    }
+
+    return this.resolveClienteId(userId, manager);
+  }
+
+  private async ensureClienteExists(
+    clienteId: string,
+    manager?: any,
+  ): Promise<string> {
+    const repo = manager ? manager.getRepository(Cliente) : this.clienteRepo;
+    const cliente = await repo.findOne({
+      where: { id: clienteId },
+    });
+
+    if (!cliente || cliente.deletedAt) {
+      throw new NotFoundException('Cliente no encontrado');
+    }
+
+    return cliente.id;
+  }
+
+  private canAssignPacienteToAnyCliente(roles: string[]): boolean {
+    return roles.includes(RoleEnum.ADMIN) || roles.includes(RoleEnum.RECEPCIONISTA);
+  }
+
+  private canAccessAnyPaciente(roles: string[]): boolean {
+    return (
+      roles.includes(RoleEnum.ADMIN) ||
+      roles.includes(RoleEnum.RECEPCIONISTA) ||
+      roles.includes(RoleEnum.MVZ)
+    );
   }
 
   private toResponse(p: Paciente) {

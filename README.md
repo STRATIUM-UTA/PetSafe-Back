@@ -1,4 +1,4 @@
-# PetSafe — Backend (Veterinaria)
+# PetSafe - Backend (Veterinaria)
 
 Backend para el sistema PetSafe (veterinaria), desarrollado con **NestJS**, **TypeORM** y **PostgreSQL**.
 
@@ -29,6 +29,17 @@ Variables usadas:
 - `DB_NAME`
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
+- `JWT_REFRESH_EXPIRES_IN_DAYS`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM_NAME`
+- `SMTP_FROM_EMAIL`
+- `PASSWORD_RESET_PIN_LENGTH`
+- `PASSWORD_RESET_PIN_EXPIRES_IN_MINUTES`
+- `PASSWORD_RESET_MAX_ATTEMPTS`
 
 3) Instala dependencias:
 
@@ -59,6 +70,8 @@ La migración [src/migrations/1742518800011-SeedUsers.ts](src/migrations/1742518
 
 - `POST /api/auth/register` (crea un cliente + usuario + rol CLIENTE_APP)
 - `POST /api/auth/login`
+- `POST /api/auth/password-reset/request`
+- `POST /api/auth/password-reset/confirm`
 - `GET /api/auth/profile` (JWT)
 
 ### Autogestión (CLIENTE_APP)

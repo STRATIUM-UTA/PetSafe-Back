@@ -32,9 +32,9 @@ export class PacientesController {
   @Post()
   create(
     @Body() dto: CreatePacienteDto,
-    @Request() req: { user: { userId: string } },
+    @Request() req: { user: { userId: string; roles?: string[] } },
   ) {
-    return this.pacientesService.create(dto, req.user.userId);
+    return this.pacientesService.create(dto, req.user.userId, req.user.roles ?? []);
   }
 
   @Roles(RoleEnum.CLIENTE_APP, RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)

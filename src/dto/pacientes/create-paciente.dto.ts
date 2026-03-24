@@ -19,6 +19,10 @@ export class CreatePacienteDto {
   @IsUUID('4', { message: 'El ID de especie debe ser un UUID válido' })
   especieId!: string;
 
+  @IsOptional()
+  @IsUUID('4', { message: 'El ID del cliente debe ser un UUID válido' })
+  clienteId?: string;
+
   @IsNotEmpty({ message: 'El sexo es obligatorio' })
   @IsEnum(PatientSexEnum, { message: 'El sexo debe ser: MACHO, HEMBRA o INTERSEXUAL' })
   sexo!: PatientSexEnum;
