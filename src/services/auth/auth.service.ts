@@ -55,7 +55,13 @@ export class AuthService {
   ) {}
 
   private async generateTokens(usuario: Usuario, manager?: EntityManager) {
-    const payload: JwtPayload = { sub: usuario.id, correo: usuario.correo };
+    const roles = usuario.usuariosRoles?.map((ur) => ur.rol.nombre) || [];
+
+    const payload: JwtPayload = {
+      sub: usuario.id,
+      correo: usuario.correo,
+      roles,
+    };
     const accessToken = this.jwtService.sign(payload);
 
     // Refresh Token: 40 bytes random text
@@ -140,6 +146,10 @@ export class AuthService {
           rolId: clienteRole.id,
         });
         await manager.save(UsuarioRol, usuarioRol);
+        // Manually add the role to the savedUsuario for generateTokens to pick it up
+        savedUsuario.usuariosRoles = savedUsuario.usuariosRoles || [];
+        savedUsuario.usuariosRoles.push(usuarioRol);
+        usuarioRol.rol = clienteRole; // Ensure the role object is available
       }
 
       // 5. Build JWT & Refresh tokens
@@ -160,7 +170,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const usuario = await this.usuarioRepo.findOne({
       where: { correo: dto.correo },
-      relations: ['persona'],
+      relations: ['persona', 'usuariosRoles', 'usuariosRoles.rol'],
     });
 
     if (!usuario) {
