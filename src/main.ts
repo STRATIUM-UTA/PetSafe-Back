@@ -2,8 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
-import { HttpExceptionFilter } from './filters/http-exception.filter.js';
-import { getCorsConfig } from './config/cors.config.js';
+import { HttpExceptionFilter } from './infra/filters/http-exception.filter.js';
+import { getCorsConfig } from './infra/config/cors.config.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

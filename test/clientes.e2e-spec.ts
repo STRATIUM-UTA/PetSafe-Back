@@ -5,7 +5,7 @@ import { DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
 
-import { AppModule } from '../src/app.module';
+import { AppModule } from '../src/app.module.js';
 
 function randomEmail(prefix: string) {
   return `${prefix}.${randomUUID()}@example.com`.toLowerCase();
@@ -25,7 +25,7 @@ async function ensureRole(dataSource: DataSource, roleName: string) {
   return inserted[0].id as string;
 }
 
-describe('Clientes + Me (e2e)', () => {
+describe('Clients + Users (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
   let jwtService: JwtService;
@@ -43,11 +43,9 @@ describe('Clientes + Me (e2e)', () => {
     dataSource = app.get(DataSource);
     jwtService = app.get(JwtService);
 
-    // Ensure roles exist
     const adminRoleId = await ensureRole(dataSource, 'ADMIN');
     await ensureRole(dataSource, 'CLIENTE_APP');
 
-    // Seed an admin user for listing endpoints
     const personaId = randomUUID();
     const usuarioId = randomUUID();
     const adminEmail = randomEmail('admin');
@@ -82,7 +80,7 @@ describe('Clientes + Me (e2e)', () => {
     }
   });
 
-  it('CLIENTE_APP: /me/profile y /me/update funcionan', async () => {
+  it('CLIENTE_APP: /users/me (GET, PATCH) funcionan con nueva abstraccion', async () => {
     const correo = randomEmail('cliente');
     const password = 'Passw0rd!123';
 
@@ -100,17 +98,17 @@ describe('Clientes + Me (e2e)', () => {
     expect(typeof token).toBe('string');
 
     const profileRes = await request(app.getHttpServer())
-      .get('/me/profile')
+      .get('/users/me')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
     expect(profileRes.body).toHaveProperty('id');
-    expect(profileRes.body).toHaveProperty('correo');
-    expect(profileRes.body.persona.nombres).toBe('Juan');
+    expect(profileRes.body).toHaveProperty('email');
+    expect(profileRes.body.person.firstName).toBe('Juan');
 
     const newCorreo = randomEmail('cliente.updated');
     await request(app.getHttpServer())
-      .patch('/me/update')
+      .patch('/users/me')
       .set('Authorization', `Bearer ${token}`)
       .send({
         correo: newCorreo,
@@ -119,15 +117,14 @@ describe('Clientes + Me (e2e)', () => {
       .expect(200);
 
     const profileRes2 = await request(app.getHttpServer())
-      .get('/me/profile')
+      .get('/users/me')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(profileRes2.body.correo).toBe(newCorreo);
-    expect(profileRes2.body.persona.telefono).toBe('555-0001');
+    expect(profileRes2.body.person.phone).toBe('555-0001');
   });
 
-  it('Ownership: CLIENTE_APP no puede leer otro cliente', async () => {
+  it('Ownership: CLIENTE_APP no puede leer otro client', async () => {
     const mkClient = async (name: string) => {
       const correo = randomEmail(`cliente.${name}`);
       const password = 'Passw0rd!123';
@@ -139,23 +136,23 @@ describe('Clientes + Me (e2e)', () => {
 
       const token = res.body.access_token as string;
       const profile = await request(app.getHttpServer())
-        .get('/me/profile')
+        .get('/clients?page=1&limit=10')
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
-      return { token, clienteId: profile.body.id as string };
+      return { token, clienteId: profile.body.data[0].id as string };
     };
 
     const a = await mkClient('A');
     const b = await mkClient('B');
 
     await request(app.getHttpServer())
-      .get(`/clientes/${b.clienteId}`)
+      .get(`/clients/${b.clienteId}`)
       .set('Authorization', `Bearer ${a.token}`)
       .expect(403);
 
     const listRes = await request(app.getHttpServer())
-      .get('/clientes?page=1&limit=10')
+      .get('/clients?page=1&limit=10')
       .set('Authorization', `Bearer ${a.token}`)
       .expect(200);
 
@@ -177,7 +174,7 @@ describe('Clientes + Me (e2e)', () => {
       .expect(201);
 
     const listRes = await request(app.getHttpServer())
-      .get('/clientes?page=1&limit=10')
+      .get('/clients?page=1&limit=10')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
@@ -186,11 +183,11 @@ describe('Clientes + Me (e2e)', () => {
     expect(listRes.body.meta).toHaveProperty('totalItems');
 
     const filterRes = await request(app.getHttpServer())
-      .get(`/clientes?page=1&limit=10&correo=${encodeURIComponent(correo)}`)
+      .get(`/clients?page=1&limit=10&correo=${encodeURIComponent(correo)}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
     expect(filterRes.body.data.length).toBeGreaterThanOrEqual(1);
-    expect(filterRes.body.data[0].correo).toBe(correo);
+    expect(filterRes.body.data[0].email).toBe(correo);
   });
 });

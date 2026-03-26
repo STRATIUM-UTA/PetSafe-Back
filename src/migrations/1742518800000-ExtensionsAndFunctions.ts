@@ -94,10 +94,10 @@ export class ExtensionsAndFunctions1742518800000 implements MigrationInterface {
       AS $$
       BEGIN
         IF NEW.deleted_at IS NOT NULL THEN
-          NEW.activo = false;
+          NEW.is_active = false;
         END IF;
         IF NEW.deleted_at IS NULL AND OLD.deleted_at IS NOT NULL THEN
-          NEW.deleted_by_usuario_id = NULL;
+          NEW.deleted_by_user_id = NULL;
         END IF;
         RETURN NEW;
       END;
@@ -110,8 +110,8 @@ export class ExtensionsAndFunctions1742518800000 implements MigrationInterface {
       LANGUAGE plpgsql
       AS $$
       BEGIN
-        IF NEW.deleted_by_usuario_id IS NOT NULL AND NEW.deleted_at IS NULL THEN
-          RAISE EXCEPTION 'deleted_by_usuario_id requiere deleted_at';
+        IF NEW.deleted_by_user_id IS NOT NULL AND NEW.deleted_at IS NULL THEN
+          RAISE EXCEPTION 'deleted_by_user_id requiere deleted_at';
         END IF;
         RETURN NEW;
       END;
@@ -124,18 +124,18 @@ export class ExtensionsAndFunctions1742518800000 implements MigrationInterface {
       LANGUAGE plpgsql
       AS $$
       DECLARE
-        especie_raza uuid;
+        especie_raza int;
       BEGIN
-        IF NEW.raza_id IS NULL THEN
+        IF NEW.breed_id IS NULL THEN
           RETURN NEW;
         END IF;
-        SELECT especie_id INTO especie_raza
-        FROM razas_catalogo
-        WHERE id = NEW.raza_id AND deleted_at IS NULL;
+        SELECT species_id INTO especie_raza
+        FROM breeds
+        WHERE id = NEW.breed_id AND deleted_at IS NULL;
         IF especie_raza IS NULL THEN
           RAISE EXCEPTION 'La raza especificada no existe o fue eliminada';
         END IF;
-        IF especie_raza <> NEW.especie_id THEN
+        IF especie_raza <> NEW.species_id THEN
           RAISE EXCEPTION 'La raza no corresponde a la especie del paciente';
         END IF;
         RETURN NEW;

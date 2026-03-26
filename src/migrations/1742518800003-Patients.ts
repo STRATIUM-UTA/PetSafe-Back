@@ -3,70 +3,69 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class Patients1742518800003 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      CREATE TABLE IF NOT EXISTS pacientes (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        codigo varchar(40),
-        nombre varchar(120) NOT NULL,
-        especie_id uuid NOT NULL,
-        raza_id uuid,
-        color_id uuid,
-        sexo patient_sex_enum NOT NULL,
-        fecha_nacimiento date,
-        peso_actual numeric(8,2),
-        esterilizado boolean NOT NULL DEFAULT false,
-        microchip_codigo varchar(80),
-        senas_particulares text,
-        alergias_generales text,
-        antecedentes_generales text,
-        activo boolean NOT NULL DEFAULT true,
+      CREATE TABLE IF NOT EXISTS patients (
+        id SERIAL PRIMARY KEY,
+        code varchar(40),
+        name varchar(120) NOT NULL,
+        species_id int NOT NULL,
+        breed_id int,
+        color_id int,
+        sex patient_sex_enum NOT NULL,
+        birth_date date,
+        current_weight numeric(8,2),
+        is_sterilized boolean NOT NULL DEFAULT false,
+        microchip_code varchar(80),
+        distinguishing_marks text,
+        general_allergies text,
+        general_history text,
+        is_active boolean NOT NULL DEFAULT true,
         created_at timestamp without time zone NOT NULL DEFAULT now(),
         updated_at timestamp without time zone NOT NULL DEFAULT now(),
         deleted_at timestamp without time zone,
-        deleted_by_usuario_id uuid,
-        CONSTRAINT ck_pacientes_peso_actual CHECK (peso_actual IS NULL OR peso_actual > 0),
-        CONSTRAINT fk_pacientes_especie FOREIGN KEY (especie_id) REFERENCES especies_catalogo(id) ON DELETE RESTRICT,
-        CONSTRAINT fk_pacientes_raza FOREIGN KEY (raza_id) REFERENCES razas_catalogo(id) ON DELETE SET NULL,
-        CONSTRAINT fk_pacientes_color FOREIGN KEY (color_id) REFERENCES colores_catalogo(id) ON DELETE SET NULL
+        deleted_by_user_id int,
+        CONSTRAINT ck_patients_current_weight CHECK (current_weight IS NULL OR current_weight > 0),
+        CONSTRAINT fk_patients_species FOREIGN KEY (species_id) REFERENCES species(id) ON DELETE RESTRICT,
+        CONSTRAINT fk_patients_breed FOREIGN KEY (breed_id) REFERENCES breeds(id) ON DELETE SET NULL,
+        CONSTRAINT fk_patients_color FOREIGN KEY (color_id) REFERENCES colors(id) ON DELETE SET NULL
       )
     `);
 
     await queryRunner.query(`
-      CREATE TABLE IF NOT EXISTS pacientes_tutores (
-        paciente_id uuid NOT NULL,
-        cliente_id uuid NOT NULL,
-        es_principal boolean NOT NULL DEFAULT false,
-        parentesco_o_relacion varchar(80),
-        activo boolean NOT NULL DEFAULT true,
+      CREATE TABLE IF NOT EXISTS patient_tutors (
+        patient_id int NOT NULL,
+        client_id int NOT NULL,
+        is_primary boolean NOT NULL DEFAULT false,
+        relationship varchar(80),
+        is_active boolean NOT NULL DEFAULT true,
         created_at timestamp without time zone NOT NULL DEFAULT now(),
         deleted_at timestamp without time zone,
-        deleted_by_usuario_id uuid,
-        PRIMARY KEY (paciente_id, cliente_id),
-        CONSTRAINT fk_pacientes_tutores_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE,
-        CONSTRAINT fk_pacientes_tutores_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
+        deleted_by_user_id int,
+        PRIMARY KEY (patient_id, client_id),
+        CONSTRAINT fk_patient_tutors_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+        CONSTRAINT fk_patient_tutors_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
       )
     `);
 
     await queryRunner.query(`
-      CREATE TABLE IF NOT EXISTS pacientes_condiciones (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        paciente_id uuid NOT NULL,
-        tipo varchar(80) NOT NULL,
-        nombre varchar(120) NOT NULL,
-        descripcion text,
-        activa boolean NOT NULL DEFAULT true,
-        activo boolean NOT NULL DEFAULT true,
+      CREATE TABLE IF NOT EXISTS patient_conditions (
+        id SERIAL PRIMARY KEY,
+        patient_id int NOT NULL,
+        type varchar(80) NOT NULL,
+        name varchar(120) NOT NULL,
+        description text,
+        is_active boolean NOT NULL DEFAULT true,
         created_at timestamp without time zone NOT NULL DEFAULT now(),
         updated_at timestamp without time zone NOT NULL DEFAULT now(),
         deleted_at timestamp without time zone,
-        deleted_by_usuario_id uuid,
-        CONSTRAINT fk_pacientes_condiciones_paciente FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE CASCADE
+        deleted_by_user_id int,
+        CONSTRAINT fk_patient_conditions_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
       )
     `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE IF EXISTS pacientes_condiciones CASCADE`);
-    await queryRunner.query(`DROP TABLE IF EXISTS pacientes_tutores CASCADE`);
-    await queryRunner.query(`DROP TABLE IF EXISTS pacientes CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS patient_conditions CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS patient_tutors CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS patients CASCADE`);
   }
 }
