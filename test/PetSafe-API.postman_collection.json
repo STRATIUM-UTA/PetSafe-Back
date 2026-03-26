@@ -1617,6 +1617,84 @@
           }
         },
         {
+          "name": "✅ Crear cliente con cuenta — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('clientId', body.id);",
+                  "  pm.collectionVariables.set('clientEmail', 'maria.con.cuenta@example.com');",
+                  "  pm.test('Se capturo el id del cliente con cuenta', function () {",
+                  "    pm.expect(body.id).to.exist;",
+                  "    pm.expect(body.email).to.eql('maria.con.cuenta@example.com');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Maria\",\n  \"lastName\": \"Con Cuenta\",\n  \"documentId\": \"0912345679\",\n  \"phone\": \"0981111112\",\n  \"address\": \"Calle Secundaria 456\",\n  \"gender\": \"F\",\n  \"birthDate\": \"1994-08-20\",\n  \"notes\": \"Cliente creado con acceso desde Postman\",\n  \"user\": {\n    \"email\": \"maria.con.cuenta@example.com\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear acceso para cliente existente — admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cliente.acceso@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/clients/{{clientId}}/access",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clients",
+                "{{clientId}}",
+                "access"
+              ]
+            }
+          }
+        },
+        {
           "name": "❌ Crear cliente — validacion sin nombres",
           "request": {
             "method": "POST",
