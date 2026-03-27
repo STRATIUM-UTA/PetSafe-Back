@@ -17,7 +17,7 @@ const PAGINATE_CONFIG: PaginateConfig<Species> = {
   sortableColumns: ['id', 'name', 'createdAt'],
   defaultSortBy: [['name', 'ASC']],
   searchableColumns: ['name'],
-  relations: ['zootecnicalGroup'],
+  relations: ['zootecnicalGroup', 'breeds'],
   maxLimit: 50,
   defaultLimit: 20,
 };
