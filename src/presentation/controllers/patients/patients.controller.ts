@@ -24,7 +24,7 @@ import { RoleEnum } from '../../../domain/enums/index.js';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('patients')
 export class PatientsController {
-  constructor(private readonly patientsService: PatientsService) {}
+  constructor(private readonly patientsService: PatientsService) { }
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
   @Post()
@@ -33,6 +33,13 @@ export class PatientsController {
     @Request() req: { user: { userId: number; roles: string[] } },
   ) {
     return this.patientsService.create(dto, req.user.userId, req.user.roles);
+  }
+
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get('/all-basic')
+  findAllBasic(@Paginate() query: PaginateQuery) {
+    return this.patientsService.findAllBasic(query);
   }
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
@@ -90,5 +97,27 @@ export class PatientsController {
     @Request() req: { user: { userId: number } },
   ) {
     return this.patientsService.removeCondition(id, conditionId, req.user.userId);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
+  @Get('by-client/:clientId')
+  findAllByClientId(
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ) {
+    return this.patientsService.findAllByClientId(
+      clientId,
+      req.user.userId,
+      req.user.roles,
+    );
+  }
+
+  @Roles(RoleEnum.ADMIN)
+  @Get('admin/:id/basic')
+  findAdminBasic(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ) {
+    return this.patientsService.findAdminBasic(id, req.user.roles);
   }
 }

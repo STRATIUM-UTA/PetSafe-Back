@@ -29,7 +29,7 @@ export class BreedsService {
     private readonly speciesRepo: Repository<Species>,
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
-  ) {}
+  ) { }
 
   async findAll(query: PaginateQuery): Promise<Paginated<any>> {
     const result = await paginate(query, this.repo, PAGINATE_CONFIG);

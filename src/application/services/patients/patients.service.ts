@@ -45,7 +45,7 @@ export class PatientsService {
     @InjectRepository(Breed)
     private readonly breedRepo: Repository<Breed>,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   private async resolveClientId(userId: number, manager?: EntityManager): Promise<number> {
     const repo = manager ? manager.getRepository(Client) : this.clientRepo;
@@ -291,4 +291,273 @@ export class PatientsService {
       throw new BadRequestException('La raza seleccionada no pertenece a la especie seleccionada');
     }
   }
+
+
+  async findAllByClientId(
+    clientId: number,
+    userId: number,
+    roles: string[],
+  ): Promise<PatientBasicByClientResponse[]> {
+    if (this.canAccessAnyPatient(roles)) {
+      await this.ensureClientExists(clientId);
+    } else {
+      const myClientId = await this.resolveClientId(userId);
+      if (myClientId !== clientId) {
+        throw new NotFoundException('Cliente no encontrado');
+      }
+    }
+
+    const patients = await this.patientRepo
+      .createQueryBuilder('p')
+      .innerJoin('patient_tutors', 'pt', 'pt.patient_id = p.id AND pt.deleted_at IS NULL')
+      .innerJoin('clients', 'c', 'c.id = pt.client_id AND c.deleted_at IS NULL')
+      .leftJoinAndSelect('p.species', 'species')
+      .leftJoinAndSelect('p.breed', 'breed')
+      .leftJoinAndSelect('p.color', 'color')
+      .where('c.id = :clientId', { clientId })
+      .andWhere('p.deleted_at IS NULL')
+      .orderBy('p.name', 'ASC')
+      .getMany();
+
+    return patients.map((patient) => ({
+      id: patient.id,
+      name: patient.name,
+      birthDate: patient.birthDate ?? null,
+      species: patient.species
+        ? {
+          id: patient.species.id,
+          name: patient.species.name,
+        }
+        : null,
+      breed: patient.breed
+        ? {
+          id: patient.breed.id,
+          name: patient.breed.name,
+        }
+        : null,
+      color: patient.color
+        ? {
+          id: patient.color.id,
+          name: patient.color.name,
+        }
+        : null,
+    }));
+  }
+
+  async findAllBasic(query: PaginateQuery): Promise<PaginatedPatientsBasicForAdminResponse> {
+    const page = Number(query.page ?? 1);
+    const limitRaw = Number(query.limit ?? 10);
+    const limit = Math.min(Math.max(limitRaw, 1), 100);
+    const offset = (Math.max(page, 1) - 1) * limit;
+    const search = typeof query.search === 'string' ? query.search.trim() : '';
+
+    const qb = this.patientRepo
+      .createQueryBuilder('p')
+      .innerJoinAndSelect('p.species', 'species')
+      .leftJoinAndSelect('p.breed', 'breed')
+      .leftJoinAndSelect('p.tutors', 'pt', 'pt.is_primary = true AND pt.deleted_at IS NULL')
+      .leftJoinAndSelect('pt.client', 'client')
+      .leftJoinAndSelect('client.person', 'tutorPerson')
+      .where('p.deleted_at IS NULL');
+
+    if (search) {
+      qb.andWhere(
+        '(p.name ILIKE :search OR species.name ILIKE :search OR tutorPerson.first_name ILIKE :search OR tutorPerson.last_name ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    qb.orderBy('p.name', 'ASC');
+
+    const total = await qb.clone().getCount();
+    const patients = await qb.skip(offset).take(limit).getMany();
+
+    const getAgeYears = (birthDate: Date) => {
+      const now = new Date();
+      let years = now.getFullYear() - birthDate.getFullYear();
+      const monthDiff = now.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
+        years -= 1;
+      }
+      return Math.max(years, 0);
+    };
+
+    const data = patients.map((patient) => {
+      const primaryTutor = patient.tutors?.[0];
+      const tutorPerson = primaryTutor?.client?.person;
+      const birthDate = patient.birthDate ?? null;
+      const birthDateValue = birthDate ? new Date(birthDate as any) : null;
+      const ageYears =
+        birthDateValue && !Number.isNaN(birthDateValue.getTime())
+          ? getAgeYears(birthDateValue)
+          : null;
+
+      return {
+        id: patient.id,
+        name: patient.name,
+        species: patient.species
+          ? {
+            id: patient.species.id,
+            name: patient.species.name,
+          }
+          : null,
+        breed: patient.breed
+          ? {
+            id: patient.breed.id,
+            name: patient.breed.name,
+          }
+          : null,
+        tutorName: tutorPerson
+          ? `${tutorPerson.firstName} ${tutorPerson.lastName}`.trim()
+          : null,
+        tutorContact: tutorPerson?.phone ?? null,
+        birthDate,
+        ageYears,
+        sex: patient.sex,
+        currentWeight: patient.currentWeight ?? null,
+      };
+    });
+
+    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+    const currentPage = totalPages === 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
+
+    return {
+      data,
+      meta: {
+        totalItems: total,
+        itemCount: data.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage,
+        hasNextPage: totalPages === 0 ? false : currentPage < totalPages,
+        hasPrevPage: totalPages === 0 ? false : currentPage > 1,
+      },
+    };
+  }
+
+  async findAdminBasic(patientId: number, roles: string[]): Promise<PatientAdminBasicDetailResponse> {
+    const patient = await this.findOneInternal(patientId, 0, undefined, roles);
+    const birthDate = patient.birthDate ?? null;
+    const birthDateValue = birthDate ? new Date(birthDate as any) : null;
+
+    const getAgeYears = (date: Date) => {
+      const now = new Date();
+      let years = now.getFullYear() - date.getFullYear();
+      const monthDiff = now.getMonth() - date.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+        years -= 1;
+      }
+      return Math.max(years, 0);
+    };
+
+    const ageYears =
+      birthDateValue && !Number.isNaN(birthDateValue.getTime())
+        ? getAgeYears(birthDateValue)
+        : null;
+
+    return {
+      id: patient.id,
+      name: patient.name,
+      species: patient.species
+        ? {
+          id: patient.species.id,
+          name: patient.species.name,
+        }
+        : null,
+      breed: patient.breed
+        ? {
+          id: patient.breed.id,
+          name: patient.breed.name,
+        }
+        : null,
+      sex: patient.sex,
+      currentWeight: patient.currentWeight ?? null,
+      birthDate,
+      ageYears,
+      color: patient.color
+        ? {
+          id: patient.color.id,
+          name: patient.color.name,
+        }
+        : null,
+      sterilized: patient.sterilized,
+      clinicalObservations: patient.conditions ?? [],
+      recentActivity: null,
+    };
+  }
+
 }
+
+type PatientBasicByClientResponse = {
+  id: number;
+  name: string;
+  birthDate: Date | null;
+  species: {
+    id: number;
+    name: string;
+  } | null;
+  breed: {
+    id: number;
+    name: string;
+  } | null;
+  color: {
+    id: number;
+    name: string;
+  } | null;
+};
+
+type PatientAdminBasicResponse = {
+  id: number;
+  name: string;
+  species: {
+    id: number;
+    name: string;
+  } | null;
+  breed: {
+    id: number;
+    name: string;
+  } | null;
+  tutorName: string | null;
+  tutorContact: string | null;
+  birthDate: Date | null;
+  ageYears: number | null;
+  sex: string;
+  currentWeight: number | null;
+};
+
+type PaginatedPatientsBasicForAdminResponse = {
+  data: PatientAdminBasicResponse[];
+  meta: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+};
+
+type PatientAdminBasicDetailResponse = {
+  id: number;
+  name: string;
+  species: {
+    id: number;
+    name: string;
+  } | null;
+  breed: {
+    id: number;
+    name: string;
+  } | null;
+  sex: string;
+  currentWeight: number | null;
+  birthDate: Date | null;
+  ageYears: number | null;
+  color: {
+    id: number;
+    name: string;
+  } | null;
+  sterilized: boolean;
+  clinicalObservations: PatientConditionResponseDto[];
+  recentActivity: null;
+};

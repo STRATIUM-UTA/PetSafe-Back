@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
   ParseIntPipe,
 } from '@nestjs/common';
 import { Paginate, type PaginateQuery } from 'nestjs-paginate';
@@ -22,7 +23,7 @@ import { RoleEnum } from '../../../domain/enums/index.js';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('breeds')
 export class BreedsController {
-  constructor(private readonly breedsService: BreedsService) {}
+  constructor(private readonly breedsService: BreedsService) { }
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
   @Post()

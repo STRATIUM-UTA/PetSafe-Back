@@ -77,4 +77,21 @@ export class ClientsController {
   ) {
     return this.clientsService.remove(id, req.user.userId);
   }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get('summary/list')
+  findSummaryList(
+    @Query() query: ListClientsQueryDto,
+    @Request() req: { user: { userId: number } },
+  ) {
+    return this.clientsService.findSummaryList(query, req.user.userId);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get('tutors/basic')
+  findBasicTutors(
+    @Query() query: { search?: string; page?: string; limit?: string },
+  ) {
+    return this.clientsService.findBasicTutors(query);
+  }
 }

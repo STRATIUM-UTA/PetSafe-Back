@@ -33,7 +33,7 @@ export class ClientsService {
     private readonly patientTutorRepository: Repository<PatientTutor>,
     private readonly dataSource: DataSource,
     private readonly clientAccessService: ClientAccessService,
-  ) {}
+  ) { }
 
   async create(dto: CreateClientDto): Promise<ClientResponseDto> {
     return this.dataSource.transaction(async (manager) => {
@@ -291,4 +291,231 @@ export class ClientsService {
     const privileged: string[] = [RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA];
     return roleNames.some((r) => privileged.includes(r));
   }
+
+  async findSummaryList(
+    query: ListClientsQueryDto,
+    actorUserId: number,
+  ): Promise<PaginatedClientSummaryResponse> {
+    const roleNames = await this.getUserRoleNames(actorUserId);
+    const canManageAll = this.canManageAllClients(roleNames);
+
+    const page = query.page ?? 1;
+    const limitRaw = query.limit ?? 10;
+    const limit = Math.min(Math.max(limitRaw, 1), 100);
+    const offset = (Math.max(page, 1) - 1) * limit;
+
+    const qb = this.clientRepository
+      .createQueryBuilder('c')
+      .innerJoinAndSelect('c.person', 'p')
+      .leftJoin(User, 'u', 'u.person_id = p.id AND u.deleted_at IS NULL')
+      .where('c.deleted_at IS NULL')
+      .andWhere('p.deleted_at IS NULL');
+
+    if (!canManageAll) {
+      qb.andWhere('u.id = :actorUserId', { actorUserId });
+    }
+
+    const searchConditions: string[] = [];
+    const params: Record<string, string> = {};
+
+    if (query.firstName) {
+      searchConditions.push('(p.first_name ILIKE :firstName OR p.last_name ILIKE :firstName)');
+      params.firstName = `%${query.firstName}%`;
+    }
+
+    if (query.email) {
+      searchConditions.push('u.email ILIKE :email');
+      params.email = `%${query.email}%`;
+    }
+
+    if (query.petName) {
+      searchConditions.push(
+        `EXISTS (
+          ${qb
+          .subQuery()
+          .select('1')
+          .from(PatientTutor, 'pt')
+          .innerJoin(Patient, 'pa', 'pa.id = pt.patient_id AND pa.deleted_at IS NULL')
+          .where('pt.client_id = c.id')
+          .andWhere('pt.deleted_at IS NULL')
+          .andWhere('pa.name ILIKE :petName')
+          .getQuery()}
+        )`,
+      );
+      params.petName = `%${query.petName}%`;
+    }
+
+    if (searchConditions.length > 0) {
+      qb.andWhere(`(${searchConditions.join(' OR ')})`, params);
+    }
+
+    qb.orderBy('p.lastName', 'ASC').addOrderBy('p.firstName', 'ASC');
+
+    const total = await qb.clone().getCount();
+
+    qb.addSelect('u.email', 'email');
+    const { entities, raw } = await qb.skip(offset).take(limit).getRawAndEntities();
+
+    const data = entities.map((c, idx) => {
+      const client = ClientMapper.toResponseDto(c, (raw[idx] as any)?.email ?? null);
+      return {
+        ...client,
+        pets: [],
+        petsCount: 0,
+      };
+    });
+
+    if (data.length === 0) {
+      return {
+        data,
+        meta: {
+          totalItems: total,
+          itemCount: 0,
+          itemsPerPage: limit,
+          totalPages: 0,
+          currentPage: 1,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      };
+    }
+
+    const clientIds = data.map((client) => client.id);
+
+    const tutors = await this.patientTutorRepository
+      .createQueryBuilder('pt')
+      .innerJoinAndSelect('pt.patient', 'pa')
+      .where('pt.deleted_at IS NULL')
+      .andWhere('pa.deleted_at IS NULL')
+      .andWhere('pt.client_id IN (:...clientIds)', { clientIds })
+      .orderBy('pt.client_id', 'ASC')
+      .addOrderBy('pa.name', 'ASC')
+      .getMany();
+
+    const petsByClientId = new Map<number, ClientPetSummary[]>();
+
+    for (const tutor of tutors) {
+      if (!tutor.patient) {
+        continue;
+      }
+
+      const pets = petsByClientId.get(tutor.clientId) ?? [];
+      pets.push({
+        id: tutor.patient.id,
+        name: tutor.patient.name,
+      });
+      petsByClientId.set(tutor.clientId, pets);
+    }
+
+    return {
+      data: data.map((client) => {
+        const pets = petsByClientId.get(client.id) ?? [];
+
+        return {
+          ...client,
+          pets,
+          petsCount: pets.length,
+        };
+      }),
+      meta: {
+        totalItems: total,
+        itemCount: data.length,
+        itemsPerPage: limit,
+        totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+        currentPage: total === 0 ? 1 : Math.min(Math.max(page, 1), Math.ceil(total / limit)),
+        hasNextPage: total === 0 ? false : Math.min(Math.max(page, 1), Math.ceil(total / limit)) < Math.ceil(total / limit),
+        hasPrevPage: total === 0 ? false : Math.min(Math.max(page, 1), Math.ceil(total / limit)) > 1,
+      },
+    };
+  }
+
+
+  async findBasicTutors(
+    query: { search?: string; page?: string; limit?: string },
+  ): Promise<PaginatedBasicTutorsResponse> {
+    const page = Number(query.page ?? 1);
+    const limitRaw = Number(query.limit ?? 10);
+    const limit = Math.min(Math.max(limitRaw, 1), 100);
+    const offset = (Math.max(page, 1) - 1) * limit;
+    const search = typeof query.search === 'string' ? query.search.trim() : '';
+
+    const qb = this.clientRepository
+      .createQueryBuilder('c')
+      .innerJoinAndSelect('c.person', 'p')
+      .where('c.deleted_at IS NULL')
+      .andWhere('p.deleted_at IS NULL');
+
+    if (search) {
+      qb.andWhere(
+        "(p.first_name ILIKE :search OR p.last_name ILIKE :search OR CONCAT(p.first_name, ' ', p.last_name) ILIKE :search OR CONCAT(p.last_name, ' ', p.first_name) ILIKE :search OR p.phone ILIKE :search)",
+        { search: `%${search}%` },
+      );
+    }
+
+    qb.orderBy('p.lastName', 'ASC').addOrderBy('p.firstName', 'ASC');
+
+    const total = await qb.clone().getCount();
+    const clients = await qb.skip(offset).take(limit).getMany();
+
+    const data = clients.map((client) => ({
+      id: client.id,
+      firstName: client.person.firstName,
+      lastName: client.person.lastName,
+      phone: client.person.phone ?? null,
+    }));
+
+    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+    const currentPage = totalPages === 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
+
+    return {
+      data,
+      meta: {
+        totalItems: total,
+        itemCount: data.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage,
+        hasNextPage: totalPages === 0 ? false : currentPage < totalPages,
+        hasPrevPage: totalPages === 0 ? false : currentPage > 1,
+      },
+    };
+  }
 }
+
+// Estos dtos son para los metodos de findSummaryList
+type ClientPetSummary = {
+  id: number;
+  name: string;
+};
+
+type ClientSummaryItem = ClientResponseDto & {
+  pets: ClientPetSummary[];
+  petsCount: number;
+};
+
+type PaginatedClientSummaryResponse = {
+  data: ClientSummaryItem[];
+  meta: PaginatedClientsResponseDto['meta'];
+};
+
+// Estos dtos son para el metodo findBasicTutors
+
+type BasicTutorResponse = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+};
+
+type PaginatedBasicTutorsResponse = {
+  data: BasicTutorResponse[];
+  meta: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+};
