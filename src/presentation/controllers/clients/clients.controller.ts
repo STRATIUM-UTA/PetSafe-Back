@@ -16,11 +16,15 @@ import { ClientAccessService } from '../../../application/services/clients/clien
 import { CreateClientDto } from '../../dto/clients/create-client.dto.js';
 import { ClientAccessDto } from '../../dto/clients/client-access.dto.js';
 import { UpdateClientDto } from '../../dto/clients/update-client.dto.js';
+import { ListBasicTutorsQueryDto } from '../../dto/clients/list-basic-tutors-query.dto.js';
 import { ListClientsQueryDto } from '../../dto/clients/list-clients-query.dto.js';
+import { ListClientSummaryQueryDto } from '../../dto/clients/list-client-summary-query.dto.js';
+import { PaginatedClientSummaryResponse } from '../../dto/clients/client-summary-response.dto.js';
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
 import { Roles } from '../../../infra/security/decorators/roles.decorator.js';
 import { RoleEnum } from '../../../domain/enums/index.js';
+import { BasicTutorResponse, ClientSummaryItem } from 'src/presentation/dto/clients/client-summary-response.dto.js';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('clients')
@@ -28,7 +32,7 @@ export class ClientsController {
   constructor(
     private readonly clientsService: ClientsService,
     private readonly clientAccessService: ClientAccessService,
-  ) {}
+  ) { }
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Post()
@@ -54,6 +58,7 @@ export class ClientsController {
     return this.clientsService.findAll(query, req.user.userId);
   }
 
+  // Obtener un cliente especifico
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get(':id')
   findOne(
@@ -78,20 +83,16 @@ export class ClientsController {
     return this.clientsService.remove(id, req.user.userId);
   }
 
-  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
-  @Get('summary/list')
-  findSummaryList(
-    @Query() query: ListClientsQueryDto,
-    @Request() req: { user: { userId: number } },
-  ) {
-    return this.clientsService.findSummaryList(query, req.user.userId);
+  // Para la tabla de propietarios en el frontend
+  @Roles(RoleEnum.ADMIN)
+  @Get('admin/summary/list') findSummaryList(@Query() query: ListClientSummaryQueryDto): Promise<PaginatedClientSummaryResponse> {
+    return this.clientsService.findSummaryList(query);
   }
 
-  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
-  @Get('tutors/basic')
-  findBasicTutors(
-    @Query() query: { search?: string; page?: string; limit?: string },
-  ) {
+  // Para el selector de tutores en el frontend en la seccion de mascotas
+  @Roles(RoleEnum.ADMIN)
+  @Get('admin/tutors/basic')
+  findBasicTutors(@Query() query: ListBasicTutorsQueryDto): Promise<BasicTutorResponse[]> {
     return this.clientsService.findBasicTutors(query);
   }
 }

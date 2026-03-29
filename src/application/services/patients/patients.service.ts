@@ -555,25 +555,28 @@ export class PatientsService {
       .innerJoin('patient_tutors', 'pt', 'pt.patient_id = p.id AND pt.deleted_at IS NULL')
       .innerJoin('clients', 'c', 'c.id = pt.client_id AND c.deleted_at IS NULL')
       .innerJoin('persons', 'per', 'per.id = c.person_id')
+      .select('p.id', 'patientId')
+      .addSelect('p.name', 'patientName')
+      .addSelect('c.id', 'tutorId')
+      .addSelect("TRIM(CONCAT(per.first_name, ' ', per.last_name))", 'tutorName')
+      .addSelect('per.document_id', 'documentId')
       .where('p.deleted_at IS NULL')
 
     queryBuilder.andWhere(
-      '(p.name ILIKE :search OR per.first_name ILIKE :search OR per.last_name ILIKE :search OR per.document_id ILIKE :search)',
+      `(
+        p.name ILIKE :search
+        OR per.first_name ILIKE :search
+        OR per.last_name ILIKE :search
+        OR CONCAT(per.first_name, ' ', per.last_name) ILIKE :search
+        OR CONCAT(per.last_name, ' ', per.first_name) ILIKE :search
+        OR per.document_id ILIKE :search
+      )`,
       { search: `%${search}%` },
     );
 
     queryBuilder.orderBy('p.name', 'ASC').addOrderBy('per.first_name', 'ASC').addOrderBy('per.last_name', 'ASC').take(limit);
 
-    const patients = await queryBuilder.getMany();
-    const data: ListPatientTutorResponseDto[] = patients.map((p) => ({
-      patientId: p.id,
-      patientName: p.name,
-      tutorId: p.tutors?.[0]?.client?.id ?? null,
-      tutorName: p.tutors?.[0]?.client?.person.firstName && p.tutors?.[0]?.client?.person.lastName,
-      documentId: p.tutors?.[0]?.client?.person?.documentId ?? null,
-    }));
-
-    return data;
+    return queryBuilder.getRawMany<ListPatientTutorResponseDto>();
   }
 
 }

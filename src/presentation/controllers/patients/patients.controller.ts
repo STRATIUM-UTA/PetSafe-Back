@@ -21,10 +21,10 @@ import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
 import { Roles } from '../../../infra/security/decorators/roles.decorator.js';
 import { RoleEnum } from '../../../domain/enums/index.js';
-import { ListPatientTutorQueryDto } from 'src/presentation/dto/patients/list-patient-tutor-query.dto.js';
-import { ListPatientTutorResponseDto } from 'src/presentation/dto/patients/list-patient-tutor-response.dto.js';
-import { PatientResponseDto } from 'src/presentation/dto/patients/patient-response.dto.js';
-import { PaginatedPatientsBasicForAdminResponse, PatientAdminBasicDetailResponse } from 'src/presentation/dto/patients/patient-basic-response.dto.js';
+import { ListPatientTutorQueryDto } from '../../dto/patients/list-patient-tutor-query.dto.js';
+import { ListPatientTutorResponseDto } from '../../dto/patients/list-patient-tutor-response.dto.js';
+import { PatientResponseDto } from '../../dto/patients/patient-response.dto.js';
+import { PaginatedPatientsBasicForAdminResponse, PatientAdminBasicDetailResponse } from '../../dto/patients/patient-basic-response.dto.js';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('patients')
@@ -118,7 +118,7 @@ export class PatientsController {
     );
   }
 
-  // Detalle basico de un paciente
+  // Esto creo q era para el detalle de un paciente en el frontend
   @Roles(RoleEnum.ADMIN)
   @Get('admin/:id/basic')
   findAdminBasic(@Param('id', ParseIntPipe) id: number, @Request() req: { user: { userId: number; roles: string[] } }): Promise<PatientAdminBasicDetailResponse> {
