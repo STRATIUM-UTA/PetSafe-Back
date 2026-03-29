@@ -11,6 +11,7 @@ import { ColorsModule } from './application/modules/colors/colors.module.js';
 import { ZootecnicalGroupsModule } from './application/modules/zootecnical-groups/zootecnical-groups.module.js';
 
 import { UsersModule } from './application/modules/users/users.module.js';
+import { HealthController } from './presentation/controllers/health/health.controller.js';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { UsersModule } from './application/modules/users/users.module.js';
     ColorsModule,
     ZootecnicalGroupsModule,
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [],
 })
 export class AppModule {}

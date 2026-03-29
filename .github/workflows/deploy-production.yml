@@ -1,0 +1,113 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      deploy_ref:
+        description: Commit SHA, tag o rama a desplegar. Si se omite, usa el commit del workflow.
+        required: false
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: safepet_user
+          POSTGRES_PASSWORD: safepet_secret
+          POSTGRES_DB: safepet_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U safepet_user -d safepet_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      FRONTEND_URL: http://localhost:5173
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USERNAME: safepet_user
+      DB_PASSWORD: safepet_secret
+      DB_NAME: safepet_db
+      JWT_SECRET: ci-secret
+      JWT_EXPIRES_IN: 1d
+      JWT_REFRESH_EXPIRES_IN_DAYS: 7
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      SMTP_SECURE: false
+      SMTP_USER: ci
+      SMTP_PASS: ci
+      SMTP_FROM_NAME: PetSafe CI
+      SMTP_FROM_EMAIL: ci@example.com
+      PASSWORD_RESET_PIN_LENGTH: 6
+      PASSWORD_RESET_PIN_EXPIRES_IN_MINUTES: 10
+      PASSWORD_RESET_MAX_ATTEMPTS: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run database migrations
+        run: npm run migration:run
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: verify
+    environment: production
+    timeout-minutes: 15
+
+    env:
+      APP_DIR: /home/deploy/petsafe-backend
+      DEPLOY_REF: ${{ github.event.inputs.deploy_ref || github.sha }}
+
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy over SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${VPS_PORT:-22}" \
+            -o StrictHostKeyChecking=yes \
+            "${VPS_USER}@${VPS_HOST}" \
+            "cd '${APP_DIR}' && APP_DIR='${APP_DIR}' DEPLOY_REF='${DEPLOY_REF}' BRANCH='main' ./scripts/deploy.sh"
