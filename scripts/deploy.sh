@@ -35,9 +35,22 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "Falta el comando requerido: $1"
 }
 
+load_nvm() {
+  local nvm_dir="${NVM_DIR:-$HOME/.nvm}"
+  local nvm_script="$nvm_dir/nvm.sh"
+
+  if [ -s "$nvm_script" ]; then
+    # shellcheck disable=SC1090
+    . "$nvm_script"
+    nvm use default >/dev/null 2>&1 || nvm use >/dev/null 2>&1 || true
+  fi
+}
+
 if [ "$(id -un)" = 'root' ]; then
   fail 'Ejecuta este script como el usuario deploy, no como root.'
 fi
+
+load_nvm
 
 require_command git
 require_command node
