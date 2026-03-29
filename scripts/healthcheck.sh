@@ -16,6 +16,19 @@ fail() {
   exit 1
 }
 
+load_nvm() {
+  local nvm_dir="${NVM_DIR:-$HOME/.nvm}"
+  local nvm_script="$nvm_dir/nvm.sh"
+
+  if [ -s "$nvm_script" ]; then
+    # shellcheck disable=SC1090
+    . "$nvm_script"
+    nvm use default >/dev/null 2>&1 || nvm use >/dev/null 2>&1 || true
+  fi
+}
+
+load_nvm
+
 command -v curl >/dev/null 2>&1 || fail 'curl no esta instalado.'
 command -v pm2 >/dev/null 2>&1 || fail 'pm2 no esta instalado o no esta en PATH.'
 
