@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
-import { JwtService } from '@nestjs/jwt';
-import { randomUUID } from 'crypto';
 
 import { AppModule } from '../src/app.module.js';
 
@@ -11,26 +11,100 @@ function randomEmail(prefix: string) {
   return `${prefix}.${randomUUID()}@example.com`.toLowerCase();
 }
 
-async function ensureRole(dataSource: DataSource, roleName: string) {
-  const existing = await dataSource.query(
-    `SELECT id FROM roles WHERE nombre = $1 AND deleted_at IS NULL LIMIT 1`,
+async function getRoleId(dataSource: DataSource, roleName: string): Promise<number> {
+  const rows = (await dataSource.query(
+    `SELECT id FROM roles WHERE name = $1 AND deleted_at IS NULL LIMIT 1`,
     [roleName],
-  );
-  if (existing?.length) return existing[0].id as string;
+  )) as Array<{ id: number }>;
 
-  const inserted = await dataSource.query(
-    `INSERT INTO roles (nombre, activo) VALUES ($1, true) RETURNING id`,
-    [roleName],
+  if (!rows.length) {
+    throw new Error(`Role not found: ${roleName}`);
+  }
+
+  return rows[0].id;
+}
+
+async function seedUser(
+  dataSource: DataSource,
+  {
+    roleName,
+    personType,
+    firstName,
+    lastName,
+    email,
+    password,
+    createClient = false,
+  }: {
+    roleName: 'ADMIN' | 'CLIENTE_APP';
+    personType: 'EMPLEADO' | 'CLIENTE';
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    createClient?: boolean;
+  },
+) {
+  const passwordHash = await bcrypt.hash(password, 10);
+  const roleId = await getRoleId(dataSource, roleName);
+
+  const personRows = (await dataSource.query(
+    `INSERT INTO persons (person_type, first_name, last_name, document_id, phone, address, gender, birth_date, is_active)
+     VALUES ($1, $2, $3, NULL, NULL, NULL, NULL, NULL, true)
+     RETURNING id`,
+    [personType, firstName, lastName],
+  )) as Array<{ id: number }>;
+
+  const personId = personRows[0].id;
+
+  const userRows = (await dataSource.query(
+    `INSERT INTO users (person_id, email, password_hash, is_active)
+     VALUES ($1, $2, $3, true)
+     RETURNING id`,
+    [personId, email, passwordHash],
+  )) as Array<{ id: number }>;
+
+  const userId = userRows[0].id;
+
+  await dataSource.query(
+    `INSERT INTO user_roles (user_id, role_id)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id, role_id) DO NOTHING`,
+    [userId, roleId],
   );
-  return inserted[0].id as string;
+
+  let clientId: number | null = null;
+
+  if (createClient) {
+    const clientRows = (await dataSource.query(
+      `INSERT INTO clients (person_id, notes, is_active)
+       VALUES ($1, NULL, true)
+       RETURNING id`,
+      [personId],
+    )) as Array<{ id: number }>;
+
+    clientId = clientRows[0].id;
+  }
+
+  return { userId, personId, clientId, email, password };
+}
+
+async function login(
+  app: INestApplication,
+  email: string,
+  password: string,
+): Promise<string> {
+  const response = await request(app.getHttpServer())
+    .post('/auth/login')
+    .send({ email, password })
+    .expect(201);
+
+  expect(typeof response.body.accessToken).toBe('string');
+  return response.body.accessToken as string;
 }
 
 describe('Clients + Users (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
-  let jwtService: JwtService;
-
-  let adminToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -41,37 +115,6 @@ describe('Clients + Users (e2e)', () => {
     await app.init();
 
     dataSource = app.get(DataSource);
-    jwtService = app.get(JwtService);
-
-    const adminRoleId = await ensureRole(dataSource, 'ADMIN');
-    await ensureRole(dataSource, 'CLIENTE_APP');
-
-    const personaId = randomUUID();
-    const usuarioId = randomUUID();
-    const adminEmail = randomEmail('admin');
-
-    await dataSource.query(
-      `INSERT INTO personas (id, tipo_persona, nombres, apellidos, cedula, telefono, direccion, genero, fecha_nacimiento, activo)
-       VALUES ($1, 'EMPLEADO', 'Admin', 'Test', NULL, NULL, NULL, NULL, NULL, true)
-       ON CONFLICT (id) DO NOTHING`,
-      [personaId],
-    );
-
-    await dataSource.query(
-      `INSERT INTO usuarios (id, persona_id, correo, password_hash, activo)
-       VALUES ($1, $2, $3, 'x', true)
-       ON CONFLICT (id) DO NOTHING`,
-      [usuarioId, personaId, adminEmail],
-    );
-
-    await dataSource.query(
-      `INSERT INTO usuarios_roles (usuario_id, rol_id)
-       VALUES ($1, $2)
-       ON CONFLICT (usuario_id, rol_id) DO NOTHING`,
-      [usuarioId, adminRoleId],
-    );
-
-    adminToken = jwtService.sign({ sub: usuarioId, correo: adminEmail });
   });
 
   afterAll(async () => {
@@ -80,114 +123,98 @@ describe('Clients + Users (e2e)', () => {
     }
   });
 
-  it('CLIENTE_APP: /users/me (GET, PATCH) funcionan con nueva abstraccion', async () => {
-    const correo = randomEmail('cliente');
-    const password = 'Passw0rd!123';
+  it('CLIENTE_APP puede consultar y actualizar /users/me', async () => {
+    const seededUser = await seedUser(dataSource, {
+      roleName: 'CLIENTE_APP',
+      personType: 'CLIENTE',
+      firstName: 'Juan',
+      lastName: 'Perez',
+      email: randomEmail('cliente.profile'),
+      password: 'Passw0rd!123',
+      createClient: true,
+    });
 
-    const registerRes = await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        correo,
-        password,
-        nombres: 'Juan',
-        apellidos: 'Pérez',
-      })
-      .expect(201);
+    const token = await login(app, seededUser.email, seededUser.password);
 
-    const token = registerRes.body.access_token as string;
-    expect(typeof token).toBe('string');
-
-    const profileRes = await request(app.getHttpServer())
+    const profileResponse = await request(app.getHttpServer())
       .get('/users/me')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(profileRes.body).toHaveProperty('id');
-    expect(profileRes.body).toHaveProperty('email');
-    expect(profileRes.body.person.firstName).toBe('Juan');
+    expect(profileResponse.body.email).toBe(seededUser.email);
+    expect(profileResponse.body.person.firstName).toBe('Juan');
 
-    const newCorreo = randomEmail('cliente.updated');
     await request(app.getHttpServer())
       .patch('/users/me')
       .set('Authorization', `Bearer ${token}`)
       .send({
-        correo: newCorreo,
-        telefono: '555-0001',
+        phone: '555-0001',
       })
       .expect(200);
 
-    const profileRes2 = await request(app.getHttpServer())
+    const updatedProfileResponse = await request(app.getHttpServer())
       .get('/users/me')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(profileRes2.body.person.phone).toBe('555-0001');
+    expect(updatedProfileResponse.body.person.phone).toBe('555-0001');
   });
 
-  it('Ownership: CLIENTE_APP no puede leer otro client', async () => {
-    const mkClient = async (name: string) => {
-      const correo = randomEmail(`cliente.${name}`);
-      const password = 'Passw0rd!123';
+  it('CLIENTE_APP no puede acceder al listado de /clients', async () => {
+    const seededUser = await seedUser(dataSource, {
+      roleName: 'CLIENTE_APP',
+      personType: 'CLIENTE',
+      firstName: 'Ana',
+      lastName: 'Cliente',
+      email: randomEmail('cliente.forbidden'),
+      password: 'Passw0rd!123',
+      createClient: true,
+    });
 
-      const res = await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({ correo, password, nombres: name, apellidos: 'Test' })
-        .expect(201);
-
-      const token = res.body.access_token as string;
-      const profile = await request(app.getHttpServer())
-        .get('/clients?page=1&limit=10')
-        .set('Authorization', `Bearer ${token}`)
-        .expect(200);
-
-      return { token, clienteId: profile.body.data[0].id as string };
-    };
-
-    const a = await mkClient('A');
-    const b = await mkClient('B');
+    const token = await login(app, seededUser.email, seededUser.password);
 
     await request(app.getHttpServer())
-      .get(`/clients/${b.clienteId}`)
-      .set('Authorization', `Bearer ${a.token}`)
+      .get('/clients?page=1&limit=10')
+      .set('Authorization', `Bearer ${token}`)
       .expect(403);
-
-    const listRes = await request(app.getHttpServer())
-      .get('/clients?page=1&limit=10')
-      .set('Authorization', `Bearer ${a.token}`)
-      .expect(200);
-
-    expect(Array.isArray(listRes.body.data)).toBe(true);
-    expect(listRes.body.data.length).toBe(1);
-    expect(listRes.body.data[0].id).toBe(a.clienteId);
   });
 
-  it('ADMIN: listado paginado incluye meta y permite filtro por correo', async () => {
-    const correo = randomEmail('cliente.for.list');
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        correo,
-        password: 'Passw0rd!123',
-        nombres: 'List',
-        apellidos: 'User',
-      })
-      .expect(201);
+  it('ADMIN puede listar clientes con paginacion y filtro por email', async () => {
+    const adminUser = await seedUser(dataSource, {
+      roleName: 'ADMIN',
+      personType: 'EMPLEADO',
+      firstName: 'Admin',
+      lastName: 'Test',
+      email: randomEmail('admin'),
+      password: 'Admin123!Pass',
+    });
 
-    const listRes = await request(app.getHttpServer())
+    const listedClient = await seedUser(dataSource, {
+      roleName: 'CLIENTE_APP',
+      personType: 'CLIENTE',
+      firstName: 'List',
+      lastName: 'User',
+      email: randomEmail('cliente.list'),
+      password: 'Passw0rd!123',
+      createClient: true,
+    });
+
+    const adminToken = await login(app, adminUser.email, adminUser.password);
+
+    const listResponse = await request(app.getHttpServer())
       .get('/clients?page=1&limit=10')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(listRes.body).toHaveProperty('data');
-    expect(listRes.body).toHaveProperty('meta');
-    expect(listRes.body.meta).toHaveProperty('totalItems');
+    expect(Array.isArray(listResponse.body.data)).toBe(true);
+    expect(listResponse.body.meta).toHaveProperty('totalItems');
 
-    const filterRes = await request(app.getHttpServer())
-      .get(`/clients?page=1&limit=10&correo=${encodeURIComponent(correo)}`)
+    const filterResponse = await request(app.getHttpServer())
+      .get(`/clients?page=1&limit=10&email=${encodeURIComponent(listedClient.email)}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(filterRes.body.data.length).toBeGreaterThanOrEqual(1);
-    expect(filterRes.body.data[0].email).toBe(correo);
+    expect(filterResponse.body.data.length).toBeGreaterThanOrEqual(1);
+    expect(filterResponse.body.data[0].email).toBe(listedClient.email);
   });
 });

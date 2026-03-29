@@ -2,6 +2,16 @@
 
 Backend para el sistema PetSafe (veterinaria), desarrollado con **NestJS**, **TypeORM** y **PostgreSQL**.
 
+## Operacion en VPS
+
+Se agrego una propuesta de CI/CD realista para un VPS Ubuntu con `deploy` + PM2 + Nginx:
+
+- [docs/vps-ci-cd.md](docs/vps-ci-cd.md)
+- [ecosystem.config.cjs](ecosystem.config.cjs)
+- [scripts/deploy.sh](scripts/deploy.sh)
+- [scripts/rollback.sh](scripts/rollback.sh)
+- [scripts/healthcheck.sh](scripts/healthcheck.sh)
+
 ## Requisitos
 
 - Node.js (recomendado: LTS)
