@@ -9,8 +9,11 @@ import { SpeciesModule } from './application/modules/species/species.module.js';
 import { BreedsModule } from './application/modules/breeds/breeds.module.js';
 import { ColorsModule } from './application/modules/colors/colors.module.js';
 import { ZootecnicalGroupsModule } from './application/modules/zootecnical-groups/zootecnical-groups.module.js';
+import { EncountersModule } from './application/modules/encounters/encounters.module.js';
+import { VaccinationModule } from './application/modules/vaccinations/vaccination.module.js';
 
 import { UsersModule } from './application/modules/users/users.module.js';
+import { ProcedureSurgeryCatalogModule } from './application/modules/catalogs/procedure-surgery-catalog.module.js';
 import { HealthController } from './presentation/controllers/health/health.controller.js';
 
 @Module({
@@ -25,6 +28,9 @@ import { HealthController } from './presentation/controllers/health/health.contr
     BreedsModule,
     ColorsModule,
     ZootecnicalGroupsModule,
+    EncountersModule,
+    VaccinationModule,
+    ProcedureSurgeryCatalogModule,
   ],
   controllers: [HealthController],
   providers: [],

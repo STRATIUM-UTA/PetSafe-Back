@@ -1,0 +1,792 @@
+{
+  "info": {
+    "name": "PetSafe — Encounters & Vaccinations",
+    "description": "Colección completa para los módulos de Atenciones (Encounters) y Vacunaciones. Incluye flujo feliz completo y casos de error. Requiere que adminToken y patientId estén seteados (ejecutar Login + flujo de Patients de la colección principal primero).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",      "value": "http://localhost:3000/api" },
+    { "key": "adminToken",   "value": "" },
+    { "key": "mvzToken",     "value": "" },
+    { "key": "clientToken",  "value": "" },
+    { "key": "patientId",    "value": "1" },
+    { "key": "speciesId",    "value": "1" },
+    { "key": "vaccineId",    "value": "" },
+    { "key": "encounterId",  "value": "" }
+  ],
+  "item": [
+
+    {
+      "name": "🔐 Setup — Login (admin y MVZ)",
+      "item": [
+        {
+          "name": "✅ Login — admin",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  const b = pm.response.json();",
+            "  pm.collectionVariables.set('adminToken', b.accessToken);",
+            "  pm.test('Token admin capturado', () => pm.expect(b.accessToken).to.be.a('string'));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@safepet.com\",\n  \"password\": \"Admin123!\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"] }
+          }
+        },
+        {
+          "name": "✅ Login — MVZ (usar token del MVZ registrado)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  const b = pm.response.json();",
+            "  pm.collectionVariables.set('mvzToken', b.accessToken);",
+            "  pm.test('Token MVZ capturado', () => pm.expect(b.accessToken).to.be.a('string'));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"mvz@safepet.com\",\n  \"password\": \"Mvz12345!\"\n}" },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "💉 Catálogo de Vacunas",
+      "item": [
+
+        {
+          "name": "✅ Crear vacuna — obligatoria (Rabia)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  const b = pm.response.json();",
+            "  pm.collectionVariables.set('vaccineId', b.id);",
+            "  pm.test('Vacuna creada y ID capturado', () => pm.expect(b.id).to.exist);",
+            "  pm.test('Es obligatoria', () => pm.expect(b.isMandatory).to.be.true);",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Rabia\",\n  \"speciesId\": {{speciesId}},\n  \"isRevaccination\": false,\n  \"isMandatory\": true,\n  \"doseOrder\": 1\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog"] }
+          }
+        },
+
+        {
+          "name": "✅ Crear vacuna — opcional (Leishmaniasis)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Leishmaniasis\",\n  \"speciesId\": {{speciesId}},\n  \"isMandatory\": false\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog"] }
+          }
+        },
+
+        {
+          "name": "❌ Crear vacuna — sin nombre (400 Bad Request)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"speciesId\": {{speciesId}},\n  \"isMandatory\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog"] }
+          }
+        },
+
+        {
+          "name": "❌ Crear vacuna — duplicada (409 Conflict)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Rabia\",\n  \"speciesId\": {{speciesId}},\n  \"isMandatory\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog"] }
+          }
+        },
+
+        {
+          "name": "❌ Crear vacuna — sin token (401 Unauthorized)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Parvovirus\",\n  \"speciesId\": {{speciesId}}\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog"] }
+          }
+        },
+
+        {
+          "name": "✅ Listar catálogo (todas las especies)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog"] }
+          }
+        },
+
+        {
+          "name": "✅ Listar catálogo filtrado por especie",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/catalog?speciesId={{speciesId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations","catalog"],
+              "query": [{ "key": "speciesId", "value": "{{speciesId}}" }]
+            }
+          }
+        },
+
+        {
+          "name": "✅ Obtener vacuna por ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog/{{vaccineId}}", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog","{{vaccineId}}"] }
+          }
+        },
+
+        {
+          "name": "❌ Obtener vacuna — ID inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog/999999", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog","999999"] }
+          }
+        },
+
+        {
+          "name": "✅ Actualizar vacuna — cambiar nombre y dosis",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Rabia (Actualizada)\",\n  \"doseOrder\": 1,\n  \"isMandatory\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog/{{vaccineId}}", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog","{{vaccineId}}"] }
+          }
+        },
+
+        {
+          "name": "✅ Marcar vacuna como NO obligatoria (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"isMandatory\": false\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog/{{vaccineId}}/mandatory", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog","{{vaccineId}}","mandatory"] }
+          }
+        },
+
+        {
+          "name": "✅ Marcar vacuna como obligatoria de nuevo (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"isMandatory\": true,\n  \"doseOrder\": 1\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog/{{vaccineId}}/mandatory", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog","{{vaccineId}}","mandatory"] }
+          }
+        },
+
+        {
+          "name": "❌ Eliminar vacuna — con registros en vaccination_events (409 Conflict — bloqueado)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog/{{vaccineId}}", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog","{{vaccineId}}"] }
+          }
+        },
+
+        {
+          "name": "❌ Eliminar vacuna — solo MVZ (403 Forbidden, requiere ADMIN)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog/{{vaccineId}}", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog","{{vaccineId}}"] }
+          }
+        },
+
+        {
+          "name": "✅ Esquema de vacunación por especie",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/scheme/{{speciesId}}", "host": ["{{baseUrl}}"], "path": ["vaccinations","scheme","{{speciesId}}"] }
+          }
+        },
+
+        {
+          "name": "❌ Esquema por especie — especie inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/scheme/999999", "host": ["{{baseUrl}}"], "path": ["vaccinations","scheme","999999"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "🩺 Encounters — Flujo completo",
+      "item": [
+
+        {
+          "name": "✅ Abrir atención (Encounter)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  const b = pm.response.json();",
+            "  pm.collectionVariables.set('encounterId', b.id);",
+            "  pm.test('Encounter creado y ID capturado', () => pm.expect(b.id).to.exist);",
+            "  pm.test('Estado ACTIVA', () => pm.expect(b.status).to.eql('ACTIVA'));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"patientId\": {{patientId}},\n  \"vetId\": 1,\n  \"startTime\": \"2026-03-29T15:00:00\",\n  \"generalNotes\": \"Consulta general de revisión anual\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters", "host": ["{{baseUrl}}"], "path": ["encounters"] }
+          }
+        },
+
+        {
+          "name": "❌ Abrir atención — paciente inexistente (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"patientId\": 999999,\n  \"vetId\": 1,\n  \"startTime\": \"2026-03-29T15:00:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters", "host": ["{{baseUrl}}"], "path": ["encounters"] }
+          }
+        },
+
+        {
+          "name": "❌ Abrir atención — campos obligatorios faltantes (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"generalNotes\": \"Sin paciente ni vet\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters", "host": ["{{baseUrl}}"], "path": ["encounters"] }
+          }
+        },
+
+        {
+          "name": "❌ Abrir atención — sin token (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"patientId\": {{patientId}},\n  \"vetId\": 1,\n  \"startTime\": \"2026-03-29T15:00:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters", "host": ["{{baseUrl}}"], "path": ["encounters"] }
+          }
+        },
+
+        {
+          "name": "✅ Listar atenciones (todas)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/encounters?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["encounters"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"10"}] }
+          }
+        },
+
+        {
+          "name": "✅ Listar atenciones filtradas por paciente",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters?patientId={{patientId}}&page=1&limit=10",
+              "host": ["{{baseUrl}}"], "path": ["encounters"],
+              "query": [{"key":"patientId","value":"{{patientId}}"},{"key":"page","value":"1"},{"key":"limit","value":"10"}]
+            }
+          }
+        },
+
+        {
+          "name": "✅ Obtener atención por ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}"] }
+          }
+        },
+
+        {
+          "name": "❌ Obtener atención — ID inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/encounters/999999", "host": ["{{baseUrl}}"], "path": ["encounters","999999"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar razón de consulta",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"consultationReason\": \"Revisión anual y vacunas\",\n  \"currentIllnessHistory\": \"El paciente no ha presentado síntomas recientes\",\n  \"referredPreviousDiagnoses\": null,\n  \"referredPreviousTreatments\": null\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/consultation-reason", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","consultation-reason"] }
+          }
+        },
+
+        {
+          "name": "❌ Registrar razón de consulta — sin campo obligatorio (400)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"currentIllnessHistory\": \"Historia sin motivo de consulta\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/consultation-reason", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","consultation-reason"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar anamnesis",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vaccinesUpToDate\": false,\n  \"dewormingUpToDate\": true,\n  \"hasPetAtHome\": true,\n  \"petAtHomeDetail\": \"Un gato adulto\",\n  \"appetiteStatus\": \"Normal\",\n  \"waterIntakeStatus\": \"Normal\",\n  \"fecesText\": \"Normales, 1 vez al dia\",\n  \"numberOfBowelMovements\": 1,\n  \"notes\": \"Paciente activo y sin síntomas evidentes\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/anamnesis", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","anamnesis"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar examen clínico",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"weightKg\": 12.5,\n  \"temperatureC\": 38.5,\n  \"pulse\": 90,\n  \"heartRate\": 90,\n  \"respiratoryRate\": 18,\n  \"mucousMembranes\": \"ROSADAS\",\n  \"hydration\": \"NORMAL\",\n  \"crtSeconds\": 2,\n  \"lymphNodes\": \"No reactivos\",\n  \"examNotes\": \"Paciente en buenas condiciones generales\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/clinical-exam", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","clinical-exam"] }
+          }
+        },
+
+        {
+          "name": "❌ Registrar examen clínico — peso negativo (400)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"weightKg\": -5,\n  \"temperatureC\": 38.5\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/clinical-exam", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","clinical-exam"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar datos ambientales",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"environmentNotes\": \"Vive en casa con patio\",\n  \"nutritionNotes\": \"Croquetas premium 2 veces al día\",\n  \"lifestyleNotes\": \"Activo, sale a pasear diariamente\",\n  \"feedingTypeNotes\": \"Croquetas secas\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/environmental-data", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","environmental-data"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar impresión clínica",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"presumptiveDiagnosis\": \"Paciente sano, control de rutina\",\n  \"prognosis\": \"Favorable\",\n  \"clinicalNotes\": \"Se recomienda actualizar vacunas\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/clinical-impression", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","clinical-impression"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar plan médico",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"clinicalPlan\": \"Aplicar vacuna antirrábica. Control en 1 año.\",\n  \"requiresFollowUp\": true,\n  \"suggestedFollowUpDate\": \"2027-03-29\",\n  \"planNotes\": \"Traer carnet de vacunación en próxima visita\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/plan", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","plan"] }
+          }
+        },
+
+        {
+          "name": "❌ Registrar plan — requiresFollowUp true sin fecha (400)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"requiresFollowUp\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/plan", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","plan"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar vacunación en el encounter",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"applicationDate\": \"2026-03-29\",\n  \"suggestedNextDate\": \"2027-03-29\",\n  \"notes\": \"Aplicada sin reacciones adversas\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/vaccinations", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","vaccinations"] }
+          }
+        },
+
+        {
+          "name": "❌ Registrar vacunación — vacuna inexistente (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vaccineId\": 999999,\n  \"applicationDate\": \"2026-03-29\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/vaccinations", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","vaccinations"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar desparasitación",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": 1,\n  \"applicationDate\": \"2026-03-29\",\n  \"suggestedNextDate\": \"2026-06-29\",\n  \"notes\": \"Desparasitación trimestral interna\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/dewormings", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","dewormings"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar tratamiento (con ítems)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"startDate\": \"2026-03-29\",\n  \"endDate\": \"2026-04-05\",\n  \"generalInstructions\": \"Administrar con alimento para evitar vómito\",\n  \"items\": [\n    {\n      \"medication\": \"Amoxicilina\",\n      \"dose\": \"250mg\",\n      \"frequency\": \"Cada 12 horas\",\n      \"durationDays\": 7,\n      \"administrationRoute\": \"Oral\",\n      \"notes\": \"Triturar y mezclar con comida húmeda\"\n    }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/treatments", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","treatments"] }
+          }
+        },
+
+        {
+          "name": "❌ Registrar tratamiento — duración < 1 día (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"startDate\": \"2026-03-29\",\n  \"items\": [\n    {\n      \"medication\": \"Ibuprofeno\",\n      \"dose\": \"100mg\",\n      \"frequency\": \"Cada 8h\",\n      \"durationDays\": 0,\n      \"administrationRoute\": \"Oral\"\n    }\n  ]\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/treatments", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","treatments"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar cirugía programada",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"surgeryType\": \"Esterilización\",\n  \"scheduledDate\": \"2026-04-15T10:00:00\",\n  \"surgeryStatus\": \"PROGRAMADA\",\n  \"description\": \"Ovario histerectomía electiva\",\n  \"postoperativeInstructions\": \"Reposo 7 días, revisar puntos a los 10 días\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/surgeries", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","surgeries"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar procedimiento",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"procedureType\": \"Limpieza dental\",\n  \"performedDate\": \"2026-03-29T16:00:00\",\n  \"description\": \"Profilaxis dental con ultrasonido\",\n  \"result\": \"Cálculo dental removido exitosamente\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/procedures", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","procedures"] }
+          }
+        },
+
+        {
+          "name": "✅ Ver atención completa (con todas las secciones)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}"] }
+          }
+        },
+
+        {
+          "name": "✅ Cerrar atención (FINALIZADA)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"endTime\": \"2026-03-29T17:00:00\",\n  \"generalNotes\": \"Consulta finalizada sin complicaciones. Cita de control en 1 año.\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/close", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","close"] }
+          }
+        },
+
+        {
+          "name": "❌ Cerrar atención — hora fin antes que inicio (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"endTime\": \"2026-03-29T10:00:00\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/close", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","close"] }
+          }
+        },
+
+        {
+          "name": "❌ Modificar atención FINALIZADA — estado inválido (409 Conflict)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"consultationReason\": \"Intento de modificar una atención ya cerrada\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/consultation-reason", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","consultation-reason"] }
+          }
+        },
+
+        {
+          "name": "✅ Abrir segunda atención (para probar cancelación)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 201) {",
+            "  const b = pm.response.json();",
+            "  pm.collectionVariables.set('encounterId', b.id);",
+            "  pm.test('Segunda atención creada', () => pm.expect(b.status).to.eql('ACTIVA'));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"patientId\": {{patientId}},\n  \"vetId\": 1,\n  \"startTime\": \"2026-03-30T09:00:00\",\n  \"generalNotes\": \"Atención de prueba para cancelación\"\n}" },
+            "url": { "raw": "{{baseUrl}}/encounters", "host": ["{{baseUrl}}"], "path": ["encounters"] }
+          }
+        },
+
+        {
+          "name": "✅ Cancelar atención (ANULADA)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/cancel", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","cancel"] }
+          }
+        },
+
+        {
+          "name": "❌ Cancelar atención ya ANULADA (409 Conflict)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/encounters/{{encounterId}}/cancel", "host": ["{{baseUrl}}"], "path": ["encounters","{{encounterId}}","cancel"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "📋 Carnet de Vacunación del Paciente",
+      "item": [
+
+        {
+          "name": "✅ Registrar vacuna EXTERNA (de otra clínica)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"applicationDate\": \"2025-05-10\",\n  \"administeredBy\": \"Dr. Pérez\",\n  \"administeredAt\": \"Clínica VetPro - Quito\",\n  \"isExternal\": true,\n  \"batchNumber\": \"LOT-2025-RB-001\",\n  \"nextDoseDate\": \"2026-05-10\",\n  \"notes\": \"Vacuna aplicada antes de registrarse en SafePet\"\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/records", "host": ["{{baseUrl}}"], "path": ["vaccinations","patients","{{patientId}}","records"] }
+          }
+        },
+
+        {
+          "name": "✅ Registrar vacuna INTERNA (ligada al encounter)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"applicationDate\": \"2026-03-29\",\n  \"isExternal\": false,\n  \"batchNumber\": \"LOT-2026-RB-042\",\n  \"nextDoseDate\": \"2027-03-29\",\n  \"notes\": \"Aplicada en consulta anual SafePet\"\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/records", "host": ["{{baseUrl}}"], "path": ["vaccinations","patients","{{patientId}}","records"] }
+          }
+        },
+
+        {
+          "name": "❌ Registrar vacuna — fecha próxima antes de aplicación (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"applicationDate\": \"2026-03-29\",\n  \"nextDoseDate\": \"2025-01-01\"\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/records", "host": ["{{baseUrl}}"], "path": ["vaccinations","patients","{{patientId}}","records"] }
+          }
+        },
+
+        {
+          "name": "❌ Registrar vacuna — vacuna desactivada (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vaccineId\": 999999,\n  \"applicationDate\": \"2026-03-29\"\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/records", "host": ["{{baseUrl}}"], "path": ["vaccinations","patients","{{patientId}}","records"] }
+          }
+        },
+
+        {
+          "name": "❌ Registrar vacuna — paciente inexistente (404)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{mvzToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"applicationDate\": \"2026-03-29\"\n}" },
+            "url": { "raw": "{{baseUrl}}/vaccinations/patients/999999/records", "host": ["{{baseUrl}}"], "path": ["vaccinations","patients","999999","records"] }
+          }
+        },
+
+        {
+          "name": "✅ Ver carnet completo del paciente",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/records", "host": ["{{baseUrl}}"], "path": ["vaccinations","patients","{{patientId}}","records"] }
+          }
+        },
+
+        {
+          "name": "✅ Ver cobertura vacunal del paciente",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  const b = pm.response.json();",
+            "  pm.test('Tiene porcentaje de cobertura', () => pm.expect(b.coveragePercent).to.be.a('number'));",
+            "  pm.test('Tiene lista de vacunas obligatorias', () => pm.expect(b.mandatoryVaccines).to.be.an('array'));",
+            "  const covered = b.mandatoryVaccines.filter(v => v.isCovered);",
+            "  pm.test('Hay vacunas cubiertas', () => pm.expect(covered.length).to.be.gte(0));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/coverage", "host": ["{{baseUrl}}"], "path": ["vaccinations","patients","{{patientId}}","coverage"] }
+          }
+        },
+
+        {
+          "name": "❌ Ver cobertura — paciente inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{mvzToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/patients/999999/coverage", "host": ["{{baseUrl}}"], "path": ["vaccinations","patients","999999","coverage"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "🗑️ Eliminación segura de vacuna (flujo completo guards)",
+      "item": [
+        {
+          "name": "✅ Eliminar vacuna SIN registros — eliminación limpia",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "if (pm.response.code === 200) {",
+            "  const b = pm.response.json();",
+            "  pm.test('Mensaje de éxito', () => pm.expect(b.message).to.include('desactivada'));",
+            "  pm.test('Warning es null si no hay registros', () => pm.expect(b.historicalRecordsCount).to.eql(0));",
+            "}"
+          ]}}],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/catalog/{{vaccineId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations","catalog","{{vaccineId}}"],
+              "description": "Usar un vaccineId que NO tenga vaccination_events activos. El 409 se activa si tiene eventos clínicos activos."
+            }
+          }
+        },
+
+        {
+          "name": "❌ Eliminar vacuna ya eliminada (404)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/vaccinations/catalog/{{vaccineId}}", "host": ["{{baseUrl}}"], "path": ["vaccinations","catalog","{{vaccineId}}"] }
+          }
+        }
+      ]
+    }
+
+  ]
+}

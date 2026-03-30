@@ -51,6 +51,7 @@ export class EncounterClinicalExam {
   respiratoryRate!: number | null;
 
   @Column({
+    name: 'mucous_membranes',
     type: 'enum',
     enum: MucosaStatusEnum,
     enumName: 'mucosa_status_enum',
@@ -67,6 +68,7 @@ export class EncounterClinicalExam {
   lymphNodes!: string | null;
 
   @Column({
+    name: 'hydration',
     type: 'enum',
     enum: HydrationStatusEnum,
     enumName: 'hydration_status_enum',

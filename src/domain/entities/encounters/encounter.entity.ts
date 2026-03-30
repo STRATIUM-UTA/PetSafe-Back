@@ -48,12 +48,12 @@ export class Encounter extends BaseAuditEntity {
   @JoinColumn({ name: 'patient_id' })
   patient!: Patient;
 
-  @Column({ name: 'veterinarian_id', type: 'int' })
-  veterinarianId!: number;
+  @Column({ name: 'vet_id', type: 'int' })
+  vetId!: number;
 
   @ManyToOne('Employee', { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'veterinarian_id' })
-  veterinarian!: Employee;
+  @JoinColumn({ name: 'vet_id' })
+  vet!: Employee;
 
   @Column({ name: 'start_time', type: 'timestamp without time zone' })
   startTime!: Date;

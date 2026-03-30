@@ -2,6 +2,7 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseAuditEntity } from '../base-audit.entity.js';
 import { SurgeryStatusEnum } from '../../enums/index.js';
 import type { Encounter } from './encounter.entity.js';
+import type { SurgeryCatalog } from '../catalogs/surgery-catalog.entity.js';
 
 @Entity({ name: 'surgeries' })
 export class Surgery extends BaseAuditEntity {
@@ -11,6 +12,13 @@ export class Surgery extends BaseAuditEntity {
   @ManyToOne('Encounter', 'surgeries', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'encounter_id' })
   encounter!: Encounter;
+
+  @Column({ name: 'catalog_id', type: 'int', nullable: true })
+  catalogId!: number | null;
+
+  @ManyToOne('SurgeryCatalog', { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'catalog_id' })
+  catalog!: SurgeryCatalog;
 
   @Column({ name: 'surgery_type', type: 'varchar', length: 120 })
   surgeryType!: string;
