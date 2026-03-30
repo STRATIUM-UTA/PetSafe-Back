@@ -15,8 +15,16 @@ import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PersonTypeEnum, RoleEnum } from '../../../domain/enums/index.js';
 import { CreateClientDto } from '../../../presentation/dto/clients/create-client.dto.js';
 import { UpdateClientDto } from '../../../presentation/dto/clients/update-client.dto.js';
+import { ListBasicTutorsQueryDto } from '../../../presentation/dto/clients/list-basic-tutors-query.dto.js';
 import { ListClientsQueryDto } from '../../../presentation/dto/clients/list-clients-query.dto.js';
+import { ListClientSummaryQueryDto } from '../../../presentation/dto/clients/list-client-summary-query.dto.js';
 import { ClientResponseDto, PaginatedClientsResponseDto } from '../../../presentation/dto/clients/client-response.dto.js';
+import {
+  BasicTutorResponse,
+  PaginatedClientSummaryResponse,
+  ClientSummaryItem,
+  ClientPetSummary,
+} from '../../../presentation/dto/clients/client-summary-response.dto.js';
 import { ClientAccessService } from './client-access.service.js';
 import { ClientMapper } from '../../mappers/client.mapper.js';
 
@@ -293,12 +301,9 @@ export class ClientsService {
   }
 
   async findSummaryList(
-    query: ListClientsQueryDto,
-    actorUserId: number,
+    query: ListClientSummaryQueryDto,
   ): Promise<PaginatedClientSummaryResponse> {
-    const roleNames = await this.getUserRoleNames(actorUserId);
-    const canManageAll = this.canManageAllClients(roleNames);
-
+    const search = typeof query.search === 'string' ? query.search.trim() : '';
     const page = query.page ?? 1;
     const limitRaw = query.limit ?? 10;
     const limit = Math.min(Math.max(limitRaw, 1), 100);
@@ -311,42 +316,28 @@ export class ClientsService {
       .where('c.deleted_at IS NULL')
       .andWhere('p.deleted_at IS NULL');
 
-    if (!canManageAll) {
-      qb.andWhere('u.id = :actorUserId', { actorUserId });
-    }
-
-    const searchConditions: string[] = [];
-    const params: Record<string, string> = {};
-
-    if (query.firstName) {
-      searchConditions.push('(p.first_name ILIKE :firstName OR p.last_name ILIKE :firstName)');
-      params.firstName = `%${query.firstName}%`;
-    }
-
-    if (query.email) {
-      searchConditions.push('u.email ILIKE :email');
-      params.email = `%${query.email}%`;
-    }
-
-    if (query.petName) {
-      searchConditions.push(
-        `EXISTS (
-          ${qb
-          .subQuery()
-          .select('1')
-          .from(PatientTutor, 'pt')
-          .innerJoin(Patient, 'pa', 'pa.id = pt.patient_id AND pa.deleted_at IS NULL')
-          .where('pt.client_id = c.id')
-          .andWhere('pt.deleted_at IS NULL')
-          .andWhere('pa.name ILIKE :petName')
-          .getQuery()}
+    if (search) {
+      qb.andWhere(
+        `(
+          p.first_name ILIKE :search
+          OR p.last_name ILIKE :search
+          OR CONCAT(p.first_name, ' ', p.last_name) ILIKE :search
+          OR CONCAT(p.last_name, ' ', p.first_name) ILIKE :search
+          OR u.email ILIKE :search
+          OR EXISTS (
+            ${qb
+              .subQuery()
+              .select('1')
+              .from(PatientTutor, 'pt')
+              .innerJoin(Patient, 'pa', 'pa.id = pt.patient_id AND pa.deleted_at IS NULL')
+              .where('pt.client_id = c.id')
+              .andWhere('pt.deleted_at IS NULL')
+              .andWhere('pa.name ILIKE :search')
+              .getQuery()}
+          )
         )`,
+        { search: `%${search}%` },
       );
-      params.petName = `%${query.petName}%`;
-    }
-
-    if (searchConditions.length > 0) {
-      qb.andWhere(`(${searchConditions.join(' OR ')})`, params);
     }
 
     qb.orderBy('p.lastName', 'ASC').addOrderBy('p.firstName', 'ASC');
@@ -366,16 +357,20 @@ export class ClientsService {
     });
 
     if (data.length === 0) {
+      const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+      const currentPage =
+        totalPages === 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
+
       return {
-        data,
+        data: [],
         meta: {
           totalItems: total,
           itemCount: 0,
           itemsPerPage: limit,
-          totalPages: 0,
-          currentPage: 1,
+          totalPages,
+          currentPage,
           hasNextPage: false,
-          hasPrevPage: false,
+          hasPrevPage: totalPages === 0 ? false : currentPage > 1,
         },
       };
     }
@@ -407,37 +402,45 @@ export class ClientsService {
       petsByClientId.set(tutor.clientId, pets);
     }
 
-    return {
-      data: data.map((client) => {
-        const pets = petsByClientId.get(client.id) ?? [];
+    const items = data.map((client) => {
+      const pets = petsByClientId.get(client.id) ?? [];
 
-        return {
-          ...client,
-          pets,
-          petsCount: pets.length,
-        };
-      }),
+      return {
+        ...client,
+        pets,
+        petsCount: pets.length,
+      };
+    });
+
+    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+    const currentPage =
+      totalPages === 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
+
+    return {
+      data: items,
       meta: {
         totalItems: total,
-        itemCount: data.length,
+        itemCount: items.length,
         itemsPerPage: limit,
-        totalPages: total === 0 ? 0 : Math.ceil(total / limit),
-        currentPage: total === 0 ? 1 : Math.min(Math.max(page, 1), Math.ceil(total / limit)),
-        hasNextPage: total === 0 ? false : Math.min(Math.max(page, 1), Math.ceil(total / limit)) < Math.ceil(total / limit),
-        hasPrevPage: total === 0 ? false : Math.min(Math.max(page, 1), Math.ceil(total / limit)) > 1,
+        totalPages,
+        currentPage,
+        hasNextPage: totalPages === 0 ? false : currentPage < totalPages,
+        hasPrevPage: totalPages === 0 ? false : currentPage > 1,
       },
     };
   }
 
 
   async findBasicTutors(
-    query: { search?: string; page?: string; limit?: string },
-  ): Promise<PaginatedBasicTutorsResponse> {
-    const page = Number(query.page ?? 1);
-    const limitRaw = Number(query.limit ?? 10);
-    const limit = Math.min(Math.max(limitRaw, 1), 100);
-    const offset = (Math.max(page, 1) - 1) * limit;
+    query: ListBasicTutorsQueryDto,
+  ): Promise<BasicTutorResponse[]> {
     const search = typeof query.search === 'string' ? query.search.trim() : '';
+    const limitRaw = query.limit ?? 10;
+    const limit = Math.min(Math.max(limitRaw, 1), 20);
+
+    if (!search) {
+      return [];
+    }
 
     const qb = this.clientRepository
       .createQueryBuilder('c')
@@ -454,68 +457,13 @@ export class ClientsService {
 
     qb.orderBy('p.lastName', 'ASC').addOrderBy('p.firstName', 'ASC');
 
-    const total = await qb.clone().getCount();
-    const clients = await qb.skip(offset).take(limit).getMany();
+    const clients = await qb.take(limit).getMany();
 
-    const data = clients.map((client) => ({
+    return clients.map((client) => ({
       id: client.id,
       firstName: client.person.firstName,
       lastName: client.person.lastName,
       phone: client.person.phone ?? null,
     }));
-
-    const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
-    const currentPage = totalPages === 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
-
-    return {
-      data,
-      meta: {
-        totalItems: total,
-        itemCount: data.length,
-        itemsPerPage: limit,
-        totalPages,
-        currentPage,
-        hasNextPage: totalPages === 0 ? false : currentPage < totalPages,
-        hasPrevPage: totalPages === 0 ? false : currentPage > 1,
-      },
-    };
   }
 }
-
-// Estos dtos son para los metodos de findSummaryList
-type ClientPetSummary = {
-  id: number;
-  name: string;
-};
-
-type ClientSummaryItem = ClientResponseDto & {
-  pets: ClientPetSummary[];
-  petsCount: number;
-};
-
-type PaginatedClientSummaryResponse = {
-  data: ClientSummaryItem[];
-  meta: PaginatedClientsResponseDto['meta'];
-};
-
-// Estos dtos son para el metodo findBasicTutors
-
-type BasicTutorResponse = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-};
-
-type PaginatedBasicTutorsResponse = {
-  data: BasicTutorResponse[];
-  meta: {
-    totalItems: number;
-    itemCount: number;
-    itemsPerPage: number;
-    totalPages: number;
-    currentPage: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
-};

@@ -17,8 +17,16 @@ import { CreatePatientDto } from '../../../presentation/dto/patients/create-pati
 import { UpdatePatientDto } from '../../../presentation/dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../../presentation/dto/patients/create-condition.dto.js';
 import { PatientResponseDto, PatientConditionResponseDto } from '../../../presentation/dto/patients/patient-response.dto.js';
+import {
+  PatientAdminBasicDetailResponse,
+  PatientAdminBasicResponse,
+  PatientBasicByClientResponse,
+  PaginatedPatientsBasicForAdminResponse,
+} from '../../../presentation/dto/patients/patient-basic-response.dto.js';
 import { PatientMapper } from '../../mappers/patient.mapper.js';
 import { RoleEnum } from '../../../domain/enums/index.js';
+import { ListPatientTutorQueryDto } from 'src/presentation/dto/patients/list-patient-tutor-query.dto.js';
+import { ListPatientTutorResponseDto } from 'src/presentation/dto/patients/list-patient-tutor-response.dto.js';
 
 const PAGINATE_CONFIG: PaginateConfig<Patient> = {
   sortableColumns: ['id', 'name', 'code', 'createdAt'],
@@ -488,11 +496,7 @@ export class PatientsService {
     };
   }
 
-  async updateAdminBasic(
-    patientId: number,
-    dto: UpdatePatientDto,
-    roles: string[],
-  ): Promise<PatientResponseDto> {
+  async updateAdminBasic(patientId: number, dto: UpdatePatientDto, roles: string[]): Promise<PatientResponseDto> {
     return this.dataSource.transaction(async (manager) => {
       if (!this.canAccessAnyPatient(roles)) {
         throw new NotFoundException('Mascota no encontrada');
@@ -534,80 +538,45 @@ export class PatientsService {
     });
   }
 
+  async findSearchSummary(query: ListPatientTutorQueryDto, roles: string[]): Promise<ListPatientTutorResponseDto[]> {
+    if (!this.canAccessAnyPatient(roles)) {
+      throw new NotFoundException('No tienes permiso para acceder a esta información');
+    }
+    const search = typeof query.search === 'string' ? query.search.trim() : '';
+    if (!search) {
+      return [];
+    }
+
+    const limitRaw = query.limit ?? 10;
+    const limit = Math.min(Math.max(limitRaw, 1), 20);
+
+    const queryBuilder = this.patientRepo
+      .createQueryBuilder('p')
+      .innerJoin('patient_tutors', 'pt', 'pt.patient_id = p.id AND pt.deleted_at IS NULL')
+      .innerJoin('clients', 'c', 'c.id = pt.client_id AND c.deleted_at IS NULL')
+      .innerJoin('persons', 'per', 'per.id = c.person_id')
+      .select('p.id', 'patientId')
+      .addSelect('p.name', 'patientName')
+      .addSelect('c.id', 'tutorId')
+      .addSelect("TRIM(CONCAT(per.first_name, ' ', per.last_name))", 'tutorName')
+      .addSelect('per.document_id', 'documentId')
+      .where('p.deleted_at IS NULL')
+
+    queryBuilder.andWhere(
+      `(
+        p.name ILIKE :search
+        OR per.first_name ILIKE :search
+        OR per.last_name ILIKE :search
+        OR CONCAT(per.first_name, ' ', per.last_name) ILIKE :search
+        OR CONCAT(per.last_name, ' ', per.first_name) ILIKE :search
+        OR per.document_id ILIKE :search
+      )`,
+      { search: `%${search}%` },
+    );
+
+    queryBuilder.orderBy('p.name', 'ASC').addOrderBy('per.first_name', 'ASC').addOrderBy('per.last_name', 'ASC').take(limit);
+
+    return queryBuilder.getRawMany<ListPatientTutorResponseDto>();
+  }
+
 }
-
-type PatientBasicByClientResponse = {
-  id: number;
-  name: string;
-  birthDate: Date | null;
-  species: {
-    id: number;
-    name: string;
-  } | null;
-  breed: {
-    id: number;
-    name: string;
-  } | null;
-  color: {
-    id: number;
-    name: string;
-  } | null;
-};
-
-type PatientAdminBasicResponse = {
-  id: number;
-  name: string;
-  species: {
-    id: number;
-    name: string;
-  } | null;
-  breed: {
-    id: number;
-    name: string;
-  } | null;
-  tutorName: string | null;
-  tutorContact: string | null;
-  birthDate: Date | null;
-  ageYears: number | null;
-  sex: string;
-  currentWeight: number | null;
-};
-
-type PaginatedPatientsBasicForAdminResponse = {
-  data: PatientAdminBasicResponse[];
-  meta: {
-    totalItems: number;
-    itemCount: number;
-    itemsPerPage: number;
-    totalPages: number;
-    currentPage: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
-};
-
-type PatientAdminBasicDetailResponse = {
-  id: number;
-  name: string;
-  species: {
-    id: number;
-    name: string;
-  } | null;
-  breed: {
-    id: number;
-    name: string;
-  } | null;
-  sex: string;
-  currentWeight: number | null;
-  birthDate: Date | null;
-  ageYears: number | null;
-  color: {
-    id: number;
-    name: string;
-  } | null;
-  sterilized: boolean;
-  generalAllergies: string | null;
-  generalHistory: string | null;
-  clinicalObservations: PatientConditionResponseDto[];
-  recentActivity: null;
-};

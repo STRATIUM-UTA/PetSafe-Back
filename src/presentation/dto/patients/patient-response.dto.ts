@@ -1,9 +1,14 @@
-export class PatientConditionResponseDto {
-  id!: number;
-  type!: string;
-  name!: string;
-  description?: string | null;
-  active!: boolean;
+export class PaginatedPatientsResponseDto {
+  data!: PatientResponseDto[];
+  meta!: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
 }
 
 export class PatientResponseDto {
@@ -24,15 +29,10 @@ export class PatientResponseDto {
   conditions!: PatientConditionResponseDto[];
 }
 
-export class PaginatedPatientsResponseDto {
-  data!: PatientResponseDto[];
-  meta!: {
-    totalItems: number;
-    itemCount: number;
-    itemsPerPage: number;
-    totalPages: number;
-    currentPage: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
+export class PatientConditionResponseDto {
+  id!: number;
+  type!: string;
+  name!: string;
+  description?: string | null;
+  active!: boolean;
 }

@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { Paginate, type PaginateQuery } from 'nestjs-paginate';
 
@@ -20,6 +21,10 @@ import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
 import { Roles } from '../../../infra/security/decorators/roles.decorator.js';
 import { RoleEnum } from '../../../domain/enums/index.js';
+import { ListPatientTutorQueryDto } from '../../dto/patients/list-patient-tutor-query.dto.js';
+import { ListPatientTutorResponseDto } from '../../dto/patients/list-patient-tutor-response.dto.js';
+import { PatientResponseDto } from '../../dto/patients/patient-response.dto.js';
+import { PaginatedPatientsBasicForAdminResponse, PatientAdminBasicDetailResponse } from '../../dto/patients/patient-basic-response.dto.js';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('patients')
@@ -35,10 +40,10 @@ export class PatientsController {
     return this.patientsService.create(dto, req.user.userId, req.user.roles);
   }
 
-
-  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
-  @Get('/all-basic')
-  findAllBasic(@Paginate() query: PaginateQuery) {
+  // Todos los pacientes con su info basica y paginada
+  @Roles(RoleEnum.ADMIN)
+  @Get('admin/all-basic')
+  findAllBasic(@Paginate() query: PaginateQuery): Promise<PaginatedPatientsBasicForAdminResponse> {
     return this.patientsService.findAllBasic(query);
   }
 
@@ -99,6 +104,7 @@ export class PatientsController {
     return this.patientsService.removeCondition(id, conditionId, req.user.userId);
   }
 
+  // Todos los pacientes en base a un tutor especifico
   @Roles(RoleEnum.ADMIN)
   @Get('admin/by-client/:clientId')
   findAllByClientId(
@@ -112,22 +118,25 @@ export class PatientsController {
     );
   }
 
+  // Esto creo q era para el detalle de un paciente en el frontend
   @Roles(RoleEnum.ADMIN)
   @Get('admin/:id/basic')
-  findAdminBasic(
-    @Param('id', ParseIntPipe) id: number,
-    @Request() req: { user: { userId: number; roles: string[] } },
-  ) {
+  findAdminBasic(@Param('id', ParseIntPipe) id: number, @Request() req: { user: { userId: number; roles: string[] } }): Promise<PatientAdminBasicDetailResponse> {
     return this.patientsService.findAdminBasic(id, req.user.roles);
   }
 
+  // Actualizar campos basicos de un paciente
   @Roles(RoleEnum.ADMIN)
   @Patch('admin/:id/basic')
   updateAdminBasic(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdatePatientDto,
-    @Request() req: { user: { userId: number; roles: string[] } },
-  ) {
+    @Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePatientDto, @Request() req: { user: { userId: number; roles: string[] } }): Promise<PatientResponseDto> {
     return this.patientsService.updateAdminBasic(id, dto, req.user.roles);
+  }
+
+  // Se utiliza en la parte de citas, para mostrar un resumen de los pacientes y tutores de manera basica y poder seleccionar al momento de generar una cita.
+  @Roles(RoleEnum.ADMIN)
+  @Get('admin/search-summary')
+  searchSummary(@Query() query: ListPatientTutorQueryDto, @Request() req: { user: { userId: number; roles: string[] } }): Promise<ListPatientTutorResponseDto[]> {
+    return this.patientsService.findSearchSummary(query, req.user.roles);
   }
 }
