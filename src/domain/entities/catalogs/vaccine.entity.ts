@@ -17,5 +17,9 @@ export class Vaccine extends BaseAuditEntity {
   @Column({ name: 'is_revaccination', type: 'boolean', default: false })
   isRevaccination!: boolean;
 
-  // The 'activa' field from the old schema is fundamentally mapped to BaseAuditEntity.isActive.
+  @Column({ name: 'is_mandatory', type: 'boolean', default: false })
+  isMandatory!: boolean;
+
+  @Column({ name: 'dose_order', type: 'integer', nullable: true })
+  doseOrder!: number | null;
 }

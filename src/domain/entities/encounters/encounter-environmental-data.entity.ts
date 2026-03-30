@@ -21,17 +21,17 @@ export class EncounterEnvironmentalData {
   @JoinColumn({ name: 'encounter_id' })
   encounter!: Encounter;
 
-  @Column({ name: 'environment_text', type: 'text', nullable: true })
-  environmentText!: string | null;
+  @Column({ name: 'environment_notes', type: 'text', nullable: true })
+  environmentNotes!: string | null;
 
-  @Column({ name: 'nutrition_text', type: 'text', nullable: true })
-  nutritionText!: string | null;
+  @Column({ name: 'nutrition_notes', type: 'text', nullable: true })
+  nutritionNotes!: string | null;
 
-  @Column({ name: 'lifestyle_text', type: 'text', nullable: true })
-  lifestyleText!: string | null;
+  @Column({ name: 'lifestyle_notes', type: 'text', nullable: true })
+  lifestyleNotes!: string | null;
 
-  @Column({ name: 'diet_type_text', type: 'text', nullable: true })
-  dietTypeText!: string | null;
+  @Column({ name: 'feeding_type_notes', type: 'text', nullable: true })
+  feedingTypeNotes!: string | null;
 
   @Column({ type: 'text', nullable: true })
   notes!: string | null;

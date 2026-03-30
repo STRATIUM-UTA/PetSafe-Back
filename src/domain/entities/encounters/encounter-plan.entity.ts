@@ -22,11 +22,11 @@ export class EncounterPlan {
   @Column({ name: 'clinical_plan', type: 'text', nullable: true })
   clinicalPlan!: string | null;
 
-  @Column({ name: 'requires_next_appointment', type: 'boolean', default: false })
-  requiresNextAppointment!: boolean;
+  @Column({ name: 'requires_follow_up', type: 'boolean', default: false })
+  requiresFollowUp!: boolean;
 
-  @Column({ name: 'suggested_next_appointment_date', type: 'date', nullable: true })
-  suggestedNextAppointmentDate!: Date | null;
+  @Column({ name: 'suggested_follow_up_date', type: 'date', nullable: true })
+  suggestedFollowUpDate!: Date | null;
 
   @Column({ name: 'plan_notes', type: 'text', nullable: true })
   planNotes!: string | null;
