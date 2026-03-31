@@ -28,7 +28,7 @@ export class EncounterSharedService {
   ) {}
 
   /**
-   * Carga una atención con todas sus relaciones clínicas principales.
+   * Carga una atenciÃ³n con todas sus relaciones clÃ­nicas principales.
    */
   async findEncounterOrFail(id: number): Promise<Encounter> {
     const encounter = await this.encounterRepo.findOne({
@@ -52,25 +52,25 @@ export class EncounterSharedService {
     });
 
     if (!encounter || encounter.deletedAt) {
-      throw new NotFoundException('Atención no encontrada.');
+      throw new NotFoundException('AtenciÃ³n no encontrada.');
     }
 
     return encounter;
   }
 
   /**
-   * Asegura que la atención siga abierta para aceptar cambios clínicos.
+   * Asegura que la atenciÃ³n siga abierta para aceptar cambios clÃ­nicos.
    */
   ensureActive(encounter: Encounter): void {
     if (encounter.status !== EncounterStatusEnum.ACTIVA) {
       throw new ConflictException(
-        `La atención ya está en estado "${encounter.status}". No se puede modificar.`,
+        `La atenciÃ³n ya estÃ¡ en estado "${encounter.status}". No se puede modificar.`,
       );
     }
   }
 
   /**
-   * Verifica que el paciente exista y no esté eliminado.
+   * Verifica que el paciente exista y no estÃ© eliminado.
    */
   async findPatientOrFail(patientId: number): Promise<Patient> {
     const patient = await this.patientRepo.findOne({
@@ -94,8 +94,14 @@ export class EncounterSharedService {
     roles: string[],
   ): Promise<void> {
     const vet = await this.employeeRepo.findOne({ where: { id: vetId } });
-    if (!vet || vet.deletedAt || !vet.isVeterinarian) {
-      throw new BadRequestException('El veterinario seleccionado no es válido.');
+    if (!vet || vet.deletedAt) {
+      throw new NotFoundException('Empleado no encontrado.');
+    }
+
+    if (!vet.isVeterinarian) {
+      throw new BadRequestException(
+        'El empleado seleccionado existe, pero no estÃ¡ registrado como veterinario.',
+      );
     }
 
     const isAdmin = roles.includes(RoleEnum.ADMIN);
@@ -112,7 +118,7 @@ export class EncounterSharedService {
 
     if (vet.personId !== user.personId) {
       throw new ConflictException(
-        'No puedes crear una atención asignándola a otro veterinario.',
+        'No puedes crear una atenciÃ³n asignÃ¡ndola a otro veterinario.',
       );
     }
   }
