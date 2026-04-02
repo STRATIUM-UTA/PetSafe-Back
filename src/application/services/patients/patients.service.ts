@@ -6,6 +6,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, EntityManager } from 'typeorm';
 import { paginate, PaginateQuery, PaginateConfig, Paginated } from 'nestjs-paginate';
+import { unlink } from 'node:fs/promises';
+import { join } from 'node:path';
 
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PatientTutor } from '../../../domain/entities/patients/patient-tutor.entity.js';
@@ -13,6 +15,7 @@ import { PatientCondition } from '../../../domain/entities/patients/patient-cond
 import { Client } from '../../../domain/entities/persons/client.entity.js';
 import { Species } from '../../../domain/entities/catalogs/species.entity.js';
 import { Breed } from '../../../domain/entities/catalogs/breed.entity.js';
+import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
 import { CreatePatientDto } from '../../../presentation/dto/patients/create-patient.dto.js';
 import { UpdatePatientDto } from '../../../presentation/dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../../presentation/dto/patients/create-condition.dto.js';
@@ -24,9 +27,15 @@ import {
   PaginatedPatientsBasicForAdminResponse,
 } from '../../../presentation/dto/patients/patient-basic-response.dto.js';
 import { PatientMapper } from '../../mappers/patient.mapper.js';
-import { RoleEnum } from '../../../domain/enums/index.js';
+import {
+  MediaOwnerTypeEnum,
+  MediaTypeEnum,
+  RoleEnum,
+  StorageProviderEnum,
+} from '../../../domain/enums/index.js';
 import { ListPatientTutorQueryDto } from 'src/presentation/dto/patients/list-patient-tutor-query.dto.js';
 import { ListPatientTutorResponseDto } from 'src/presentation/dto/patients/list-patient-tutor-response.dto.js';
+import { PATIENT_UPLOADS_DIR } from '../../../infra/config/uploads.config.js';
 
 const PAGINATE_CONFIG: PaginateConfig<Patient> = {
   sortableColumns: ['id', 'name', 'code', 'createdAt'],
@@ -52,6 +61,8 @@ export class PatientsService {
     private readonly speciesRepo: Repository<Species>,
     @InjectRepository(Breed)
     private readonly breedRepo: Repository<Breed>,
+    @InjectRepository(MediaFile)
+    private readonly mediaFileRepo: Repository<MediaFile>,
     private readonly dataSource: DataSource,
   ) { }
 
@@ -93,37 +104,60 @@ export class PatientsService {
     return patient;
   }
 
-  async create(dto: CreatePatientDto, userId: number, roles: string[]): Promise<PatientResponseDto> {
-    return this.dataSource.transaction(async (manager) => {
-      const clientId = await this.resolveTargetClientId(dto, userId, roles, manager);
-      await this.ensurePatientTaxonomyIsValid(dto.speciesId, dto.breedId ?? null, manager);
+  async create(
+    dto: CreatePatientDto,
+    userId: number,
+    roles: string[],
+    imageFile?: any,
+    imageBaseUrl?: string,
+  ): Promise<PatientResponseDto> {
+    return this.createWithOptionalImage(dto, userId, roles, imageFile, imageBaseUrl);
+  }
 
-      const patient = manager.create(Patient, {
-        name: dto.name,
-        speciesId: dto.speciesId,
-        sex: dto.sex as any,
-        breedId: dto.breedId ?? null,
-        colorId: dto.colorId ?? null,
-        birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
-        currentWeight: dto.currentWeight ?? null,
-        isSterilized: dto.sterilized ?? false,
-        microchipCode: dto.microchipCode ?? null,
-        distinguishingMarks: dto.distinguishingMarks ?? null,
-        generalAllergies: dto.generalAllergies ?? null,
-        generalHistory: dto.generalHistory ?? null,
+  async createWithOptionalImage(
+    dto: CreatePatientDto,
+    userId: number,
+    roles: string[],
+    imageFile?: any,
+    imageBaseUrl?: string,
+  ): Promise<PatientResponseDto> {
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const clientId = await this.resolveTargetClientId(dto, userId, roles, manager);
+        await this.ensurePatientTaxonomyIsValid(dto.speciesId, dto.breedId ?? null, manager);
+
+        const patient = manager.create(Patient, {
+          name: dto.name,
+          speciesId: dto.speciesId,
+          sex: dto.sex as any,
+          breedId: dto.breedId ?? null,
+          colorId: dto.colorId ?? null,
+          birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
+          currentWeight: dto.currentWeight ?? null,
+          isSterilized: dto.sterilized ?? false,
+          microchipCode: dto.microchipCode ?? null,
+          distinguishingMarks: dto.distinguishingMarks ?? null,
+          generalAllergies: dto.generalAllergies ?? null,
+          generalHistory: dto.generalHistory ?? null,
+        });
+        const saved = await manager.save(Patient, patient);
+
+        await this.upsertPatientImage(saved.id, imageFile, imageBaseUrl, userId, manager);
+
+        const tutor = manager.create(PatientTutor, {
+          patientId: saved.id,
+          clientId: clientId,
+          isPrimary: true,
+          relationship: 'Propietario',
+        });
+        await manager.save(PatientTutor, tutor);
+
+        return this.findOneInternal(saved.id, userId, manager, roles);
       });
-      const saved = await manager.save(Patient, patient);
-
-      const tutor = manager.create(PatientTutor, {
-        patientId: saved.id,
-        clientId: clientId,
-        isPrimary: true,
-        relationship: 'Propietario',
-      });
-      await manager.save(PatientTutor, tutor);
-
-      return this.findOneInternal(saved.id, userId, manager, roles);
-    });
+    } catch (error) {
+      await this.deleteStoredFileIfExists(imageFile?.filename);
+      throw error;
+    }
   }
 
   async findAllByUser(query: PaginateQuery, userId: number): Promise<Paginated<any>> {
@@ -140,9 +174,14 @@ export class PatientsService {
       .andWhere('p.deleted_at IS NULL');
 
     const result = await paginate(query, qb, PAGINATE_CONFIG);
+    const imagesByPatientId = await this.findImagesByPatientIds(
+      result.data.map((patient) => patient.id),
+    );
     return {
       ...result,
-      data: result.data.map(PatientMapper.toResponseDto),
+      data: result.data.map((patient) =>
+        PatientMapper.toResponseDto(patient, imagesByPatientId.get(patient.id)),
+      ),
     };
   }
 
@@ -150,34 +189,62 @@ export class PatientsService {
     return this.findOneInternal(patientId, userId);
   }
 
-  async update(patientId: number, dto: UpdatePatientDto, userId: number): Promise<PatientResponseDto> {
-    return this.dataSource.transaction(async (manager) => {
-      const existingPatient = await this.verifyOwnership(patientId, userId, manager);
+  async update(
+    patientId: number,
+    dto: UpdatePatientDto,
+    userId: number,
+    imageFile?: any,
+    imageBaseUrl?: string,
+  ): Promise<PatientResponseDto> {
+    return this.updateWithOptionalImage(patientId, dto, userId, imageFile, imageBaseUrl);
+  }
 
-      const targetSpeciesId = dto.speciesId ?? existingPatient.speciesId;
-      const targetBreedId = dto.breedId !== undefined ? (dto.breedId ?? null) : existingPatient.breedId;
-      await this.ensurePatientTaxonomyIsValid(targetSpeciesId, targetBreedId, manager);
+  async updateWithOptionalImage(
+    patientId: number,
+    dto: UpdatePatientDto,
+    userId: number,
+    imageFile?: any,
+    imageBaseUrl?: string,
+  ): Promise<PatientResponseDto> {
+    let previousImage: MediaFile | null = null;
 
-      const updateData: Partial<Patient> = {};
-      if (dto.name !== undefined) updateData.name = dto.name;
-      if (dto.speciesId !== undefined) updateData.speciesId = dto.speciesId;
-      if (dto.sex !== undefined) updateData.sex = dto.sex as any;
-      if (dto.breedId !== undefined) updateData.breedId = dto.breedId ?? null;
-      if (dto.colorId !== undefined) updateData.colorId = dto.colorId ?? null;
-      if (dto.birthDate !== undefined) {
-        updateData.birthDate = dto.birthDate ? new Date(dto.birthDate) : null;
-      }
-      if (dto.currentWeight !== undefined) updateData.currentWeight = dto.currentWeight ?? null;
-      if (dto.sterilized !== undefined) updateData.isSterilized = dto.sterilized;
-      if (dto.microchipCode !== undefined) updateData.microchipCode = dto.microchipCode ?? null;
-      if (dto.distinguishingMarks !== undefined) updateData.distinguishingMarks = dto.distinguishingMarks ?? null;
-      if (dto.generalAllergies !== undefined) updateData.generalAllergies = dto.generalAllergies ?? null;
-      if (dto.generalHistory !== undefined) updateData.generalHistory = dto.generalHistory ?? null;
+    try {
+      const result = await this.dataSource.transaction(async (manager) => {
+        const existingPatient = await this.verifyOwnership(patientId, userId, manager);
 
-      await manager.update(Patient, patientId, updateData);
+        const targetSpeciesId = dto.speciesId ?? existingPatient.speciesId;
+        const targetBreedId = dto.breedId !== undefined ? (dto.breedId ?? null) : existingPatient.breedId;
+        await this.ensurePatientTaxonomyIsValid(targetSpeciesId, targetBreedId, manager);
 
-      return this.findOneInternal(patientId, userId, manager);
-    });
+        const updateData: Partial<Patient> = {};
+        if (dto.name !== undefined) updateData.name = dto.name;
+        if (dto.speciesId !== undefined) updateData.speciesId = dto.speciesId;
+        if (dto.sex !== undefined) updateData.sex = dto.sex as any;
+        if (dto.breedId !== undefined) updateData.breedId = dto.breedId ?? null;
+        if (dto.colorId !== undefined) updateData.colorId = dto.colorId ?? null;
+        if (dto.birthDate !== undefined) {
+          updateData.birthDate = dto.birthDate ? new Date(dto.birthDate) : null;
+        }
+        if (dto.currentWeight !== undefined) updateData.currentWeight = dto.currentWeight ?? null;
+        if (dto.sterilized !== undefined) updateData.isSterilized = dto.sterilized;
+        if (dto.microchipCode !== undefined) updateData.microchipCode = dto.microchipCode ?? null;
+        if (dto.distinguishingMarks !== undefined) updateData.distinguishingMarks = dto.distinguishingMarks ?? null;
+        if (dto.generalAllergies !== undefined) updateData.generalAllergies = dto.generalAllergies ?? null;
+        if (dto.generalHistory !== undefined) updateData.generalHistory = dto.generalHistory ?? null;
+
+        await manager.update(Patient, patientId, updateData);
+        previousImage = imageFile ? await this.findPatientImage(patientId, manager) : null;
+        await this.upsertPatientImage(patientId, imageFile, imageBaseUrl, userId, manager);
+
+        return this.findOneInternal(patientId, userId, manager);
+      });
+
+      await this.deleteMediaPhysicalFile(previousImage);
+      return result;
+    } catch (error) {
+      await this.deleteStoredFileIfExists(imageFile?.filename);
+      throw error;
+    }
   }
 
   async softDelete(patientId: number, userId: number): Promise<{ message: string }> {
@@ -229,7 +296,8 @@ export class PatientsService {
       if (!patient || patient.deletedAt) throw new NotFoundException('Mascota no encontrada');
 
       patient.conditions = patient.conditions?.filter((c) => !c.deletedAt) ?? [];
-      return PatientMapper.toResponseDto(patient);
+      const image = await this.findPatientImage(patient.id, manager);
+      return PatientMapper.toResponseDto(patient, image);
     }
 
     const patient = await repo
@@ -249,7 +317,8 @@ export class PatientsService {
 
     if (!patient) throw new NotFoundException('Mascota no encontrada');
 
-    return PatientMapper.toResponseDto(patient);
+    const image = await this.findPatientImage(patient.id, manager);
+    return PatientMapper.toResponseDto(patient, image);
   }
 
   private async resolveTargetClientId(dto: CreatePatientDto, userId: number, roles: string[], manager?: EntityManager): Promise<number> {
@@ -327,6 +396,10 @@ export class PatientsService {
       .orderBy('p.name', 'ASC')
       .getMany();
 
+    const imagesByPatientId = await this.findImagesByPatientIds(
+      patients.map((patient) => patient.id),
+    );
+
     return patients.map((patient) => ({
       id: patient.id,
       name: patient.name,
@@ -349,6 +422,7 @@ export class PatientsService {
           name: patient.color.name,
         }
         : null,
+      image: PatientMapper.toImageDto(imagesByPatientId.get(patient.id)),
     }));
   }
 
@@ -379,6 +453,9 @@ export class PatientsService {
 
     const total = await qb.clone().getCount();
     const patients = await qb.skip(offset).take(limit).getMany();
+    const imagesByPatientId = await this.findImagesByPatientIds(
+      patients.map((patient) => patient.id),
+    );
 
     const getAgeYears = (birthDate: Date) => {
       const now = new Date();
@@ -423,6 +500,7 @@ export class PatientsService {
         ageYears,
         sex: patient.sex,
         currentWeight: patient.currentWeight ?? null,
+        image: PatientMapper.toImageDto(imagesByPatientId.get(patient.id)),
       };
     });
 
@@ -491,51 +569,71 @@ export class PatientsService {
       sterilized: patient.sterilized,
       generalAllergies: patient.generalAllergies ?? null,
       generalHistory: patient.generalHistory ?? null,
+      image: patient.image ?? null,
       clinicalObservations: patient.conditions ?? [],
       recentActivity: null,
     };
   }
 
-  async updateAdminBasic(patientId: number, dto: UpdatePatientDto, roles: string[]): Promise<PatientResponseDto> {
-    return this.dataSource.transaction(async (manager) => {
-      if (!this.canAccessAnyPatient(roles)) {
-        throw new NotFoundException('Mascota no encontrada');
-      }
+  async updateAdminBasic(
+    patientId: number,
+    dto: UpdatePatientDto,
+    userId: number,
+    roles: string[],
+    imageFile?: any,
+    imageBaseUrl?: string,
+  ): Promise<PatientResponseDto> {
+    let previousImage: MediaFile | null = null;
 
-      const repo = manager.getRepository(Patient);
-      const existingPatient = await repo.findOne({ where: { id: patientId } });
+    try {
+      const result = await this.dataSource.transaction(async (manager) => {
+        if (!this.canAccessAnyPatient(roles)) {
+          throw new NotFoundException('Mascota no encontrada');
+        }
 
-      if (!existingPatient || existingPatient.deletedAt) {
-        throw new NotFoundException('Mascota no encontrada');
-      }
+        const repo = manager.getRepository(Patient);
+        const existingPatient = await repo.findOne({ where: { id: patientId } });
 
-      const targetSpeciesId = dto.speciesId ?? existingPatient.speciesId;
-      const targetBreedId =
-        dto.breedId !== undefined ? (dto.breedId ?? null) : existingPatient.breedId;
-      await this.ensurePatientTaxonomyIsValid(targetSpeciesId, targetBreedId, manager);
+        if (!existingPatient || existingPatient.deletedAt) {
+          throw new NotFoundException('Mascota no encontrada');
+        }
 
-      const updateData: Partial<Patient> = {};
-      if (dto.name !== undefined) updateData.name = dto.name;
-      if (dto.speciesId !== undefined) updateData.speciesId = dto.speciesId;
-      if (dto.breedId !== undefined) updateData.breedId = dto.breedId ?? null;
-      if (dto.sex !== undefined) updateData.sex = dto.sex as any;
-      if (dto.birthDate !== undefined) {
-        updateData.birthDate = dto.birthDate ? new Date(dto.birthDate) : null;
-      }
-      if (dto.currentWeight !== undefined) updateData.currentWeight = dto.currentWeight ?? null;
-      if (dto.colorId !== undefined) updateData.colorId = dto.colorId ?? null;
-      if (dto.sterilized !== undefined) updateData.isSterilized = dto.sterilized;
-      if (dto.generalAllergies !== undefined) {
-        updateData.generalAllergies = dto.generalAllergies ?? null;
-      }
-      if (dto.generalHistory !== undefined) {
-        updateData.generalHistory = dto.generalHistory ?? null;
-      }
+        const targetSpeciesId = dto.speciesId ?? existingPatient.speciesId;
+        const targetBreedId =
+          dto.breedId !== undefined ? (dto.breedId ?? null) : existingPatient.breedId;
+        await this.ensurePatientTaxonomyIsValid(targetSpeciesId, targetBreedId, manager);
 
-      await manager.update(Patient, patientId, updateData);
+        const updateData: Partial<Patient> = {};
+        if (dto.name !== undefined) updateData.name = dto.name;
+        if (dto.speciesId !== undefined) updateData.speciesId = dto.speciesId;
+        if (dto.breedId !== undefined) updateData.breedId = dto.breedId ?? null;
+        if (dto.sex !== undefined) updateData.sex = dto.sex as any;
+        if (dto.birthDate !== undefined) {
+          updateData.birthDate = dto.birthDate ? new Date(dto.birthDate) : null;
+        }
+        if (dto.currentWeight !== undefined) updateData.currentWeight = dto.currentWeight ?? null;
+        if (dto.colorId !== undefined) updateData.colorId = dto.colorId ?? null;
+        if (dto.sterilized !== undefined) updateData.isSterilized = dto.sterilized;
+        if (dto.generalAllergies !== undefined) {
+          updateData.generalAllergies = dto.generalAllergies ?? null;
+        }
+        if (dto.generalHistory !== undefined) {
+          updateData.generalHistory = dto.generalHistory ?? null;
+        }
 
-      return this.findOneInternal(patientId, 0, manager, roles);
-    });
+        await manager.update(Patient, patientId, updateData);
+        previousImage = imageFile ? await this.findPatientImage(patientId, manager) : null;
+        await this.upsertPatientImage(patientId, imageFile, imageBaseUrl, userId, manager);
+
+        return this.findOneInternal(patientId, 0, manager, roles);
+      });
+
+      await this.deleteMediaPhysicalFile(previousImage);
+      return result;
+    } catch (error) {
+      await this.deleteStoredFileIfExists(imageFile?.filename);
+      throw error;
+    }
   }
 
   async findSearchSummary(query: ListPatientTutorQueryDto, roles: string[]): Promise<ListPatientTutorResponseDto[]> {
@@ -577,6 +675,127 @@ export class PatientsService {
     queryBuilder.orderBy('p.name', 'ASC').addOrderBy('per.first_name', 'ASC').addOrderBy('per.last_name', 'ASC').take(limit);
 
     return queryBuilder.getRawMany<ListPatientTutorResponseDto>();
+  }
+
+  private async findPatientImage(
+    patientId: number,
+    manager?: EntityManager,
+  ): Promise<MediaFile | null> {
+    const repo = manager ? manager.getRepository(MediaFile) : this.mediaFileRepo;
+
+    return repo.findOne({
+      where: {
+        ownerType: MediaOwnerTypeEnum.PACIENTE,
+        ownerId: patientId,
+        mediaType: MediaTypeEnum.IMAGEN,
+        isActive: true,
+      },
+      order: { createdAt: 'DESC', id: 'DESC' },
+    });
+  }
+
+  private async findImagesByPatientIds(patientIds: number[]): Promise<Map<number, MediaFile>> {
+    const imagesByPatientId = new Map<number, MediaFile>();
+
+    if (patientIds.length === 0) {
+      return imagesByPatientId;
+    }
+
+    const images = await this.mediaFileRepo
+      .createQueryBuilder('media')
+      .where('media.owner_type = :ownerType', { ownerType: MediaOwnerTypeEnum.PACIENTE })
+      .andWhere('media.media_type = :mediaType', { mediaType: MediaTypeEnum.IMAGEN })
+      .andWhere('media.is_active = true')
+      .andWhere('media.owner_id IN (:...patientIds)', { patientIds })
+      .andWhere('media.deleted_at IS NULL')
+      .orderBy('media.owner_id', 'ASC')
+      .addOrderBy('media.created_at', 'DESC')
+      .addOrderBy('media.id', 'DESC')
+      .getMany();
+
+    for (const image of images) {
+      if (!imagesByPatientId.has(image.ownerId)) {
+        imagesByPatientId.set(image.ownerId, image);
+      }
+    }
+
+    return imagesByPatientId;
+  }
+
+  private async upsertPatientImage(
+    patientId: number,
+    imageFile: any,
+    imageBaseUrl: string | undefined,
+    userId: number,
+    manager: EntityManager,
+  ): Promise<void> {
+    if (!imageFile) {
+      return;
+    }
+
+    const mediaRepo = manager.getRepository(MediaFile);
+
+    await mediaRepo.update(
+      {
+        ownerType: MediaOwnerTypeEnum.PACIENTE,
+        ownerId: patientId,
+        mediaType: MediaTypeEnum.IMAGEN,
+        isActive: true,
+      },
+      {
+        isActive: false,
+        deletedAt: new Date(),
+        deletedByUserId: userId,
+      },
+    );
+
+    const mediaFile = mediaRepo.create({
+      ownerType: MediaOwnerTypeEnum.PACIENTE,
+      ownerId: patientId,
+      mediaType: MediaTypeEnum.IMAGEN,
+      provider: StorageProviderEnum.LOCAL,
+      url: this.buildPatientImageUrl(imageBaseUrl, imageFile.filename),
+      storageKey: `uploads/patients/${imageFile.filename}`,
+      originalName: imageFile.originalname,
+      mimeType: imageFile.mimetype ?? null,
+      sizeBytes: imageFile.size ?? null,
+      width: null,
+      height: null,
+      metadata: {},
+      createdByUserId: userId,
+    });
+
+    await mediaRepo.save(mediaFile);
+  }
+
+  private buildPatientImageUrl(imageBaseUrl: string | undefined, fileName: string): string {
+    const baseUrl = imageBaseUrl?.replace(/\/+$/, '') || '/assets/uploads/patients';
+    return `${baseUrl}/${fileName}`;
+  }
+
+  private async deleteMediaPhysicalFile(image: MediaFile | null): Promise<void> {
+    if (!image?.storageKey) {
+      return;
+    }
+
+    if (!image.storageKey.startsWith('uploads/patients/')) {
+      return;
+    }
+
+    const fileName = image.storageKey.replace('uploads/patients/', '');
+    await this.deleteStoredFileIfExists(fileName);
+  }
+
+  private async deleteStoredFileIfExists(fileName?: string): Promise<void> {
+    if (!fileName) {
+      return;
+    }
+
+    try {
+      await unlink(join(PATIENT_UPLOADS_DIR, fileName));
+    } catch {
+      return;
+    }
   }
 
 }

@@ -18,6 +18,7 @@ import { UpdateProfileDto } from '../../../presentation/dto/auth/update-profile.
 import { UserProfileResponseDto } from '../../../presentation/dto/users/user-response.dto.js';
 import { UserMapper } from '../../mappers/user.mapper.js';
 import { TemporaryAccessService } from './temporary-access.service.js';
+import { normalizeDocumentId } from '../../../infra/utils/document-id.util.js';
 
 @Injectable()
 export class UsersService {
@@ -37,11 +38,14 @@ export class UsersService {
     roleName: RoleEnum,
     manager: EntityManager,
   ): Promise<{ savedUser: User; savedPerson: Person; savedUserRole: UserRole | null }> {
+    const normalizedDocumentId = normalizeDocumentId(dto.documentId);
+    await this.ensureDocumentIdAvailable(normalizedDocumentId, manager);
+
     const person = manager.create(Person, {
       personType: personType,
       firstName: dto.firstName,
       lastName: dto.lastName,
-      documentId: dto.documentId ?? null,
+      documentId: normalizedDocumentId,
       phone: dto.phone ?? null,
       address: dto.address ?? null,
       gender: dto.gender ?? null,
@@ -161,7 +165,11 @@ export class UsersService {
 
     if (dto.firstName !== undefined) person.firstName = dto.firstName;
     if (dto.lastName !== undefined) person.lastName = dto.lastName;
-    if (dto.documentId !== undefined) person.documentId = dto.documentId ?? null;
+    if (dto.documentId !== undefined) {
+      const normalizedDocumentId = normalizeDocumentId(dto.documentId);
+      await this.ensureDocumentIdAvailable(normalizedDocumentId, undefined, person.id);
+      person.documentId = normalizedDocumentId;
+    }
     if (dto.phone !== undefined) person.phone = dto.phone ?? null;
     if (dto.address !== undefined) person.address = dto.address ?? null;
     if (dto.gender !== undefined) person.gender = dto.gender ?? null;
@@ -184,6 +192,32 @@ export class UsersService {
 
     if (existingUser) {
       throw new ConflictException('El correo electrónico ya está registrado');
+    }
+  }
+
+  private async ensureDocumentIdAvailable(
+    documentId: string | null,
+    manager?: EntityManager,
+    excludePersonId?: number,
+  ): Promise<void> {
+    if (!documentId) {
+      return;
+    }
+
+    const repo = manager ? manager.getRepository(Person) : this.personRepository;
+    const query = repo
+      .createQueryBuilder('p')
+      .where('p.document_id = :documentId', { documentId })
+      .andWhere('p.deleted_at IS NULL');
+
+    if (excludePersonId) {
+      query.andWhere('p.id != :excludePersonId', { excludePersonId });
+    }
+
+    const existingPerson = await query.getOne();
+
+    if (existingPerson) {
+      throw new ConflictException('La cédula ya está registrada');
     }
   }
 

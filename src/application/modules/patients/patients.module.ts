@@ -11,6 +11,7 @@ import { Client } from '../../../domain/entities/persons/client.entity.js';
 import { Species } from '../../../domain/entities/catalogs/species.entity.js';
 import { Breed } from '../../../domain/entities/catalogs/breed.entity.js';
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
+import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
       Species,
       Breed,
       UserRole,
+      MediaFile,
     ]),
   ],
   controllers: [PatientsController],

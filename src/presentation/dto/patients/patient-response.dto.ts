@@ -1,3 +1,5 @@
+import { PatientImageResponseDto } from './patient-image.dto.js';
+
 export class PaginatedPatientsResponseDto {
   data!: PatientResponseDto[];
   meta!: {
@@ -26,6 +28,7 @@ export class PatientResponseDto {
   species?: { id: number; name: string; zootecnicalGroupId?: number | null } | null;
   breed?: { id: number; name: string; speciesId?: number | null } | null;
   color?: { id: number; name: string } | null;
+  image!: PatientImageResponseDto | null;
   conditions!: PatientConditionResponseDto[];
 }
 
