@@ -1,0 +1,375 @@
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+
+import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
+import { Patient } from '../../../domain/entities/patients/patient.entity.js';
+import { Employee } from '../../../domain/entities/persons/employee.entity.js';
+import { User } from '../../../domain/entities/auth/user.entity.js';
+import { QueueEntryTypeEnum, QueueStatusEnum } from '../../../domain/enums/index.js';
+
+import { CreateQueueEntryDto } from '../../../presentation/dto/queue/create-queue-entry.dto.js';
+import { ListQueueQueryDto } from '../../../presentation/dto/queue/list-queue-query.dto.js';
+import {
+  QueueEntryRecordDto,
+  QueueListResponseDto,
+  QueuePaginationMetaDto,
+  QueuePatientDto,
+  QueueSummaryDto,
+  QueueVeterinarianDto,
+} from '../../../presentation/dto/queue/queue-response.dto.js';
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatTime(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  return String(raw).substring(0, 5); // "HH:MM:SS" → "HH:MM"
+}
+
+function formatDate(raw: Date | string): string {
+  if (raw instanceof Date) {
+    const y = raw.getFullYear();
+    const m = String(raw.getMonth() + 1).padStart(2, '0');
+    const d = String(raw.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return String(raw).substring(0, 10);
+}
+
+function formatTimestamp(raw: Date | null | undefined): string {
+  if (!raw) return new Date().toISOString();
+  return raw instanceof Date ? raw.toISOString() : String(raw);
+}
+
+/** Minutos transcurridos desde arrivalTime (HH:MM) hasta ahora */
+function calcWaitMinutes(entry: QueueEntry): number {
+  if (entry.status !== QueueStatusEnum.EN_ESPERA) return 0;
+  const [h, m] = (formatTime(entry.arrivalTime as unknown as string) ?? '00:00').split(':').map(Number);
+  const now = new Date();
+  const arrivalToday = new Date();
+  arrivalToday.setHours(h, m, 0, 0);
+  const diff = Math.floor((now.getTime() - arrivalToday.getTime()) / 60000);
+  return Math.max(diff, 0);
+}
+
+const QUEUE_STATUS_ORDER: Record<QueueStatusEnum, number> = {
+  [QueueStatusEnum.EN_ATENCION]: 0,
+  [QueueStatusEnum.EN_ESPERA]: 1,
+  [QueueStatusEnum.FINALIZADA]: 2,
+  [QueueStatusEnum.CANCELADA]: 3,
+};
+
+const QUEUE_ENTRY_TYPE_ORDER: Record<QueueEntryTypeEnum, number> = {
+  [QueueEntryTypeEnum.EMERGENCIA]: 0,
+  [QueueEntryTypeEnum.CON_CITA]: 1,
+  [QueueEntryTypeEnum.SIN_CITA]: 2,
+};
+
+function compareNullableTimes(left: string | null, right: string | null): number {
+  if (left === right) return 0;
+  if (left === null) return 1;
+  if (right === null) return -1;
+  return left.localeCompare(right);
+}
+
+function compareDates(left: Date | string, right: Date | string): number {
+  return new Date(left).getTime() - new Date(right).getTime();
+}
+
+// ── Servicio ─────────────────────────────────────────────────────────────────
+
+@Injectable()
+export class QueueService {
+  constructor(
+    @InjectRepository(QueueEntry)
+    private readonly queueRepo: Repository<QueueEntry>,
+    @InjectRepository(Patient)
+    private readonly patientRepo: Repository<Patient>,
+    @InjectRepository(Employee)
+    private readonly employeeRepo: Repository<Employee>,
+  ) {}
+
+  // ── Resuelve el employeeId a partir del userId autenticado ──
+  private async resolveVetId(userId: number): Promise<number> {
+    const employee = await this.employeeRepo
+      .createQueryBuilder('e')
+      .innerJoin('e.person', 'p')
+      .innerJoin(User, 'u', '"u"."person_id" = "p"."id"')
+      .where('u.id = :userId', { userId })
+      .andWhere('"e"."deleted_at" IS NULL')
+      .select('e.id')
+      .getOne();
+
+    if (!employee) {
+      throw new UnprocessableEntityException(
+        'El usuario autenticado no tiene un perfil de empleado/veterinario asociado.',
+      );
+    }
+    return employee.id;
+  }
+
+  // ── Mapea una QueueEntry a lo que espera el front ──
+  private toDto(entry: QueueEntry): QueueEntryRecordDto {
+    const patient = entry.patient;
+    const vet = entry.veterinarian;
+    const vetPerson = vet?.person;
+
+    const patientDto = new QueuePatientDto();
+    patientDto.id = patient?.id ?? entry.patientId;
+    patientDto.name = patient?.name ?? '';
+    patientDto.species = patient?.species?.name ?? '';
+    patientDto.breed = patient?.breed?.name ?? '';
+
+    // Tutor primario
+    const primaryTutor = patient?.tutors?.find((t) => !t.deletedAt && t.isPrimary);
+    const tutorPerson = primaryTutor?.client?.person;
+    patientDto.tutorName = tutorPerson
+      ? `${tutorPerson.firstName} ${tutorPerson.lastName}`.trim()
+      : '';
+    patientDto.tutorPhone = tutorPerson?.phone ?? null;
+
+    const vetDto = new QueueVeterinarianDto();
+    vetDto.id = vet?.id ?? entry.vetId;
+    vetDto.name = vetPerson
+      ? `${vetPerson.firstName} ${vetPerson.lastName}`.trim()
+      : '';
+    vetDto.code = vet?.code ?? null;
+
+    const dto = new QueueEntryRecordDto();
+    dto.id = entry.id;
+    dto.date = formatDate(entry.date);
+    dto.appointmentId = entry.appointmentId ?? null;
+    dto.patient = patientDto;
+    dto.veterinarian = vetDto;
+    dto.entryType = entry.entryType;
+    dto.arrivalTime = formatTime(entry.arrivalTime as unknown as string) ?? '';
+    dto.scheduledTime = formatTime(entry.scheduledTime) ?? null;
+    dto.queueStatus = entry.status;
+    dto.notes = entry.notes ?? null;
+    dto.waitMinutes = calcWaitMinutes(entry);
+    dto.createdAt = formatTimestamp(entry.createdAt);
+    dto.updatedAt = formatTimestamp(entry.updatedAt);
+    return dto;
+  }
+
+  // ── Construye el query base con relaciones ──
+  private baseQb() {
+    return this.queueRepo
+      .createQueryBuilder('q')
+      .innerJoinAndSelect('q.patient', 'patient')
+      .leftJoinAndSelect('patient.species', 'species')
+      .leftJoinAndSelect('patient.breed', 'breed')
+      .leftJoinAndSelect(
+        'patient.tutors',
+        'tutor',
+        '"tutor"."is_primary" = true AND "tutor"."deleted_at" IS NULL',
+      )
+      .leftJoinAndSelect('tutor.client', 'client')
+      .leftJoinAndSelect('client.person', 'tutorPerson')
+      .innerJoinAndSelect('q.veterinarian', 'vet')
+      .innerJoinAndSelect('vet.person', 'vetPerson')
+      .where('"q"."deleted_at" IS NULL');
+  }
+
+  // ── Ordenamiento de cola en memoria para evitar edge-cases del QueryBuilder con CASE/skip/take ──
+  private sortEntries(entries: QueueEntry[]): QueueEntry[] {
+    return [...entries].sort((left, right) => {
+      const statusOrder =
+        (QUEUE_STATUS_ORDER[left.status] ?? Number.MAX_SAFE_INTEGER)
+        - (QUEUE_STATUS_ORDER[right.status] ?? Number.MAX_SAFE_INTEGER);
+      if (statusOrder !== 0) return statusOrder;
+
+      const typeOrder =
+        (QUEUE_ENTRY_TYPE_ORDER[left.entryType] ?? Number.MAX_SAFE_INTEGER)
+        - (QUEUE_ENTRY_TYPE_ORDER[right.entryType] ?? Number.MAX_SAFE_INTEGER);
+      if (typeOrder !== 0) return typeOrder;
+
+      const scheduledOrder = compareNullableTimes(left.scheduledTime, right.scheduledTime);
+      if (scheduledOrder !== 0) return scheduledOrder;
+
+      const arrivalOrder = compareDates(left.arrivalTime, right.arrivalTime);
+      if (arrivalOrder !== 0) return arrivalOrder;
+
+      return left.id - right.id;
+    });
+  }
+
+  // ── Construye el summary ──
+  private buildSummary(entries: QueueEntryRecordDto[]): QueueSummaryDto {
+    const waiting = entries.filter((e) => e.queueStatus === 'EN_ESPERA');
+    const inAttention = entries.filter((e) => e.queueStatus === 'EN_ATENCION');
+    const finished = entries.filter((e) => e.queueStatus === 'FINALIZADA');
+    const emergencies = entries.filter((e) => e.entryType === 'EMERGENCIA');
+    const active = entries.filter(
+      (e) => e.queueStatus === 'EN_ESPERA' || e.queueStatus === 'EN_ATENCION',
+    );
+    const averageWaitMinutes =
+      active.length === 0
+        ? 0
+        : Math.round(active.reduce((sum, e) => sum + e.waitMinutes, 0) / active.length);
+
+    const summary = new QueueSummaryDto();
+    summary.totalEntries = entries.length;
+    summary.waitingEntries = waiting.length;
+    summary.inAttentionEntries = inAttention.length;
+    summary.finishedEntries = finished.length;
+    summary.emergencyEntries = emergencies.length;
+    summary.averageWaitMinutes = averageWaitMinutes;
+    summary.currentAttentionEntry = inAttention[0] ?? null;
+    summary.nextUpEntry = waiting[0] ?? null;
+    return summary;
+  }
+
+  // ── GET /queue ──
+  async list(query: ListQueueQueryDto): Promise<QueueListResponseDto> {
+    const today = new Date();
+    const targetDate =
+      query.date ?? formatDate(today);
+
+    const page = Math.max(query.page ?? 1, 1);
+    const limit = Math.min(Math.max(query.limit ?? 15, 1), 100);
+
+    // Query para el summary (todo el día, sin filtros de status/search)
+    const allQb = this.baseQb().andWhere('"q"."date" = :date', { date: targetDate });
+    if (query.veterinarianId) {
+      allQb.andWhere('"q"."vet_id" = :veterinarianId', {
+        veterinarianId: query.veterinarianId,
+      });
+    }
+    const allEntities = this.sortEntries(await allQb.getMany());
+    const allDtos = allEntities.map((e) => this.toDto(e));
+    const summary = this.buildSummary(allDtos);
+
+    // Query filtrada para la lista paginada
+    const filteredQb = this.baseQb().andWhere('"q"."date" = :date', { date: targetDate });
+
+    if (query.veterinarianId) {
+      filteredQb.andWhere('"q"."vet_id" = :veterinarianId', {
+        veterinarianId: query.veterinarianId,
+      });
+    }
+
+    if (query.status && query.status !== 'TODOS') {
+      filteredQb.andWhere('"q"."status" = :status', { status: query.status });
+    }
+
+    if (query.searchTerm?.trim()) {
+      const search = `%${query.searchTerm.trim()}%`;
+      filteredQb.andWhere(
+        `(patient.name ILIKE :search
+          OR CONCAT("tutorPerson"."first_name", ' ', "tutorPerson"."last_name") ILIKE :search
+          OR "tutorPerson"."phone" ILIKE :search
+          OR species.name ILIKE :search
+          OR breed.name ILIKE :search
+        )`,
+        { search },
+      );
+    }
+
+    const filteredEntities = this.sortEntries(await filteredQb.getMany());
+    const total = filteredEntities.length;
+    const entities = filteredEntities.slice((page - 1) * limit, page * limit);
+
+    const dtos = entities.map((e) => this.toDto(e));
+
+    const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
+    const currentPage = Math.min(page, totalPages);
+
+    const meta = new QueuePaginationMetaDto();
+    meta.totalItems = total;
+    meta.itemCount = dtos.length;
+    meta.itemsPerPage = limit;
+    meta.totalPages = totalPages;
+    meta.currentPage = currentPage;
+    meta.hasNextPage = currentPage < totalPages;
+    meta.hasPrevPage = currentPage > 1;
+
+    const response = new QueueListResponseDto();
+    response.data = dtos;
+    response.meta = meta;
+    response.summary = summary;
+    return response;
+  }
+
+  // ── POST /queue ──
+  async create(dto: CreateQueueEntryDto, userId: number): Promise<QueueEntryRecordDto> {
+    // 1) Validar paciente
+    const patient = await this.patientRepo.findOne({ where: { id: dto.patientId } });
+    if (!patient || patient.deletedAt) {
+      throw new NotFoundException('Paciente no encontrado.');
+    }
+
+    // 2) Resolver veterinario
+    let vetId: number;
+    if (dto.veterinarianId) {
+      const vet = await this.employeeRepo.findOne({ where: { id: dto.veterinarianId } });
+      if (!vet || vet.deletedAt) throw new NotFoundException('Veterinario no encontrado.');
+      vetId = vet.id;
+    } else {
+      vetId = await this.resolveVetId(userId);
+    }
+
+    // 3) Crear la entrada
+    const now = new Date();
+    const entry = this.queueRepo.create({
+      date: formatDate(now) as unknown as Date,
+      patientId: dto.patientId,
+      vetId,
+      appointmentId: dto.appointmentId ?? null,
+      entryType: dto.entryType,
+      arrivalTime: now,
+      scheduledTime: dto.scheduledTime ?? null,
+      notes: dto.notes?.trim() ?? null,
+      status: QueueStatusEnum.EN_ESPERA,
+    });
+    const saved = await this.queueRepo.save(entry);
+
+    // 4) Recargar con relaciones
+    return this.findOneDto(saved.id);
+  }
+
+  // ── PATCH /queue/:id/start ──
+  async startAttention(id: number): Promise<QueueEntryRecordDto> {
+    const entry = await this.queueRepo.findOne({ where: { id } });
+    if (!entry || entry.deletedAt) throw new NotFoundException('Entrada no encontrada.');
+    if (entry.status !== QueueStatusEnum.EN_ESPERA) {
+      throw new BadRequestException('Solo se puede iniciar una atención que esté en espera.');
+    }
+    await this.queueRepo.update(id, { status: QueueStatusEnum.EN_ATENCION });
+    return this.findOneDto(id);
+  }
+
+  // ── PATCH /queue/:id/finish ──
+  async finishAttention(id: number): Promise<QueueEntryRecordDto> {
+    const entry = await this.queueRepo.findOne({ where: { id } });
+    if (!entry || entry.deletedAt) throw new NotFoundException('Entrada no encontrada.');
+    if (entry.status !== QueueStatusEnum.EN_ATENCION) {
+      throw new BadRequestException('Solo se puede finalizar una atención que ya inició.');
+    }
+    await this.queueRepo.update(id, { status: QueueStatusEnum.FINALIZADA });
+    return this.findOneDto(id);
+  }
+
+  // ── PATCH /queue/:id/cancel ──
+  async cancelEntry(id: number): Promise<QueueEntryRecordDto> {
+    const entry = await this.queueRepo.findOne({ where: { id } });
+    if (!entry || entry.deletedAt) throw new NotFoundException('Entrada no encontrada.');
+    if (entry.status !== QueueStatusEnum.EN_ESPERA) {
+      throw new BadRequestException('Solo se puede cancelar un ingreso que esté en espera.');
+    }
+    await this.queueRepo.update(id, { status: QueueStatusEnum.CANCELADA });
+    return this.findOneDto(id);
+  }
+
+  // ── Helper: recarga una entrada con todas sus relaciones ──
+  private async findOneDto(id: number): Promise<QueueEntryRecordDto> {
+    const full = await this.baseQb().andWhere('q.id = :id', { id }).getOne();
+    if (!full) throw new NotFoundException('Entrada de cola no encontrada.');
+    return this.toDto(full);
+  }
+}

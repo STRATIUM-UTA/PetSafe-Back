@@ -27,11 +27,12 @@ export class QueueEntry extends BaseAuditEntity {
   @JoinColumn({ name: 'patient_id' })
   patient!: Patient;
 
-  @Column({ name: 'veterinarian_id', type: 'int' })
-  veterinarianId!: number;
+  // Columna en BD: vet_id
+  @Column({ name: 'vet_id', type: 'int' })
+  vetId!: number;
 
   @ManyToOne(() => Employee, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'veterinarian_id' })
+  @JoinColumn({ name: 'vet_id' })
   veterinarian!: Employee;
 
   @Column({
@@ -52,14 +53,15 @@ export class QueueEntry extends BaseAuditEntity {
   })
   scheduledTime!: string | null;
 
+  // Columna en BD: status
   @Column({
-    name: 'queue_status',
+    name: 'status',
     type: 'enum',
     enum: QueueStatusEnum,
     enumName: 'queue_status_enum',
     default: QueueStatusEnum.EN_ESPERA,
   })
-  queueStatus!: QueueStatusEnum;
+  status!: QueueStatusEnum;
 
   @Column({ type: 'text', nullable: true })
   notes!: string | null;

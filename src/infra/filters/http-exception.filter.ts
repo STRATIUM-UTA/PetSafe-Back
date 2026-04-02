@@ -112,14 +112,14 @@ function handleQueryFailed(
   };
 
   logger.error(
-    `DB Error [${pgError.code}] ${pgError.constraint ?? ''}: ${pgError.message}`,
+    `DB Error [${pgError.code}] ${pgError.constraint ?? ''}: ${pgError.message}. Detail: ${pgError.detail ?? ''}`,
     exception.stack,
   );
 
   const mapping = pgError.code ? PG_ERROR_MAP[pgError.code] : undefined;
 
   if (mapping) {
-    return { statusCode: mapping.status, message: mapping.message, error: mapping.error };
+    return { statusCode: mapping.status, message: `${mapping.message} (${pgError.message})`, error: mapping.error };
   }
 
   return {

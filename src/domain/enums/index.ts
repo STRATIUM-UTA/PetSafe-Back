@@ -144,3 +144,10 @@ export enum RoleEnum {
   RECEPCIONISTA = 'RECEPCIONISTA',
   CLIENTE_APP = 'CLIENTE_APP',
 }
+
+export enum AdoptionStatusEnum {
+  DISPONIBLE = 'DISPONIBLE',
+  EN_PROCESO = 'EN_PROCESO',
+  ADOPTADO = 'ADOPTADO',
+  CANCELADO = 'CANCELADO',
+}

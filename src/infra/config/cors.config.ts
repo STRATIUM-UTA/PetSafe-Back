@@ -9,7 +9,7 @@ export const getCorsConfig = (configService: ConfigService): CorsOptions => {
       origin: true,
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       credentials: true,
-      allowedHeaders: '*',
+      allowedHeaders: 'Content-Type, Authorization, Accept, X-Requested-With, Origin',
     };
   }
 
