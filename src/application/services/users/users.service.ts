@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -39,6 +40,9 @@ export class UsersService {
     manager: EntityManager,
   ): Promise<{ savedUser: User; savedPerson: Person; savedUserRole: UserRole | null }> {
     const normalizedDocumentId = normalizeDocumentId(dto.documentId);
+    if (!normalizedDocumentId) {
+      throw new BadRequestException('La cédula es obligatoria y no puede quedar vacía');
+    }
     await this.ensureDocumentIdAvailable(normalizedDocumentId, manager);
 
     const person = manager.create(Person, {
@@ -167,6 +171,9 @@ export class UsersService {
     if (dto.lastName !== undefined) person.lastName = dto.lastName;
     if (dto.documentId !== undefined) {
       const normalizedDocumentId = normalizeDocumentId(dto.documentId);
+      if (!normalizedDocumentId) {
+        throw new BadRequestException('La cédula es obligatoria y no puede quedar vacía');
+      }
       await this.ensureDocumentIdAvailable(normalizedDocumentId, undefined, person.id);
       person.documentId = normalizedDocumentId;
     }

@@ -20,6 +20,7 @@ import { PatientsService } from '../../../application/services/patients/patients
 import { CreatePatientDto } from '../../dto/patients/create-patient.dto.js';
 import { UpdatePatientDto } from '../../dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../dto/patients/create-condition.dto.js';
+import { AddPatientTutorDto } from '../../dto/patients/add-patient-tutor.dto.js';
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
 import { Roles } from '../../../infra/security/decorators/roles.decorator.js';
@@ -132,6 +133,36 @@ export class PatientsController {
     @Request() req: { user: { userId: number } },
   ) {
     return this.patientsService.removeCondition(id, conditionId, req.user.userId);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Post(':id/tutors')
+  addTutor(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AddPatientTutorDto,
+    @Request() req: { user: { roles: string[] } },
+  ) {
+    return this.patientsService.addTutor(id, dto, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Patch(':id/tutors/:clientId/primary')
+  setPrimaryTutor(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Request() req: { user: { roles: string[] } },
+  ) {
+    return this.patientsService.setPrimaryTutor(id, clientId, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Delete(':id/tutors/:clientId')
+  removeTutor(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ) {
+    return this.patientsService.removeTutor(id, clientId, req.user.userId, req.user.roles);
   }
 
   // Todos los pacientes en base a un tutor especifico

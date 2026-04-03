@@ -18,8 +18,8 @@ export class Person extends BaseAuditEntity {
   @Column({ name: 'last_name', type: 'varchar', length: 120 })
   lastName!: string;
 
-  @Column({ name: 'document_id', type: 'varchar', length: 20, nullable: true })
-  documentId!: string | null;
+  @Column({ name: 'document_id', type: 'varchar', length: 20 })
+  documentId!: string;
 
   @Column({ type: 'varchar', length: 25, nullable: true })
   phone!: string | null;

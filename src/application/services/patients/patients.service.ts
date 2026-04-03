@@ -19,6 +19,7 @@ import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
 import { CreatePatientDto } from '../../../presentation/dto/patients/create-patient.dto.js';
 import { UpdatePatientDto } from '../../../presentation/dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../../presentation/dto/patients/create-condition.dto.js';
+import { AddPatientTutorDto } from '../../../presentation/dto/patients/add-patient-tutor.dto.js';
 import { PatientResponseDto, PatientConditionResponseDto } from '../../../presentation/dto/patients/patient-response.dto.js';
 import {
   PatientAdminBasicDetailResponse,
@@ -284,13 +285,136 @@ export class PatientsService {
     return { message: 'Condición eliminada correctamente' };
   }
 
+  async addTutor(
+    patientId: number,
+    dto: AddPatientTutorDto,
+    roles: string[],
+  ): Promise<PatientResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      await this.ensurePatientAccessibleForStaff(patientId, roles, manager);
+      await this.ensureClientExists(dto.clientId, manager);
+
+      const tutorRepo = manager.getRepository(PatientTutor);
+      const existingTutor = await tutorRepo.findOne({
+        where: { patientId, clientId: dto.clientId },
+        withDeleted: true,
+      });
+
+      if (existingTutor && !existingTutor.deletedAt) {
+        throw new BadRequestException('Ese tutor ya está relacionado con la mascota.');
+      }
+
+      if (dto.isPrimary) {
+        await this.clearPrimaryTutor(patientId, manager);
+      }
+
+      if (existingTutor) {
+        existingTutor.deletedAt = null;
+        existingTutor.deletedByUserId = null;
+        existingTutor.isActive = true;
+        existingTutor.isPrimary = dto.isPrimary ?? false;
+        existingTutor.relationship = dto.relationship ?? existingTutor.relationship ?? 'Responsable';
+        await tutorRepo.save(existingTutor);
+      } else {
+        const tutor = tutorRepo.create({
+          patientId,
+          clientId: dto.clientId,
+          isPrimary: dto.isPrimary ?? false,
+          relationship: dto.relationship ?? 'Responsable',
+          isActive: true,
+        });
+        await tutorRepo.save(tutor);
+      }
+
+      await this.ensurePrimaryTutorExists(patientId, manager);
+      return this.findOneInternal(patientId, 0, manager, roles);
+    });
+  }
+
+  async setPrimaryTutor(
+    patientId: number,
+    clientId: number,
+    roles: string[],
+  ): Promise<PatientResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      await this.ensurePatientAccessibleForStaff(patientId, roles, manager);
+      const tutorRepo = manager.getRepository(PatientTutor);
+      const tutor = await tutorRepo.findOne({
+        where: { patientId, clientId },
+      });
+
+      if (!tutor || tutor.deletedAt) {
+        throw new NotFoundException('Relación tutor-mascota no encontrada');
+      }
+
+      await this.clearPrimaryTutor(patientId, manager);
+      tutor.isPrimary = true;
+      await tutorRepo.save(tutor);
+
+      return this.findOneInternal(patientId, 0, manager, roles);
+    });
+  }
+
+  async removeTutor(
+    patientId: number,
+    clientId: number,
+    userId: number,
+    roles: string[],
+  ): Promise<PatientResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      await this.ensurePatientAccessibleForStaff(patientId, roles, manager);
+      const tutorRepo = manager.getRepository(PatientTutor);
+      const tutors = await tutorRepo.find({
+        where: { patientId },
+        order: { createdAt: 'ASC' },
+      });
+
+      const activeTutors = tutors.filter((tutor) => !tutor.deletedAt);
+      const tutorToRemove = activeTutors.find((tutor) => tutor.clientId === clientId);
+
+      if (!tutorToRemove) {
+        throw new NotFoundException('Relación tutor-mascota no encontrada');
+      }
+
+      if (activeTutors.length <= 1) {
+        throw new BadRequestException('La mascota debe tener al menos un tutor activo.');
+      }
+
+      const wasPrimary = tutorToRemove.isPrimary;
+      tutorToRemove.deletedAt = new Date();
+      tutorToRemove.deletedByUserId = userId;
+      tutorToRemove.isActive = false;
+      tutorToRemove.isPrimary = false;
+      await tutorRepo.save(tutorToRemove);
+
+      if (wasPrimary) {
+        const replacement = activeTutors.find((tutor) => tutor.clientId !== clientId);
+        if (replacement) {
+          replacement.isPrimary = true;
+          await tutorRepo.save(replacement);
+        }
+      }
+
+      await this.ensurePrimaryTutorExists(patientId, manager);
+      return this.findOneInternal(patientId, 0, manager, roles);
+    });
+  }
+
   private async findOneInternal(patientId: number, userId: number, manager?: EntityManager, roles: string[] = []): Promise<PatientResponseDto> {
     const repo = manager ? manager.getRepository(Patient) : this.patientRepo;
 
     if (this.canAccessAnyPatient(roles)) {
       const patient = await repo.findOne({
         where: { id: patientId },
-        relations: ['species', 'breed', 'color', 'conditions'],
+        relations: [
+          'species',
+          'breed',
+          'color',
+          'conditions',
+          'tutors',
+          'tutors.client',
+          'tutors.client.person',
+        ],
       });
 
       if (!patient || patient.deletedAt) throw new NotFoundException('Mascota no encontrada');
@@ -310,6 +434,9 @@ export class PatientsService {
       .leftJoinAndSelect('p.breed', 'breed')
       .leftJoinAndSelect('p.color', 'color')
       .leftJoinAndSelect('p.conditions', 'conditions', 'conditions.deleted_at IS NULL')
+      .leftJoinAndSelect('p.tutors', 'tutors', 'tutors.deleted_at IS NULL')
+      .leftJoinAndSelect('tutors.client', 'tutorClient')
+      .leftJoinAndSelect('tutorClient.person', 'tutorPerson')
       .where('p.id = :patientId', { patientId })
       .andWhere('u.id = :userId', { userId })
       .andWhere('p.deleted_at IS NULL')
@@ -342,6 +469,53 @@ export class PatientsService {
 
   private canAccessAnyPatient(roles: string[]): boolean {
     return roles.includes(RoleEnum.ADMIN) || roles.includes(RoleEnum.RECEPCIONISTA) || roles.includes(RoleEnum.MVZ);
+  }
+
+  private async ensurePatientAccessibleForStaff(
+    patientId: number,
+    roles: string[],
+    manager?: EntityManager,
+  ): Promise<void> {
+    if (!this.canAccessAnyPatient(roles)) {
+      throw new NotFoundException('Mascota no encontrada');
+    }
+
+    const repo = manager ? manager.getRepository(Patient) : this.patientRepo;
+    const patient = await repo.findOne({ where: { id: patientId } });
+    if (!patient || patient.deletedAt) {
+      throw new NotFoundException('Mascota no encontrada');
+    }
+  }
+
+  private async clearPrimaryTutor(patientId: number, manager: EntityManager): Promise<void> {
+    await manager.getRepository(PatientTutor).update(
+      {
+        patientId,
+        isPrimary: true,
+      },
+      { isPrimary: false },
+    );
+  }
+
+  private async ensurePrimaryTutorExists(
+    patientId: number,
+    manager: EntityManager,
+  ): Promise<void> {
+    const tutorRepo = manager.getRepository(PatientTutor);
+    const activeTutors = await tutorRepo.find({
+      where: { patientId },
+      order: { createdAt: 'ASC' },
+    });
+
+    const liveTutors = activeTutors.filter((tutor) => !tutor.deletedAt);
+    if (liveTutors.length === 0) {
+      throw new BadRequestException('La mascota debe tener al menos un tutor activo.');
+    }
+
+    if (!liveTutors.some((tutor) => tutor.isPrimary)) {
+      liveTutors[0].isPrimary = true;
+      await tutorRepo.save(liveTutors[0]);
+    }
   }
 
   private async ensurePatientTaxonomyIsValid(
@@ -570,6 +744,7 @@ export class PatientsService {
       generalAllergies: patient.generalAllergies ?? null,
       generalHistory: patient.generalHistory ?? null,
       image: patient.image ?? null,
+      tutors: patient.tutors ?? [],
       clinicalObservations: patient.conditions ?? [],
       recentActivity: null,
     };
