@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
 import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { Employee } from '../../../domain/entities/persons/employee.entity.js';
@@ -86,6 +87,8 @@ function compareDates(left: Date | string, right: Date | string): number {
 @Injectable()
 export class QueueService {
   constructor(
+    @InjectRepository(Appointment)
+    private readonly appointmentRepo: Repository<Appointment>,
     @InjectRepository(QueueEntry)
     private readonly queueRepo: Repository<QueueEntry>,
     @InjectRepository(Patient)
@@ -93,6 +96,28 @@ export class QueueService {
     @InjectRepository(Employee)
     private readonly employeeRepo: Repository<Employee>,
   ) {}
+
+  private async syncCancelledAppointmentsIntoQueue(): Promise<void> {
+    await this.queueRepo.query(
+      `
+        UPDATE queue_entries AS q
+        SET status = $1,
+            updated_at = NOW()
+        FROM appointments AS a
+        WHERE q.appointment_id = a.id
+          AND q.deleted_at IS NULL
+          AND a.deleted_at IS NULL
+          AND q.status = $2
+          AND a.status IN ($3, $4)
+      `,
+      [
+        QueueStatusEnum.CANCELADA,
+        QueueStatusEnum.EN_ESPERA,
+        'CANCELADA',
+        'NO_ASISTIO',
+      ],
+    );
+  }
 
   // ── Resuelve el employeeId a partir del userId autenticado ──
   private async resolveVetId(userId: number): Promise<number> {
@@ -227,6 +252,8 @@ export class QueueService {
 
   // ── GET /queue ──
   async list(query: ListQueueQueryDto): Promise<QueueListResponseDto> {
+    await this.syncCancelledAppointmentsIntoQueue();
+
     const today = new Date();
     const targetDate =
       query.date ?? formatDate(today);
@@ -304,9 +331,53 @@ export class QueueService {
       throw new NotFoundException('Paciente no encontrado.');
     }
 
+    let linkedAppointment: Appointment | null = null;
+    if (dto.appointmentId) {
+      linkedAppointment = await this.appointmentRepo.findOne({
+        where: { id: dto.appointmentId },
+      });
+      if (!linkedAppointment || linkedAppointment.deletedAt) {
+        throw new NotFoundException('Cita no encontrada.');
+      }
+      if (linkedAppointment.patientId !== dto.patientId) {
+        throw new BadRequestException(
+          'La cita seleccionada no corresponde al paciente indicado.',
+        );
+      }
+      if (
+        ['FINALIZADA', 'CANCELADA', 'NO_ASISTIO'].includes(linkedAppointment.status as any)
+      ) {
+        throw new BadRequestException(
+          'La cita enlazada no puede registrarse en la cola por su estado actual.',
+        );
+      }
+      if (formatDate(linkedAppointment.scheduledDate) !== formatDate(new Date())) {
+        throw new BadRequestException(
+          'Solo se puede registrar llegada en cola para citas del día actual.',
+        );
+      }
+      if (
+        dto.veterinarianId &&
+        dto.veterinarianId !== linkedAppointment.vetId
+      ) {
+        throw new BadRequestException(
+          'La cita ya está asignada a otro veterinario.',
+        );
+      }
+
+      const existingEntry = await this.queueRepo.findOne({
+        where: { appointmentId: linkedAppointment.id },
+      });
+      if (existingEntry && !existingEntry.deletedAt) {
+        return this.findOneDto(existingEntry.id);
+      }
+    }
+
     // 2) Resolver veterinario
     let vetId: number;
-    if (dto.veterinarianId) {
+    if (linkedAppointment) {
+      vetId = linkedAppointment.vetId;
+    } else if (dto.veterinarianId) {
       const vet = await this.employeeRepo.findOne({ where: { id: dto.veterinarianId } });
       if (!vet || vet.deletedAt) throw new NotFoundException('Veterinario no encontrado.');
       vetId = vet.id;
@@ -320,10 +391,10 @@ export class QueueService {
       date: formatDate(now) as unknown as Date,
       patientId: dto.patientId,
       vetId,
-      appointmentId: dto.appointmentId ?? null,
-      entryType: dto.entryType,
+      appointmentId: linkedAppointment?.id ?? dto.appointmentId ?? null,
+      entryType: linkedAppointment ? QueueEntryTypeEnum.CON_CITA : dto.entryType,
       arrivalTime: now,
-      scheduledTime: dto.scheduledTime ?? null,
+      scheduledTime: linkedAppointment?.scheduledTime ?? dto.scheduledTime ?? null,
       notes: dto.notes?.trim() ?? null,
       status: QueueStatusEnum.EN_ESPERA,
     });
@@ -337,10 +408,33 @@ export class QueueService {
   async startAttention(id: number): Promise<QueueEntryRecordDto> {
     const entry = await this.queueRepo.findOne({ where: { id } });
     if (!entry || entry.deletedAt) throw new NotFoundException('Entrada no encontrada.');
+    if (entry.status === QueueStatusEnum.EN_ATENCION) {
+      return this.findOneDto(id);
+    }
     if (entry.status !== QueueStatusEnum.EN_ESPERA) {
       throw new BadRequestException('Solo se puede iniciar una atención que esté en espera.');
     }
+
+    if (entry.appointmentId) {
+      const appointment = await this.appointmentRepo.findOne({
+        where: { id: entry.appointmentId },
+      });
+      if (
+        appointment
+        && !appointment.deletedAt
+        && ['CANCELADA', 'NO_ASISTIO'].includes(appointment.status as any)
+      ) {
+        await this.queueRepo.update(id, { status: QueueStatusEnum.CANCELADA });
+        throw new BadRequestException(
+          'La cita enlazada fue cancelada o marcada como no asistió. El ingreso en cola se canceló automáticamente.',
+        );
+      }
+    }
+
     await this.queueRepo.update(id, { status: QueueStatusEnum.EN_ATENCION });
+    if (entry.appointmentId) {
+      await this.appointmentRepo.update(entry.appointmentId, { status: 'EN_PROCESO' as any });
+    }
     return this.findOneDto(id);
   }
 
@@ -352,6 +446,9 @@ export class QueueService {
       throw new BadRequestException('Solo se puede finalizar una atención que ya inició.');
     }
     await this.queueRepo.update(id, { status: QueueStatusEnum.FINALIZADA });
+    if (entry.appointmentId) {
+      await this.appointmentRepo.update(entry.appointmentId, { status: 'FINALIZADA' as any });
+    }
     return this.findOneDto(id);
   }
 

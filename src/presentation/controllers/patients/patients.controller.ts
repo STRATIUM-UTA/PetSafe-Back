@@ -63,7 +63,7 @@ export class PatientsController {
   }
 
   // Todos los pacientes con su info basica y paginada
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/all-basic')
   findAllBasic(@Paginate() query: PaginateQuery): Promise<PaginatedPatientsBasicForAdminResponse> {
     return this.patientsService.findAllBasic(query);
@@ -135,7 +135,7 @@ export class PatientsController {
   }
 
   // Todos los pacientes en base a un tutor especifico
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/by-client/:clientId')
   findAllByClientId(
     @Param('clientId', ParseIntPipe) clientId: number,
@@ -149,14 +149,14 @@ export class PatientsController {
   }
 
   // Esto creo q era para el detalle de un paciente en el frontend
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/:id/basic')
   findAdminBasic(@Param('id', ParseIntPipe) id: number, @Request() req: { user: { userId: number; roles: string[] } }): Promise<PatientAdminBasicDetailResponse> {
     return this.patientsService.findAdminBasic(id, req.user.roles);
   }
 
   // Actualizar campos basicos de un paciente
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Patch('admin/:id/basic')
   @UseInterceptors(FileInterceptor('image', patientImageUploadOptions))
   updateAdminBasic(
@@ -172,7 +172,7 @@ export class PatientsController {
   }
 
   // Se utiliza en la parte de citas, para mostrar un resumen de los pacientes y tutores de manera basica y poder seleccionar al momento de generar una cita.
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/search-summary')
   searchSummary(@Query() query: ListPatientTutorQueryDto, @Request() req: { user: { userId: number; roles: string[] } }): Promise<ListPatientTutorResponseDto[]> {
     return this.patientsService.findSearchSummary(query, req.user.roles);

@@ -62,4 +62,10 @@ export class AppointmentsController {
   cancel(@Param('id') id: string): Promise<AppointmentCalendarItemDto> {
     return this.appointmentsService.cancel(+id);
   }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Patch(':id/no-show')
+  markNoShow(@Param('id') id: string): Promise<AppointmentCalendarItemDto> {
+    return this.appointmentsService.markNoShow(+id);
+  }
 }

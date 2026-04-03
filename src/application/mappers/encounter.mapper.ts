@@ -14,6 +14,7 @@ import { Procedure } from '../../domain/entities/encounters/procedure.entity.js'
 import {
   EncounterResponseDto,
   EncounterListItemDto,
+  EncounterPatientResponseDto,
   ConsultationReasonResponseDto,
   AnamnesisResponseDto,
   ClinicalExamResponseDto,
@@ -34,6 +35,15 @@ const toDate = (d: Date | string | null | undefined): string | null => {
 };
 
 export class EncounterMapper {
+  static toPatientDto(enc: Encounter): EncounterPatientResponseDto {
+    return {
+      id: enc.patientId,
+      name: enc.patient?.name ?? '',
+      species: enc.patient?.species?.name ?? '',
+      breed: enc.patient?.breed?.name ?? '',
+    };
+  }
+
   static toConsultationReasonDto(e: EncounterConsultationReason): ConsultationReasonResponseDto {
     return {
       consultationReason: e.consultationReason,
@@ -182,6 +192,7 @@ export class EncounterMapper {
       id: enc.id,
       patientId: enc.patientId,
       vetId: enc.vetId,
+      veterinarianId: enc.vetId,
       appointmentId: enc.appointmentId ?? null,
       queueEntryId: enc.queueEntryId ?? null,
       startTime: toDate(enc.startTime)!,
@@ -189,6 +200,7 @@ export class EncounterMapper {
       status: enc.status,
       generalNotes: enc.generalNotes ?? null,
       createdByUserId: enc.createdByUserId ?? null,
+      patient: this.toPatientDto(enc),
 
       consultationReason: enc.consultationReason
         ? this.toConsultationReasonDto(enc.consultationReason)
@@ -208,6 +220,11 @@ export class EncounterMapper {
       treatments: (enc.treatments ?? []).map((t) => this.toTreatmentDto(t)),
       surgeries: (enc.surgeries ?? []).map((s) => this.toSurgeryDto(s)),
       procedures: (enc.procedures ?? []).map((p) => this.toProcedureDto(p)),
+      vaccinesCount: enc.vaccinationEvents?.length ?? 0,
+      dewormingCount: enc.dewormingEvents?.length ?? 0,
+      treatmentsCount: enc.treatments?.length ?? 0,
+      surgeriesCount: enc.surgeries?.length ?? 0,
+      proceduresCount: enc.procedures?.length ?? 0,
 
       createdAt: toDate(enc.createdAt)!,
       updatedAt: toDate(enc.updatedAt)!,

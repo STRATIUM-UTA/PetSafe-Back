@@ -121,12 +121,20 @@ export class ProcedureResponseDto {
   notes!: string | null;
 }
 
+export class EncounterPatientResponseDto {
+  id!: number;
+  name!: string;
+  species!: string;
+  breed!: string;
+}
+
 // ── Main response ──────────────────────────────────────────────────────────
 
 export class EncounterResponseDto {
   id!: number;
   patientId!: number;
   vetId!: number;
+  veterinarianId!: number;
   appointmentId!: number | null;
   queueEntryId!: number | null;
   startTime!: string;
@@ -134,6 +142,7 @@ export class EncounterResponseDto {
   status!: EncounterStatusEnum;
   generalNotes!: string | null;
   createdByUserId!: number | null;
+  patient!: EncounterPatientResponseDto;
 
   consultationReason!: ConsultationReasonResponseDto | null;
   anamnesis!: AnamnesisResponseDto | null;
@@ -147,6 +156,11 @@ export class EncounterResponseDto {
   treatments!: TreatmentResponseDto[];
   surgeries!: SurgeryResponseDto[];
   procedures!: ProcedureResponseDto[];
+  vaccinesCount!: number;
+  dewormingCount!: number;
+  treatmentsCount!: number;
+  surgeriesCount!: number;
+  proceduresCount!: number;
 
   createdAt!: string;
   updatedAt!: string;

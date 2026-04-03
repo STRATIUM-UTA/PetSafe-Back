@@ -6,9 +6,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, QueryFailedError } from 'typeorm';
+import { IsNull, QueryFailedError, Repository } from 'typeorm';
 
 import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
+import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { Employee } from '../../../domain/entities/persons/employee.entity.js';
 import { User } from '../../../domain/entities/auth/user.entity.js';
@@ -44,6 +45,8 @@ export class AppointmentsService {
   constructor(
     @InjectRepository(Appointment)
     private readonly appointmentRepo: Repository<Appointment>,
+    @InjectRepository(QueueEntry)
+    private readonly queueRepo: Repository<QueueEntry>,
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
     @InjectRepository(Employee)
@@ -73,13 +76,15 @@ export class AppointmentsService {
   private toCalendarItem(appt: Appointment): AppointmentCalendarItemDto {
     const startsAt = formatTime(appt.scheduledTime);
     const endsAt = formatTime(appt.endTime);
+    const primaryTutor = appt.patient?.tutors?.find((tutor) => !tutor.deletedAt && tutor.isPrimary);
+    const tutorPerson = primaryTutor?.client?.person;
     const dto = new AppointmentCalendarItemDto();
     dto.id = appt.id;
     dto.patientId = appt.patientId;
     dto.vetId = appt.vetId;
     dto.patientName = appt.patient?.name ?? null;
-    dto.ownerName = appt.veterinarian?.person
-      ? `${appt.veterinarian.person.firstName} ${appt.veterinarian.person.lastName}`.trim()
+    dto.ownerName = tutorPerson
+      ? `${tutorPerson.firstName} ${tutorPerson.lastName}`.trim()
       : null;
     dto.scheduledDate = formatDate(appt.scheduledDate);
     dto.startsAt = startsAt ?? '';
@@ -89,6 +94,18 @@ export class AppointmentsService {
     dto.status = appt.status;
     dto.isActive = appt.isActive;
     return dto;
+  }
+
+  private buildAppointmentEndDate(appt: Appointment): Date | null {
+    const scheduledDate = formatDate(appt.scheduledDate);
+    const endTime = formatTime(appt.endTime) ?? formatTime(appt.scheduledTime);
+
+    if (!endTime) {
+      return null;
+    }
+
+    const endDate = new Date(`${scheduledDate}T${endTime}:00`);
+    return Number.isNaN(endDate.getTime()) ? null : endDate;
   }
 
   private async ensureNoScheduleOverlap(
@@ -125,6 +142,13 @@ export class AppointmentsService {
     const appointments = await this.appointmentRepo
       .createQueryBuilder('a')
       .innerJoinAndSelect('a.patient', 'patient')
+      .leftJoinAndSelect(
+        'patient.tutors',
+        'tutor',
+        '"tutor"."is_primary" = true AND "tutor"."deleted_at" IS NULL',
+      )
+      .leftJoinAndSelect('tutor.client', 'client')
+      .leftJoinAndSelect('client.person', 'tutorPerson')
       .innerJoinAndSelect('a.veterinarian', 'vet')
       .innerJoinAndSelect('vet.person', 'vetPerson')
       .where('"a"."vet_id" = :vetId', { vetId })
@@ -193,7 +217,14 @@ export class AppointmentsService {
     // 5) Recargar con relaciones para poder mapear al formato del calendario
     const full = await this.appointmentRepo.findOne({
       where: { id: saved.id },
-      relations: ['patient', 'veterinarian', 'veterinarian.person'],
+      relations: [
+        'patient',
+        'patient.tutors',
+        'patient.tutors.client',
+        'patient.tutors.client.person',
+        'veterinarian',
+        'veterinarian.person',
+      ],
     });
 
     if (!full) {
@@ -225,14 +256,66 @@ export class AppointmentsService {
     if (['FINALIZADA', 'CANCELADA', 'EN_PROCESO'].includes(appt.status as any)) {
       throw new BadRequestException('No se puede cancelar la cita en su estado actual.');
     }
+
+    const linkedQueueEntry = await this.queueRepo.findOne({
+      where: { appointmentId: id, deletedAt: IsNull() },
+    });
+    if (linkedQueueEntry?.status === 'EN_ATENCION') {
+      throw new BadRequestException(
+        'No se puede cancelar la cita porque el paciente ya está siendo atendido.',
+      );
+    }
+
     await this.appointmentRepo.update(id, { status: 'CANCELADA' as any });
+    if (linkedQueueEntry?.status === 'EN_ESPERA') {
+      await this.queueRepo.update(linkedQueueEntry.id, { status: 'CANCELADA' as any });
+    }
+    return this.findOneDto(id);
+  }
+
+  // ── PATCH /appointments/:id/no-show ──
+  async markNoShow(id: number): Promise<AppointmentCalendarItemDto> {
+    const appt = await this.appointmentRepo.findOne({ where: { id } });
+    if (!appt || appt.deletedAt) {
+      throw new NotFoundException('Cita no encontrada.');
+    }
+    if (!['PROGRAMADA', 'CONFIRMADA'].includes(appt.status as any)) {
+      throw new BadRequestException(
+        'Solo se puede marcar como no asistió una cita programada o confirmada.',
+      );
+    }
+
+    const appointmentEnd = this.buildAppointmentEndDate(appt);
+    if (!appointmentEnd || appointmentEnd > new Date()) {
+      throw new BadRequestException(
+        'Solo se puede marcar como no asistió cuando la cita ya terminó.',
+      );
+    }
+
+    const hasQueueEntry = await this.queueRepo.exists({
+      where: { appointmentId: id, deletedAt: IsNull() },
+    });
+    if (hasQueueEntry) {
+      throw new BadRequestException(
+        'La cita ya tiene un registro en la cola de atención y no puede marcarse como no asistió.',
+      );
+    }
+
+    await this.appointmentRepo.update(id, { status: 'NO_ASISTIO' as any });
     return this.findOneDto(id);
   }
 
   private async findOneDto(id: number): Promise<AppointmentCalendarItemDto> {
     const full = await this.appointmentRepo.findOne({
       where: { id },
-      relations: ['patient', 'veterinarian', 'veterinarian.person'],
+      relations: [
+        'patient',
+        'patient.tutors',
+        'patient.tutors.client',
+        'patient.tutors.client.person',
+        'veterinarian',
+        'veterinarian.person',
+      ],
     });
     if (!full) throw new NotFoundException('Cita no encontrada.');
     return this.toCalendarItem(full);

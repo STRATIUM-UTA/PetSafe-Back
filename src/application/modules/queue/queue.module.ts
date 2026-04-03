@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { QueueService } from '../../services/queue/queue.service.js';
 import { QueueController } from '../../../presentation/controllers/queue/queue.controller.js';
 
+import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
 import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PatientTutor } from '../../../domain/entities/patients/patient-tutor.entity.js';
@@ -13,7 +14,15 @@ import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([QueueEntry, Patient, PatientTutor, Employee, Client, UserRole]),
+    TypeOrmModule.forFeature([
+      Appointment,
+      QueueEntry,
+      Patient,
+      PatientTutor,
+      Employee,
+      Client,
+      UserRole,
+    ]),
   ],
   controllers: [QueueController],
   providers: [QueueService],

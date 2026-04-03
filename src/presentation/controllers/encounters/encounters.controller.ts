@@ -78,6 +78,15 @@ export class EncountersController {
   }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Patch(':id/finish')
+  finishEncounter(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CloseEncounterDto,
+  ) {
+    return this.encountersService.closeEncounter(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
   @Patch(':id/cancel')
   cancelEncounter(@Param('id', ParseIntPipe) id: number) {
     return this.encountersService.cancelEncounter(id);

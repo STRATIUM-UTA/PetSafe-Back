@@ -1,7 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
+import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
 import { CreateEncounterDto } from '../../../presentation/dto/encounters/create-encounter.dto.js';
 import { CloseEncounterDto } from '../../../presentation/dto/encounters/update-encounter-status.dto.js';
@@ -10,7 +12,7 @@ import {
   EncounterResponseDto,
 } from '../../../presentation/dto/encounters/encounter-response.dto.js';
 import { EncounterMapper } from '../../mappers/encounter.mapper.js';
-import { EncounterStatusEnum } from '../../../domain/enums/index.js';
+import { EncounterStatusEnum, QueueStatusEnum } from '../../../domain/enums/index.js';
 import { EncounterSharedService } from './encounter-shared.service.js';
 import { EncounterTreatmentService } from './encounter-treatment.service.js';
 
@@ -19,6 +21,10 @@ export class EncounterCoreService {
   constructor(
     @InjectRepository(Encounter)
     private readonly encounterRepo: Repository<Encounter>,
+    @InjectRepository(Appointment)
+    private readonly appointmentRepo: Repository<Appointment>,
+    @InjectRepository(QueueEntry)
+    private readonly queueRepo: Repository<QueueEntry>,
     private readonly sharedService: EncounterSharedService,
     private readonly treatmentService: EncounterTreatmentService,
   ) {}
@@ -31,14 +37,85 @@ export class EncounterCoreService {
     userId: number,
     roles: string[],
   ): Promise<EncounterResponseDto> {
-    await this.sharedService.findPatientOrFail(dto.patientId);
-    await this.sharedService.ensureVetCanCreateEncounter(dto.vetId, userId, roles);
+    let patientId = dto.patientId;
+    let vetId = dto.vetId;
+    let appointmentId = dto.appointmentId ?? null;
+    let startTime = dto.startTime ? new Date(dto.startTime) : new Date();
+
+    if (dto.queueEntryId) {
+      const existingEncounter = await this.encounterRepo.findOne({
+        where: {
+          queueEntryId: dto.queueEntryId,
+          status: EncounterStatusEnum.ACTIVA,
+        },
+      });
+      if (existingEncounter && !existingEncounter.deletedAt) {
+        return this.findOne(existingEncounter.id);
+      }
+
+      const queueEntry = await this.queueRepo.findOne({ where: { id: dto.queueEntryId } });
+      if (!queueEntry || queueEntry.deletedAt) {
+        throw new NotFoundException('Entrada de cola no encontrada.');
+      }
+      if (queueEntry.status === QueueStatusEnum.CANCELADA) {
+        throw new BadRequestException(
+          'No se puede iniciar una consulta desde una entrada de cola cancelada.',
+        );
+      }
+      if (queueEntry.appointmentId) {
+        const linkedAppointment = await this.appointmentRepo.findOne({
+          where: { id: queueEntry.appointmentId },
+        });
+        if (
+          linkedAppointment
+          && !linkedAppointment.deletedAt
+          && ['CANCELADA', 'NO_ASISTIO'].includes(linkedAppointment.status as any)
+        ) {
+          await this.queueRepo.update(queueEntry.id, { status: QueueStatusEnum.CANCELADA });
+          throw new BadRequestException(
+            'La cita enlazada fue cancelada o marcada como no asistió. El ingreso en cola se canceló automáticamente.',
+          );
+        }
+      }
+
+      patientId = patientId ?? queueEntry.patientId;
+      vetId = vetId ?? queueEntry.vetId;
+      appointmentId = appointmentId ?? queueEntry.appointmentId ?? null;
+      startTime = dto.startTime ? new Date(dto.startTime) : new Date();
+
+      const isPureMvz = roles.includes('MVZ') && !roles.includes('ADMIN');
+      if (isPureMvz && vetId) {
+        const assignedEmployee = await this.sharedService.findEmployeeById(vetId);
+        if (!assignedEmployee || assignedEmployee.deletedAt || !assignedEmployee.isVeterinarian) {
+          const currentVet = await this.sharedService.findVeterinarianEmployeeForUser(userId);
+          vetId = currentVet.id;
+
+          await this.queueRepo.update(queueEntry.id, { vetId: currentVet.id });
+
+          if (appointmentId) {
+            await this.appointmentRepo.update(appointmentId, { vetId: currentVet.id });
+          }
+        }
+      }
+    }
+
+    if (!patientId || !vetId) {
+      throw new BadRequestException(
+        'Debes indicar paciente y veterinario, o bien iniciar la consulta desde una entrada en cola válida.',
+      );
+    }
+    if (Number.isNaN(startTime.getTime())) {
+      throw new BadRequestException('La hora de inicio de la atención no es válida.');
+    }
+
+    await this.sharedService.findPatientOrFail(patientId);
+    await this.sharedService.ensureVetCanCreateEncounter(vetId, userId, roles);
 
     const encounter = this.encounterRepo.create({
-      patientId: dto.patientId,
-      vetId: dto.vetId,
-      startTime: new Date(dto.startTime),
-      appointmentId: dto.appointmentId ?? null,
+      patientId,
+      vetId,
+      startTime,
+      appointmentId,
       queueEntryId: dto.queueEntryId ?? null,
       generalNotes: dto.generalNotes ?? null,
       status: EncounterStatusEnum.ACTIVA,
@@ -109,6 +186,18 @@ export class EncounterCoreService {
       endTime,
       generalNotes: dto.generalNotes ?? encounter.generalNotes,
     });
+
+    if (encounter.queueEntryId) {
+      await this.queueRepo.update(encounter.queueEntryId, {
+        status: QueueStatusEnum.FINALIZADA,
+      });
+    }
+
+    if (encounter.appointmentId) {
+      await this.appointmentRepo.update(encounter.appointmentId, {
+        status: 'FINALIZADA' as any,
+      });
+    }
 
     return this.findOne(id);
   }

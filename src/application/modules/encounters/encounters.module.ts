@@ -24,6 +24,8 @@ import { Surgery } from '../../../domain/entities/encounters/surgery.entity.js';
 import { Procedure } from '../../../domain/entities/encounters/procedure.entity.js';
 import { Vaccine } from '../../../domain/entities/catalogs/vaccine.entity.js';
 import { Antiparasitic } from '../../../domain/entities/catalogs/antiparasitic.entity.js';
+import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
+import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PatientVaccineRecord } from '../../../domain/entities/patients/patient-vaccine-record.entity.js';
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
@@ -48,6 +50,8 @@ import { User } from '../../../domain/entities/auth/user.entity.js';
       Procedure,
       Vaccine,
       Antiparasitic,
+      Appointment,
+      QueueEntry,
       Patient,
       PatientVaccineRecord,
       UserRole,

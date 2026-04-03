@@ -34,6 +34,9 @@ export class EncounterSharedService {
     const encounter = await this.encounterRepo.findOne({
       where: { id },
       relations: [
+        'patient',
+        'patient.species',
+        'patient.breed',
         'consultationReason',
         'anamnesis',
         'clinicalExam',
@@ -121,6 +124,29 @@ export class EncounterSharedService {
         'No puedes crear una atenciÃ³n asignÃ¡ndola a otro veterinario.',
       );
     }
+  }
+
+  async findEmployeeById(employeeId: number): Promise<Employee | null> {
+    return this.employeeRepo.findOne({ where: { id: employeeId } });
+  }
+
+  async findVeterinarianEmployeeForUser(userId: number): Promise<Employee> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user || user.deletedAt) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
+
+    const employee = await this.employeeRepo.findOne({
+      where: { personId: user.personId },
+    });
+
+    if (!employee || employee.deletedAt || !employee.isVeterinarian) {
+      throw new BadRequestException(
+        'Tu usuario no tiene un perfil de veterinario activo asociado.',
+      );
+    }
+
+    return employee;
   }
 
   /**
