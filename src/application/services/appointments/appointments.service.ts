@@ -6,7 +6,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, QueryFailedError, Repository } from 'typeorm';
+import { In, IsNull, QueryFailedError, Repository } from 'typeorm';
 
 import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
 import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
@@ -40,6 +40,11 @@ function isTimeRangeValid(startTime: string, endTime: string): boolean {
   return endTime > startTime;
 }
 
+type QueueEntrySummary = {
+  id: number;
+  status: string;
+};
+
 @Injectable()
 export class AppointmentsService {
   constructor(
@@ -72,8 +77,43 @@ export class AppointmentsService {
     return employee.id;
   }
 
+  private async getQueueEntriesByAppointmentIds(
+    appointmentIds: number[],
+  ): Promise<Map<number, QueueEntrySummary>> {
+    if (appointmentIds.length === 0) {
+      return new Map();
+    }
+
+    const queueEntries = await this.queueRepo.find({
+      where: {
+        appointmentId: In(appointmentIds),
+        deletedAt: IsNull(),
+      },
+      order: {
+        id: 'DESC',
+      },
+    });
+
+    const queueByAppointmentId = new Map<number, QueueEntrySummary>();
+    for (const entry of queueEntries) {
+      if (!entry.appointmentId || queueByAppointmentId.has(entry.appointmentId)) {
+        continue;
+      }
+
+      queueByAppointmentId.set(entry.appointmentId, {
+        id: entry.id,
+        status: entry.status,
+      });
+    }
+
+    return queueByAppointmentId;
+  }
+
   // ── Mapea una Appointment a lo que espera el front ──
-  private toCalendarItem(appt: Appointment): AppointmentCalendarItemDto {
+  private toCalendarItem(
+    appt: Appointment,
+    queueEntry?: QueueEntrySummary,
+  ): AppointmentCalendarItemDto {
     const startsAt = formatTime(appt.scheduledTime);
     const endsAt = formatTime(appt.endTime);
     const primaryTutor = appt.patient?.tutors?.find((tutor) => !tutor.deletedAt && tutor.isPrimary);
@@ -92,6 +132,9 @@ export class AppointmentsService {
     dto.reason = appt.reason ?? null;
     dto.notes = appt.notes ?? null;
     dto.status = appt.status;
+    dto.hasQueueEntry = Boolean(queueEntry);
+    dto.queueEntryId = queueEntry?.id ?? null;
+    dto.queueStatus = queueEntry?.status ?? null;
     dto.isActive = appt.isActive;
     return dto;
   }
@@ -160,7 +203,13 @@ export class AppointmentsService {
       .addOrderBy('"a"."end_time"', 'ASC')
       .getMany();
 
-    return appointments.map((a) => this.toCalendarItem(a));
+    const queueByAppointmentId = await this.getQueueEntriesByAppointmentIds(
+      appointments.map((appointment) => appointment.id),
+    );
+
+    return appointments.map((appointment) =>
+      this.toCalendarItem(appointment, queueByAppointmentId.get(appointment.id)),
+    );
   }
 
   // ── POST /appointments ──
@@ -231,7 +280,8 @@ export class AppointmentsService {
       throw new NotFoundException('No se pudo recuperar la cita recién creada.');
     }
 
-    return this.toCalendarItem(full);
+    const queueByAppointmentId = await this.getQueueEntriesByAppointmentIds([full.id]);
+    return this.toCalendarItem(full, queueByAppointmentId.get(full.id));
   }
 
   // ── PATCH /appointments/:id/confirm ──
@@ -318,6 +368,7 @@ export class AppointmentsService {
       ],
     });
     if (!full) throw new NotFoundException('Cita no encontrada.');
-    return this.toCalendarItem(full);
+    const queueByAppointmentId = await this.getQueueEntriesByAppointmentIds([full.id]);
+    return this.toCalendarItem(full, queueByAppointmentId.get(full.id));
   }
 }

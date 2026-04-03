@@ -27,9 +27,19 @@ import {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatTime(raw: string | null | undefined): string | null {
+function formatTime(raw: string | Date | null | undefined): string | null {
   if (!raw) return null;
   return String(raw).substring(0, 5); // "HH:MM:SS" → "HH:MM"
+}
+
+function formatClockTime(raw: Date | string | null | undefined): string | null {
+  if (!raw) return null;
+  if (raw instanceof Date) {
+    const hours = String(raw.getHours()).padStart(2, '0');
+    const minutes = String(raw.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+  return formatTime(raw);
 }
 
 function formatDate(raw: Date | string): string {
@@ -50,7 +60,7 @@ function formatTimestamp(raw: Date | null | undefined): string {
 /** Minutos transcurridos desde arrivalTime (HH:MM) hasta ahora */
 function calcWaitMinutes(entry: QueueEntry): number {
   if (entry.status !== QueueStatusEnum.EN_ESPERA) return 0;
-  const [h, m] = (formatTime(entry.arrivalTime as unknown as string) ?? '00:00').split(':').map(Number);
+  const [h, m] = (formatClockTime(entry.arrivalTime) ?? '00:00').split(':').map(Number);
   const now = new Date();
   const arrivalToday = new Date();
   arrivalToday.setHours(h, m, 0, 0);
@@ -172,7 +182,7 @@ export class QueueService {
     dto.patient = patientDto;
     dto.veterinarian = vetDto;
     dto.entryType = entry.entryType;
-    dto.arrivalTime = formatTime(entry.arrivalTime as unknown as string) ?? '';
+    dto.arrivalTime = formatClockTime(entry.arrivalTime) ?? '';
     dto.scheduledTime = formatTime(entry.scheduledTime) ?? null;
     dto.queueStatus = entry.status;
     dto.notes = entry.notes ?? null;
