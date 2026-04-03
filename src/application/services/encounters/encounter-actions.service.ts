@@ -15,6 +15,7 @@ import { CreateDewormingEventDto } from '../../../presentation/dto/encounters/cr
 import { CreateSurgeryDto } from '../../../presentation/dto/encounters/create-surgery.dto.js';
 import { CreateProcedureDto } from '../../../presentation/dto/encounters/create-procedure.dto.js';
 import { EncounterSharedService } from './encounter-shared.service.js';
+import { VaccinationPlanService } from '../vaccinations/vaccination-plan.service.js';
 
 @Injectable()
 export class EncounterActionsService {
@@ -35,6 +36,7 @@ export class EncounterActionsService {
     private readonly patientVaccineRecordRepo: Repository<PatientVaccineRecord>,
     private readonly dataSource: DataSource,
     private readonly sharedService: EncounterSharedService,
+    private readonly vaccinationPlanService: VaccinationPlanService,
   ) {}
 
   /**
@@ -76,7 +78,14 @@ export class EncounterActionsService {
 
     await this.dataSource.transaction(async (manager: EntityManager) => {
       await manager.save(VaccinationEvent, event);
-      await manager.save(PatientVaccineRecord, carnetRecord);
+      const savedRecord = await manager.save(PatientVaccineRecord, carnetRecord);
+      await this.vaccinationPlanService.registerApplication(
+        encounter.patientId,
+        dto.vaccineId,
+        new Date(dto.applicationDate),
+        savedRecord.id,
+        manager,
+      );
     });
   }
 

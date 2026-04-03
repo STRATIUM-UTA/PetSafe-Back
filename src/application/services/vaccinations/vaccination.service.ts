@@ -1,33 +1,39 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
   ConflictException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, IsNull } from 'typeorm';
+import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 
 import { Vaccine } from '../../../domain/entities/catalogs/vaccine.entity.js';
 import { PatientVaccineRecord } from '../../../domain/entities/patients/patient-vaccine-record.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { Species } from '../../../domain/entities/catalogs/species.entity.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
-
+import { VaccinationScheme } from '../../../domain/entities/vaccinations/vaccination-scheme.entity.js';
+import { VaccinationSchemeVersion } from '../../../domain/entities/vaccinations/vaccination-scheme-version.entity.js';
+import { VaccinationSchemeVersionDose } from '../../../domain/entities/vaccinations/vaccination-scheme-version-dose.entity.js';
+import {
+  PatientVaccinationPlanDoseStatusEnum,
+  VaccinationSchemeVersionStatusEnum,
+} from '../../../domain/enums/index.js';
 import { CreateVaccineDto } from '../../../presentation/dto/vaccinations/create-vaccine.dto.js';
 import { UpdateVaccineDto } from '../../../presentation/dto/vaccinations/update-vaccine.dto.js';
-import { UpdateVaccineMandatoryDto } from '../../../presentation/dto/vaccinations/update-vaccine-mandatory.dto.js';
 import { CreatePatientVaccineRecordDto } from '../../../presentation/dto/vaccinations/create-patient-vaccine-record.dto.js';
+import { CreateVaccinationSchemeDto } from '../../../presentation/dto/vaccinations/create-vaccination-scheme.dto.js';
+import { CreateVaccinationSchemeVersionDto } from '../../../presentation/dto/vaccinations/create-vaccination-scheme-version.dto.js';
+import { UpdateVaccinationSchemeVersionStatusDto } from '../../../presentation/dto/vaccinations/update-vaccination-scheme-version-status.dto.js';
+import { UpdatePatientVaccinationPlanDoseDto } from '../../../presentation/dto/vaccinations/update-patient-vaccination-plan-dose.dto.js';
 import {
-  VaccineCatalogItemDto,
+  PatientVaccinationPlanResponseDto,
   PatientVaccineRecordResponseDto,
-  PatientVaccineCoverageResponseDto,
-  VaccineCoverageItemDto,
+  VaccineCatalogItemDto,
+  VaccinationSchemeResponseDto,
+  VaccinationSchemeVersionResponseDto,
 } from '../../../presentation/dto/vaccinations/vaccination-response.dto.js';
-
-const toDateStr = (d: Date | string | null | undefined): string | null => {
-  if (!d) return null;
-  return d instanceof Date ? d.toISOString().split('T')[0] : String(d).split('T')[0];
-};
+import { VaccinationPlanService } from './vaccination-plan.service.js';
 
 @Injectable()
 export class VaccinationService {
@@ -42,268 +48,300 @@ export class VaccinationService {
     private readonly speciesRepo: Repository<Species>,
     @InjectRepository(Encounter)
     private readonly encounterRepo: Repository<Encounter>,
+    @InjectRepository(VaccinationScheme)
+    private readonly schemeRepo: Repository<VaccinationScheme>,
+    @InjectRepository(VaccinationSchemeVersion)
+    private readonly schemeVersionRepo: Repository<VaccinationSchemeVersion>,
+    @InjectRepository(VaccinationSchemeVersionDose)
+    private readonly schemeDoseRepo: Repository<VaccinationSchemeVersionDose>,
     private readonly dataSource: DataSource,
+    private readonly vaccinationPlanService: VaccinationPlanService,
   ) {}
 
-  // ══════════════════════════════════════════════════════════
-  //  CATÁLOGO DE VACUNAS — CRUD
-  // ══════════════════════════════════════════════════════════
-
-  /**
-   * Lista todas las vacunas del catálogo.
-   * Si se filtra por speciesId, retorna solo las de esa especie ordenadas por obligatoriedad.
-   */
-  async getAllVaccines(speciesId?: number): Promise<VaccineCatalogItemDto[]> {
-    const where: Record<string, unknown> = { isActive: true, deletedAt: IsNull() };
+  async getProducts(speciesId?: number): Promise<VaccineCatalogItemDto[]> {
+    const where: Record<string, unknown> = {
+      deletedAt: IsNull(),
+    };
     if (speciesId) {
       await this.ensureSpeciesExists(speciesId);
       where['speciesId'] = speciesId;
     }
 
     const vaccines = await this.vaccineRepo.find({
-      where: where as any,
-      order: { isMandatory: 'DESC', doseOrder: 'ASC', name: 'ASC' },
+      where: where as never,
+      relations: ['species'],
+      order: { name: 'ASC' },
     });
 
-    return vaccines.map((v) => this.toVaccineCatalogItem(v));
+    return vaccines.map((vaccine) => this.toProductResponse(vaccine));
   }
 
-  /**
-   * Detalle de una vacuna por ID.
-   */
-  async getOneVaccine(vaccineId: number): Promise<VaccineCatalogItemDto> {
-    const vaccine = await this.findVaccineOrFail(vaccineId);
-    return this.toVaccineCatalogItem(vaccine);
+  async getProduct(productId: number): Promise<VaccineCatalogItemDto> {
+    const vaccine = await this.findVaccineOrFail(productId);
+    return this.toProductResponse(vaccine);
   }
 
-  /**
-   * Crea una nueva vacuna en el catálogo.
-   * Solo ADMIN / MVZ.
-   */
-  async createVaccine(dto: CreateVaccineDto, userId: number): Promise<VaccineCatalogItemDto> {
+  async createProduct(dto: CreateVaccineDto): Promise<VaccineCatalogItemDto> {
     await this.ensureSpeciesExists(dto.speciesId);
 
-    // Verificar que no exista otra vacuna activa con el mismo nombre en la misma especie
-    const existing = await this.vaccineRepo.findOne({
-      where: { name: dto.name.trim(), speciesId: dto.speciesId, isActive: true },
+    const duplicate = await this.vaccineRepo.findOne({
+      where: {
+        name: dto.name.trim(),
+        speciesId: dto.speciesId,
+        deletedAt: IsNull(),
+      } as never,
     });
-    if (existing && !existing.deletedAt) {
+
+    if (duplicate) {
       throw new ConflictException(
-        `Ya existe una vacuna con el nombre "${dto.name}" para esta especie.`,
+        `Ya existe un producto biológico con el nombre "${dto.name}" para esta especie.`,
       );
     }
 
-    const vaccine = this.vaccineRepo.create({
-      name: dto.name.trim(),
-      speciesId: dto.speciesId,
-      isRevaccination: dto.isRevaccination ?? false,
-      isMandatory: dto.isMandatory ?? false,
-      doseOrder: dto.doseOrder ?? null,
-    });
+    const vaccine = await this.vaccineRepo.save(
+      this.vaccineRepo.create({
+        name: dto.name.trim(),
+        speciesId: dto.speciesId,
+        isRevaccination: dto.isRevaccination ?? false,
+        isMandatory: false,
+        doseOrder: null,
+      }),
+    );
 
-    // Inyectar deleted_by_user_id queda en BaseAuditEntity, pero created_by no existe
-    // en el schema de vacunas; el user que lo creó queda en el audit de la sesión.
-    const saved: Vaccine = await this.vaccineRepo.save(vaccine);
-    return this.toVaccineCatalogItem(saved);
+    return this.getProduct(vaccine.id);
   }
 
-  /**
-   * Actualiza los datos de una vacuna del catálogo.
-   * Solo ADMIN / MVZ.
-   */
-  async updateVaccine(
-    vaccineId: number,
+  async updateProduct(
+    productId: number,
     dto: UpdateVaccineDto,
-    userId: number,
   ): Promise<VaccineCatalogItemDto> {
-    const vaccine = await this.findVaccineOrFail(vaccineId);
+    const vaccine = await this.findVaccineOrFail(productId);
 
-    // Verificar nombre único si lo está cambiando
     if (dto.name && dto.name.trim() !== vaccine.name) {
       const duplicate = await this.vaccineRepo.findOne({
-        where: { name: dto.name.trim(), speciesId: vaccine.speciesId, isActive: true },
+        where: {
+          name: dto.name.trim(),
+          speciesId: vaccine.speciesId,
+          deletedAt: IsNull(),
+        } as never,
       });
-      if (duplicate && !duplicate.deletedAt && duplicate.id !== vaccineId) {
+
+      if (duplicate && duplicate.id !== productId) {
         throw new ConflictException(
-          `Ya existe otra vacuna con el nombre "${dto.name}" para esta especie.`,
+          `Ya existe otro producto biológico con el nombre "${dto.name}" para esta especie.`,
         );
       }
     }
 
-    const updateData: Partial<Vaccine> = {};
-    if (dto.name !== undefined) updateData.name = dto.name.trim();
-    if (dto.isRevaccination !== undefined) updateData.isRevaccination = dto.isRevaccination;
-    if (dto.isMandatory !== undefined) updateData.isMandatory = dto.isMandatory;
-    if (dto.doseOrder !== undefined) updateData.doseOrder = dto.doseOrder;
+    if (dto.name !== undefined) {
+      vaccine.name = dto.name.trim();
+    }
+    if (dto.isRevaccination !== undefined) {
+      vaccine.isRevaccination = dto.isRevaccination;
+    }
 
-    await this.vaccineRepo.update(vaccineId, updateData);
-    const updated = await this.vaccineRepo.findOneOrFail({ where: { id: vaccineId } });
-    return this.toVaccineCatalogItem(updated);
+    await this.vaccineRepo.save(vaccine);
+    return this.getProduct(productId);
   }
 
-  /**
-   * Elimina SUAVEMENTE (soft-delete) una vacuna del catálogo.
-   *
-   * REGLAS DE SEGURIDAD:
-   * ──────────────────────────────────────────────────────────────
-   * 1. Si hay vaccination_events activos (en encounters no anulados) que usen
-   *    esta vacuna → se RECHAZA la eliminación. Los registros clínicos activos
-   *    no deben quedar huérfanos de referencia.
-   *
-   * 2. Si solo hay patient_vaccine_records (carnet histórico), se PERMITE el
-   *    soft-delete pero se devuelve un aviso indicando cuántos registros
-   *    históricos hacen referencia a ella. Los datos históricos se conservan
-   *    intactos (el FK en DB usa ON DELETE RESTRICT, así que la vacuna nunca
-   *    se borra físicamente).
-   *
-   * 3. Si la vacuna era obligatoria, el soft-delete la retira del esquema de
-   *    vacunación de la especie. Los carnets históricos que la registraron
-   *    permanecen con esos datos; simplemente dejan de aparecer como "vacuna
-   *    obligatoria pendiente" en futuros cálculos de cobertura.
-   * ──────────────────────────────────────────────────────────────
-   */
-  async softDeleteVaccine(
-    vaccineId: number,
+  async deactivateProduct(
+    productId: number,
     userId: number,
-  ): Promise<{ message: string; warning: string | null; historicalRecordsCount: number }> {
-    const vaccine = await this.findVaccineOrFail(vaccineId);
+  ): Promise<{ message: string }> {
+    const vaccine = await this.findVaccineOrFail(productId);
 
-    // ── 1. Verificar vaccination_events activos ──────────────────────────────
-    const activeEventsCount: number = await this.dataSource
-      .createQueryBuilder()
-      .select('COUNT(*)', 'cnt')
-      .from('vaccination_events', 've')
-      .innerJoin('encounters', 'e', 'e.id = ve.encounter_id')
-      .where('ve.vaccine_id = :vaccineId', { vaccineId })
-      .andWhere('ve.deleted_at IS NULL')
-      .andWhere("e.status != 'ANULADA'")
-      .andWhere('e.deleted_at IS NULL')
-      .getRawOne()
-      .then((r: { cnt: string }) => parseInt(r?.cnt ?? '0', 10));
+    await this.dataSource.transaction(async (manager) => {
+      vaccine.isActive = false;
+      vaccine.deletedAt = new Date();
+      vaccine.deletedByUserId = userId;
+      await manager.getRepository(Vaccine).save(vaccine);
+      await this.vaccinationPlanService.blockPendingDosesForInactiveProduct(
+        productId,
+        manager,
+      );
+    });
 
-    if (activeEventsCount > 0) {
+    return { message: `Producto biológico "${vaccine.name}" desactivado correctamente.` };
+  }
+
+  async getSchemes(speciesId?: number): Promise<VaccinationSchemeResponseDto[]> {
+    const qb = this.schemeRepo
+      .createQueryBuilder('scheme')
+      .innerJoinAndSelect('scheme.species', 'species')
+      .leftJoinAndSelect('scheme.versions', 'version', 'version.deleted_at IS NULL')
+      .leftJoinAndSelect('version.doses', 'dose', 'dose.deleted_at IS NULL')
+      .leftJoinAndSelect('dose.vaccine', 'vaccine')
+      .where('scheme.deleted_at IS NULL')
+      .orderBy('scheme.name', 'ASC')
+      .addOrderBy('version.version', 'DESC')
+      .addOrderBy('dose.dose_order', 'ASC');
+
+    if (speciesId) {
+      await this.ensureSpeciesExists(speciesId);
+      qb.andWhere('scheme.species_id = :speciesId', { speciesId });
+    }
+
+    const schemes = await qb.getMany();
+    return schemes.map((scheme) => this.toSchemeResponse(scheme));
+  }
+
+  async getScheme(schemeId: number): Promise<VaccinationSchemeResponseDto> {
+    const scheme = await this.schemeRepo.findOne({
+      where: {
+        id: schemeId,
+        deletedAt: IsNull(),
+      } as never,
+      relations: ['species', 'versions', 'versions.doses', 'versions.doses.vaccine'],
+      order: {
+        versions: { version: 'DESC' },
+      },
+    });
+
+    if (!scheme) {
+      throw new NotFoundException('Esquema vacunal no encontrado.');
+    }
+
+    return this.toSchemeResponse(scheme);
+  }
+
+  async createScheme(dto: CreateVaccinationSchemeDto): Promise<VaccinationSchemeResponseDto> {
+    await this.ensureSpeciesExists(dto.speciesId);
+
+    const duplicate = await this.schemeRepo.findOne({
+      where: {
+        name: dto.name.trim(),
+        speciesId: dto.speciesId,
+        deletedAt: IsNull(),
+      } as never,
+    });
+
+    if (duplicate) {
       throw new ConflictException(
-        `No se puede eliminar esta vacuna porque tiene ${activeEventsCount} aplicación(es) registrada(s) en atenciones activas o finalizadas. ` +
-          `Si deseas retirarla del esquema de la especie, márcarla primero como no obligatoria (isMandatory: false).`,
+        `Ya existe un esquema con el nombre "${dto.name}" para esta especie.`,
       );
     }
 
-    // ── 2. Contar registros históricos en el carnet del paciente ─────────────
-    const historicalRecordsCount = await this.recordRepo.count({
-      where: { vaccineId, isActive: true, deletedAt: IsNull() },
-    });
-
-    // ── 3. Aplicar soft-delete ────────────────────────────────────────────────
-    // Marcar is_active = false y deleted_by_user_id antes de softDelete
-    await this.vaccineRepo.update(vaccineId, {
-      isActive: false,
-      deletedByUserId: userId,
-    } as any);
-    await this.vaccineRepo.softDelete(vaccineId);
-
-    const wasMandatory = vaccine.isMandatory;
-    const warningParts: string[] = [];
-
-    if (wasMandatory) {
-      warningParts.push(
-        'Era una vacuna marcada como OBLIGATORIA. Ha sido retirada del esquema de vacunación de la especie.',
+    const scheme = await this.dataSource.transaction(async (manager) => {
+      const savedScheme = await manager.getRepository(VaccinationScheme).save(
+        manager.getRepository(VaccinationScheme).create({
+          name: dto.name.trim(),
+          description: dto.description?.trim() ?? null,
+          speciesId: dto.speciesId,
+        }),
       );
-    }
-    if (historicalRecordsCount > 0) {
-      warningParts.push(
-        `Existen ${historicalRecordsCount} registro(s) histórico(s) en carnets de pacientes que hacen referencia a ella. Esos datos se conservan intactos.`,
+
+      await this.createSchemeVersionInternal(
+        savedScheme.id,
+        dto.speciesId,
+        dto.initialVersion,
+        manager,
       );
+
+      return savedScheme;
+    });
+
+    return this.getScheme(scheme.id);
+  }
+
+  async createSchemeVersion(
+    schemeId: number,
+    dto: CreateVaccinationSchemeVersionDto,
+  ): Promise<VaccinationSchemeVersionResponseDto> {
+    const scheme = await this.schemeRepo.findOne({
+      where: {
+        id: schemeId,
+        deletedAt: IsNull(),
+      } as never,
+    });
+
+    if (!scheme) {
+      throw new NotFoundException('Esquema vacunal no encontrado.');
     }
 
-    return {
-      message: `Vacuna "${vaccine.name}" desactivada del catálogo correctamente.`,
-      warning: warningParts.length > 0 ? warningParts.join(' ') : null,
-      historicalRecordsCount,
-    };
+    const version = await this.dataSource.transaction((manager) =>
+      this.createSchemeVersionInternal(scheme.id, scheme.speciesId, dto, manager),
+    );
+
+    return this.getSchemeVersion(version.id);
   }
 
-  /**
-   * Devuelve todas las vacunas de una especie ordenadas por obligatoriedad y dosis.
-   */
-  async getVaccinationSchemeBySpecies(speciesId: number): Promise<VaccineCatalogItemDto[]> {
-    await this.ensureSpeciesExists(speciesId);
-
-    const vaccines = await this.vaccineRepo.find({
-      where: { speciesId, isActive: true, deletedAt: IsNull() } as any,
-      order: { isMandatory: 'DESC', doseOrder: 'ASC', name: 'ASC' },
+  async getSchemeVersion(versionId: number): Promise<VaccinationSchemeVersionResponseDto> {
+    const version = await this.schemeVersionRepo.findOne({
+      where: {
+        id: versionId,
+        deletedAt: IsNull(),
+      } as never,
+      relations: ['scheme', 'scheme.species', 'doses', 'doses.vaccine'],
     });
 
-    return vaccines.map((v) => this.toVaccineCatalogItem(v));
+    if (!version) {
+      throw new NotFoundException('Versión de esquema vacunal no encontrada.');
+    }
+
+    return this.toSchemeVersionResponse(version);
   }
 
-  /**
-   * Marca/desmarca una vacuna como obligatoria y ajusta su orden de dosis.
-   * Mantenido por retrocompatibilidad; internamente llama a updateVaccine.
-   */
-  async updateVaccineMandatory(
-    vaccineId: number,
-    dto: UpdateVaccineMandatoryDto,
-  ): Promise<VaccineCatalogItemDto> {
-    const vaccine = await this.findVaccineOrFail(vaccineId);
-
-    await this.vaccineRepo.update(vaccineId, {
-      isMandatory: dto.isMandatory,
-      doseOrder: dto.doseOrder !== undefined ? dto.doseOrder : vaccine.doseOrder,
+  async updateSchemeVersionStatus(
+    versionId: number,
+    dto: UpdateVaccinationSchemeVersionStatusDto,
+  ): Promise<VaccinationSchemeVersionResponseDto> {
+    const version = await this.schemeVersionRepo.findOne({
+      where: {
+        id: versionId,
+        deletedAt: IsNull(),
+      } as never,
+      relations: ['scheme'],
     });
 
-    const updated = await this.vaccineRepo.findOneOrFail({ where: { id: vaccineId } });
-    return this.toVaccineCatalogItem(updated);
+    if (!version) {
+      throw new NotFoundException('Versión de esquema vacunal no encontrada.');
+    }
+
+    version.status = dto.status;
+    if (dto.validTo !== undefined) {
+      version.validTo = dto.validTo ? new Date(dto.validTo) : null;
+    }
+    if (dto.changeReason !== undefined) {
+      version.changeReason = dto.changeReason ?? null;
+    }
+
+    await this.schemeVersionRepo.save(version);
+    return this.getSchemeVersion(versionId);
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  CARNET DEL PACIENTE
-  // ══════════════════════════════════════════════════════════
+  async getPatientPlan(patientId: number): Promise<PatientVaccinationPlanResponseDto> {
+    await this.ensurePatientExists(patientId);
+    return this.vaccinationPlanService.getPatientPlanDetail(patientId);
+  }
 
-  /**
-   * Historial completo del carnet de vacunación de un paciente.
-   */
-  async getPatientVaccineRecord(
+  async getPatientApplications(
     patientId: number,
   ): Promise<PatientVaccineRecordResponseDto[]> {
     await this.ensurePatientExists(patientId);
-
-    const records = await this.recordRepo.find({
-      where: { patientId },
-      relations: ['vaccine'],
-      order: { applicationDate: 'DESC' },
-    });
-
-    return records
-      .filter((r) => !r.deletedAt && r.isActive)
-      .map((r) => this.toRecordResponseDto(r));
+    return this.vaccinationPlanService.findApplicationsForPatient(patientId);
   }
 
-  /**
-   * Agrega una vacuna al carnet del paciente.
-   * Puede ser externa (isExternal: true) o ligada a un encounter interno.
-   */
-  async addPatientVaccineRecord(
+  async addPatientApplication(
     patientId: number,
     dto: CreatePatientVaccineRecordDto,
     userId: number,
   ): Promise<PatientVaccineRecordResponseDto> {
     const patient = await this.findPatientOrFail(patientId);
+    const vaccine = await this.findVaccineOrFail(dto.vaccineId);
 
-    // La vacuna debe existir y estar activa
-    const vaccine = await this.vaccineRepo.findOne({ where: { id: dto.vaccineId } });
-    if (!vaccine || vaccine.deletedAt || !vaccine.isActive) {
-      throw new NotFoundException(
-        'Vacuna no encontrada en el catálogo. Puede haber sido desactivada; consulta al administrador.',
+    if (!vaccine.isActive) {
+      throw new BadRequestException(
+        'El producto biológico está desactivado y no puede utilizarse en nuevas aplicaciones.',
       );
     }
 
     this.ensureVaccineMatchesPatientSpecies(vaccine, patient);
 
-    // Si se provee encounter, verificar que existe y corresponde al paciente
     if (dto.encounterId) {
       const encounter = await this.encounterRepo.findOne({
         where: { id: dto.encounterId, patientId },
       });
+
       if (!encounter || encounter.deletedAt) {
         throw new BadRequestException(
           'El encounter referenciado no existe o no corresponde a este paciente.',
@@ -311,128 +349,156 @@ export class VaccinationService {
       }
     }
 
-    // Si está ligada a un encounter es siempre interna
-    const isExternal = dto.encounterId ? false : (dto.isExternal ?? true);
+    const applicationDate = new Date(dto.applicationDate);
+    const nextDoseDate = dto.nextDoseDate ? new Date(dto.nextDoseDate) : null;
 
-    const appDate = new Date(dto.applicationDate);
-    const nextDate = dto.nextDoseDate ? new Date(dto.nextDoseDate) : null;
+    const saved = await this.dataSource.transaction(async (manager) => {
+      const record = await manager.getRepository(PatientVaccineRecord).save(
+        manager.getRepository(PatientVaccineRecord).create({
+          patientId,
+          vaccineId: dto.vaccineId,
+          applicationDate,
+          administeredBy: dto.administeredBy?.trim() ?? null,
+          administeredAt: dto.administeredAt?.trim() ?? null,
+          isExternal: dto.encounterId ? false : (dto.isExternal ?? true),
+          batchNumber: dto.batchNumber?.trim() ?? null,
+          nextDoseDate,
+          notes: dto.notes?.trim() ?? null,
+          encounterId: dto.encounterId ?? null,
+          createdByUserId: userId,
+        }),
+      );
 
-    if (nextDate && nextDate < appDate) {
+      const planDoseId = await this.vaccinationPlanService.registerApplication(
+        patientId,
+        dto.vaccineId,
+        applicationDate,
+        record.id,
+        manager,
+      );
+
+      return {
+        recordId: record.id,
+        planDoseId,
+      };
+    });
+
+    const applications = await this.vaccinationPlanService.findApplicationsForPatient(patientId);
+    const response = applications.find((item) => item.id === saved.recordId);
+    if (!response) {
+      throw new NotFoundException('No se pudo recuperar la aplicación vacunal guardada.');
+    }
+
+    response.planDoseId = saved.planDoseId;
+    return response;
+  }
+
+  async updatePatientPlanDoseStatus(
+    patientId: number,
+    planDoseId: number,
+    dto: UpdatePatientVaccinationPlanDoseDto,
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    if (dto.status === PatientVaccinationPlanDoseStatusEnum.APLICADA) {
       throw new BadRequestException(
-        'La fecha de próxima dosis no puede ser anterior a la fecha de aplicación.',
+        'La dosis no puede marcarse como APLICADA manualmente; debe registrarse una aplicación real.',
       );
     }
 
-    const record = this.recordRepo.create({
-      patientId,
-      vaccineId: dto.vaccineId,
-      applicationDate: appDate,
-      administeredBy: dto.administeredBy?.trim() ?? null,
-      administeredAt: dto.administeredAt?.trim() ?? null,
-      isExternal,
-      batchNumber: dto.batchNumber?.trim() ?? null,
-      nextDoseDate: nextDate,
-      notes: dto.notes ?? null,
-      encounterId: dto.encounterId ?? null,
-      createdByUserId: userId,
-    });
-
-    const saved = await this.recordRepo.save(record);
-    const full = await this.recordRepo.findOne({
-      where: { id: saved.id },
-      relations: ['vaccine'],
-    });
-    return this.toRecordResponseDto(full!);
+    return this.vaccinationPlanService.updatePlanDoseStatus(patientId, planDoseId, dto);
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  COBERTURA VACUNAL
-  // ══════════════════════════════════════════════════════════
-
-  /**
-   * Compara las vacunas obligatorias de la especie del paciente
-   * contra las registradas en su carnet.
-   */
-  async getPatientVaccineCoverage(
-    patientId: number,
-  ): Promise<PatientVaccineCoverageResponseDto> {
-    const patient = await this.patientRepo.findOne({
-      where: { id: patientId },
-      relations: ['species'],
+  private async createSchemeVersionInternal(
+    schemeId: number,
+    speciesId: number,
+    dto: CreateVaccinationSchemeVersionDto,
+    manager: EntityManager,
+  ): Promise<VaccinationSchemeVersion> {
+    const existingVersion = await manager.getRepository(VaccinationSchemeVersion).findOne({
+      where: {
+        schemeId,
+        version: dto.version,
+        deletedAt: IsNull(),
+      } as never,
     });
-    if (!patient || patient.deletedAt) {
-      throw new NotFoundException('Paciente no encontrado.');
+
+    if (existingVersion) {
+      throw new ConflictException(
+        `La versión ${dto.version} ya existe para este esquema vacunal.`,
+      );
     }
 
-    // Vacunas obligatorias activas de la especie
-    const mandatoryVaccines = await this.vaccineRepo.find({
-      where: { speciesId: patient.speciesId, isMandatory: true, isActive: true } as any,
-      order: { doseOrder: 'ASC', name: 'ASC' },
-    });
+    for (const dose of dto.doses) {
+      const vaccine = await manager.getRepository(Vaccine).findOne({
+        where: {
+          id: dose.vaccineId,
+          deletedAt: IsNull(),
+        } as never,
+      });
 
-    if (mandatoryVaccines.length === 0) {
-      return {
-        patientId,
-        speciesId: patient.speciesId,
-        speciesName: patient.species?.name ?? '',
-        mandatoryVaccines: [],
-        coveragePercent: 100,
-      };
-    }
+      if (!vaccine) {
+        throw new NotFoundException(
+          `Producto biológico con id ${dose.vaccineId} no encontrado.`,
+        );
+      }
 
-    // Carnet activo del paciente
-    const records = await this.recordRepo.find({
-      where: { patientId, isActive: true },
-      order: { applicationDate: 'DESC' },
-    });
-    const activeRecords = records.filter((r) => !r.deletedAt);
-
-    // Agrupar por vaccineId → último registro aplicado
-    const byVaccineId = new Map<number, PatientVaccineRecord>();
-    for (const rec of activeRecords) {
-      if (!byVaccineId.has(rec.vaccineId)) {
-        byVaccineId.set(rec.vaccineId, rec);
+      if (vaccine.speciesId !== speciesId) {
+        throw new BadRequestException(
+          `El producto "${vaccine.name}" no corresponde a la especie del esquema.`,
+        );
       }
     }
 
-    const coverageItems: VaccineCoverageItemDto[] = mandatoryVaccines.map((v) => {
-      const latestRecord = byVaccineId.get(v.id);
-      return {
-        vaccineId: v.id,
-        vaccineName: v.name,
-        doseOrder: v.doseOrder ?? null,
-        isRevaccination: v.isRevaccination,
-        lastApplied: latestRecord ? toDateStr(latestRecord.applicationDate) : null,
-        nextDoseDate: latestRecord ? toDateStr(latestRecord.nextDoseDate) : null,
-        isCovered: !!latestRecord,
-      };
-    });
+    if ((dto.status ?? VaccinationSchemeVersionStatusEnum.VIGENTE) === VaccinationSchemeVersionStatusEnum.VIGENTE) {
+      const activeVersions = await manager.getRepository(VaccinationSchemeVersion).find({
+        where: {
+          schemeId,
+          deletedAt: IsNull(),
+          status: VaccinationSchemeVersionStatusEnum.VIGENTE,
+        } as never,
+      });
 
-    const covered = coverageItems.filter((i) => i.isCovered).length;
-    const coveragePercent =
-      mandatoryVaccines.length > 0
-        ? Math.round((covered / mandatoryVaccines.length) * 100)
-        : 100;
-
-    return {
-      patientId,
-      speciesId: patient.speciesId,
-      speciesName: patient.species?.name ?? '',
-      mandatoryVaccines: coverageItems,
-      coveragePercent,
-    };
-  }
-
-  // ══════════════════════════════════════════════════════════
-  //  HELPERS PRIVADOS
-  // ══════════════════════════════════════════════════════════
-
-  private async findVaccineOrFail(vaccineId: number): Promise<Vaccine> {
-    const vaccine = await this.vaccineRepo.findOne({ where: { id: vaccineId } });
-    if (!vaccine || vaccine.deletedAt) {
-      throw new NotFoundException('Vacuna no encontrada en el catálogo.');
+      for (const activeVersion of activeVersions) {
+        activeVersion.status = VaccinationSchemeVersionStatusEnum.REEMPLAZADO;
+        activeVersion.validTo = new Date(dto.validFrom);
+        await manager.getRepository(VaccinationSchemeVersion).save(activeVersion);
+      }
     }
-    return vaccine;
+
+    const savedVersion = await manager.getRepository(VaccinationSchemeVersion).save(
+      manager.getRepository(VaccinationSchemeVersion).create({
+        schemeId,
+        version: dto.version,
+        status: dto.status ?? VaccinationSchemeVersionStatusEnum.VIGENTE,
+        validFrom: new Date(dto.validFrom),
+        validTo: dto.validTo ? new Date(dto.validTo) : null,
+        changeReason: dto.changeReason?.trim() ?? null,
+        revaccinationRule: dto.revaccinationRule?.trim() ?? null,
+        generalIntervalDays: dto.generalIntervalDays ?? null,
+      }),
+    );
+
+    const usedOrders = new Set<number>();
+    for (const dose of dto.doses) {
+      if (usedOrders.has(dose.doseOrder)) {
+        throw new ConflictException('No se permiten órdenes de dosis duplicados en una versión.');
+      }
+      usedOrders.add(dose.doseOrder);
+
+      await manager.getRepository(VaccinationSchemeVersionDose).save(
+        manager.getRepository(VaccinationSchemeVersionDose).create({
+          schemeVersionId: savedVersion.id,
+          vaccineId: dose.vaccineId,
+          doseOrder: dose.doseOrder,
+          ageStartWeeks: dose.ageStartWeeks ?? null,
+          ageEndWeeks: dose.ageEndWeeks ?? null,
+          intervalDays: dose.intervalDays ?? null,
+          isRequired: dose.isRequired ?? true,
+          notes: dose.notes?.trim() ?? null,
+        }),
+      );
+    }
+
+    return savedVersion;
   }
 
   private async ensurePatientExists(patientId: number): Promise<void> {
@@ -443,10 +509,15 @@ export class VaccinationService {
   }
 
   private async findPatientOrFail(patientId: number): Promise<Patient> {
-    const patient = await this.patientRepo.findOne({ where: { id: patientId }, relations: ['species'] });
+    const patient = await this.patientRepo.findOne({
+      where: { id: patientId },
+      relations: ['species'],
+    });
+
     if (!patient || patient.deletedAt) {
       throw new NotFoundException('Paciente no encontrado.');
     }
+
     return patient;
   }
 
@@ -457,38 +528,90 @@ export class VaccinationService {
     }
   }
 
-  private toVaccineCatalogItem(v: Vaccine): VaccineCatalogItemDto {
-    return {
-      id: v.id,
-      name: v.name,
-      isMandatory: v.isMandatory,
-      isRevaccination: v.isRevaccination,
-      doseOrder: v.doseOrder ?? null,
-    };
-  }
+  private async findVaccineOrFail(vaccineId: number): Promise<Vaccine> {
+    const vaccine = await this.vaccineRepo.findOne({
+      where: {
+        id: vaccineId,
+        deletedAt: IsNull(),
+      } as never,
+      relations: ['species'],
+    });
 
-  private toRecordResponseDto(r: PatientVaccineRecord): PatientVaccineRecordResponseDto {
-    return {
-      id: r.id,
-      vaccineId: r.vaccineId,
-      vaccineName: r.vaccine?.name ?? '',
-      applicationDate: toDateStr(r.applicationDate)!,
-      administeredBy: r.administeredBy ?? null,
-      administeredAt: r.administeredAt ?? null,
-      isExternal: r.isExternal,
-      batchNumber: r.batchNumber ?? null,
-      nextDoseDate: r.nextDoseDate ? toDateStr(r.nextDoseDate) : null,
-      notes: r.notes ?? null,
-      encounterId: r.encounterId ?? null,
-      createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
-    };
+    if (!vaccine) {
+      throw new NotFoundException('Producto biológico no encontrado.');
+    }
+
+    return vaccine;
   }
 
   private ensureVaccineMatchesPatientSpecies(vaccine: Vaccine, patient: Patient): void {
     if (vaccine.speciesId !== patient.speciesId) {
       throw new BadRequestException(
-        `La vacuna "${vaccine.name}" no corresponde a la especie del paciente.`,
+        `El producto "${vaccine.name}" no corresponde a la especie del paciente.`,
       );
     }
+  }
+
+  private toProductResponse(vaccine: Vaccine): VaccineCatalogItemDto {
+    return {
+      id: vaccine.id,
+      name: vaccine.name,
+      species: {
+        id: vaccine.species.id,
+        name: vaccine.species.name,
+      },
+      isRevaccination: vaccine.isRevaccination,
+      isActive: vaccine.isActive,
+    };
+  }
+
+  private toSchemeResponse(scheme: VaccinationScheme): VaccinationSchemeResponseDto {
+    const versions = [...(scheme.versions ?? [])]
+      .filter((version) => !version.deletedAt)
+      .sort((a, b) => b.version - a.version);
+    const activeVersion = versions.find(
+      (version) => version.status === VaccinationSchemeVersionStatusEnum.VIGENTE,
+    );
+
+    return {
+      id: scheme.id,
+      name: scheme.name,
+      description: scheme.description ?? null,
+      species: {
+        id: scheme.species.id,
+        name: scheme.species.name,
+      },
+      activeVersionId: activeVersion?.id ?? null,
+      versions: versions.map((version) => this.toSchemeVersionResponse(version)),
+    };
+  }
+
+  private toSchemeVersionResponse(
+    version: VaccinationSchemeVersion,
+  ): VaccinationSchemeVersionResponseDto {
+    return {
+      id: version.id,
+      version: version.version,
+      status: version.status,
+      validFrom: version.validFrom.toISOString().split('T')[0],
+      validTo: version.validTo ? version.validTo.toISOString().split('T')[0] : null,
+      changeReason: version.changeReason ?? null,
+      revaccinationRule: version.revaccinationRule ?? null,
+      generalIntervalDays: version.generalIntervalDays ?? null,
+      doses: [...(version.doses ?? [])]
+        .filter((dose) => !dose.deletedAt)
+        .sort((a, b) => a.doseOrder - b.doseOrder)
+        .map((dose) => ({
+          id: dose.id,
+          doseOrder: dose.doseOrder,
+          vaccineId: dose.vaccineId,
+          vaccineName: dose.vaccine?.name ?? '',
+          ageStartWeeks: dose.ageStartWeeks ?? null,
+          ageEndWeeks: dose.ageEndWeeks ?? null,
+          intervalDays: dose.intervalDays ?? null,
+          isRequired: dose.isRequired,
+          notes: dose.notes ?? null,
+        })),
+    };
   }
 }

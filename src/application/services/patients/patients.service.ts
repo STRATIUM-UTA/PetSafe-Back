@@ -37,6 +37,7 @@ import {
 import { ListPatientTutorQueryDto } from 'src/presentation/dto/patients/list-patient-tutor-query.dto.js';
 import { ListPatientTutorResponseDto } from 'src/presentation/dto/patients/list-patient-tutor-response.dto.js';
 import { PATIENT_UPLOADS_DIR } from '../../../infra/config/uploads.config.js';
+import { VaccinationPlanService } from '../vaccinations/vaccination-plan.service.js';
 
 const PAGINATE_CONFIG: PaginateConfig<Patient> = {
   sortableColumns: ['id', 'name', 'code', 'createdAt'],
@@ -65,6 +66,7 @@ export class PatientsService {
     @InjectRepository(MediaFile)
     private readonly mediaFileRepo: Repository<MediaFile>,
     private readonly dataSource: DataSource,
+    private readonly vaccinationPlanService: VaccinationPlanService,
   ) { }
 
   private async resolveClientId(userId: number, manager?: EntityManager): Promise<number> {
@@ -152,6 +154,12 @@ export class PatientsService {
           relationship: 'Propietario',
         });
         await manager.save(PatientTutor, tutor);
+        await this.vaccinationPlanService.initializePlanForPatient(
+          saved.id,
+          saved.speciesId,
+          saved.birthDate ?? null,
+          manager,
+        );
 
         return this.findOneInternal(saved.id, userId, manager, roles);
       });
@@ -236,6 +244,16 @@ export class PatientsService {
         await manager.update(Patient, patientId, updateData);
         previousImage = imageFile ? await this.findPatientImage(patientId, manager) : null;
         await this.upsertPatientImage(patientId, imageFile, imageBaseUrl, userId, manager);
+        if (dto.speciesId !== undefined || dto.birthDate !== undefined) {
+          await this.vaccinationPlanService.syncPatientPlanAfterPatientUpdate(
+            patientId,
+            targetSpeciesId,
+            updateData.birthDate !== undefined
+              ? (updateData.birthDate ?? null)
+              : (existingPatient.birthDate ?? null),
+            manager,
+          );
+        }
 
         return this.findOneInternal(patientId, userId, manager);
       });
@@ -799,6 +817,16 @@ export class PatientsService {
         await manager.update(Patient, patientId, updateData);
         previousImage = imageFile ? await this.findPatientImage(patientId, manager) : null;
         await this.upsertPatientImage(patientId, imageFile, imageBaseUrl, userId, manager);
+        if (dto.speciesId !== undefined || dto.birthDate !== undefined) {
+          await this.vaccinationPlanService.syncPatientPlanAfterPatientUpdate(
+            patientId,
+            targetSpeciesId,
+            updateData.birthDate !== undefined
+              ? (updateData.birthDate ?? null)
+              : (existingPatient.birthDate ?? null),
+            manager,
+          );
+        }
 
         return this.findOneInternal(patientId, 0, manager, roles);
       });

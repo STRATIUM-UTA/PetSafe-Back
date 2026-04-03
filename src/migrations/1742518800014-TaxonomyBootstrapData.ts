@@ -110,43 +110,9 @@ export class TaxonomyBootstrapData1742518800014 implements MigrationInterface {
         SELECT 1 FROM colors c WHERE LOWER(c.name) = LOWER(data.name)
       )
     `);
-
-    await queryRunner.query(`
-      INSERT INTO vaccines (name, species_id, is_revaccination, is_active)
-      SELECT data.name, s.id, data.is_revaccination, true
-      FROM (
-        VALUES
-          ('Triple Canina', 'Perro', false),
-          ('Antirrábica Canina', 'Perro', false),
-          ('Séxtuple Canina', 'Perro', false),
-          ('Parvovirus Canino Refuerzo', 'Perro', true),
-          ('Triple Felina', 'Gato', false),
-          ('Antirrábica Felina', 'Gato', false),
-          ('Leucemia Felina', 'Gato', false),
-          ('Clostridial Bovina', 'Bovino', false),
-          ('Carbunco Sintomático', 'Bovino', false),
-          ('Enterotoxemia Ovina', 'Oveja', false),
-          ('Newcastle', 'Pollo', false),
-          ('Viruela Aviar', 'Gallina', false)
-      ) AS data(name, species_name, is_revaccination)
-      INNER JOIN species s ON LOWER(s.name) = LOWER(data.species_name)
-      WHERE NOT EXISTS (
-        SELECT 1 FROM vaccines v WHERE LOWER(v.name) = LOWER(data.name) AND v.species_id = s.id
-      )
-    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-      DELETE FROM vaccines
-      WHERE name IN (
-        'Triple Canina', 'Antirrábica Canina', 'Séxtuple Canina', 'Parvovirus Canino Refuerzo',
-        'Triple Felina', 'Antirrábica Felina', 'Leucemia Felina',
-        'Clostridial Bovina', 'Carbunco Sintomático', 'Enterotoxemia Ovina',
-        'Newcastle', 'Viruela Aviar'
-      )
-    `);
-
     await queryRunner.query(`
       DELETE FROM breeds
       WHERE name IN (

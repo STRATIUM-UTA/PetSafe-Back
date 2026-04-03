@@ -56,7 +56,7 @@ export class DeferredFksAndIndexes1742518800008 implements MigrationInterface {
     await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_species_name_live ON species(name) WHERE deleted_at IS NULL`);
     await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_breeds_species_name_live ON breeds(species_id, name) WHERE deleted_at IS NULL`);
     await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_colors_name_live ON colors(name) WHERE deleted_at IS NULL`);
-    await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_vaccines_name_live ON vaccines(name) WHERE deleted_at IS NULL`);
+    await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_vaccines_species_name_live ON vaccines(species_id, name) WHERE deleted_at IS NULL`);
     await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_antiparasitics_name_live ON antiparasitics(name) WHERE deleted_at IS NULL`);
     await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_patients_code_live ON patients(code) WHERE code IS NOT NULL AND deleted_at IS NULL`);
     await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_patients_microchip_live ON patients(microchip_code) WHERE microchip_code IS NOT NULL AND deleted_at IS NULL`);
@@ -155,7 +155,7 @@ export class DeferredFksAndIndexes1742518800008 implements MigrationInterface {
       'uq_encounter_active_by_queue_live', 'uq_encounter_active_by_patient_live',
       'uq_queue_entries_appointment_live', 'uq_appointments_vet_slot_live',
       'uq_patients_tutor_primary_live', 'uq_patients_microchip_live', 'uq_patients_code_live',
-      'uq_antiparasitics_name_live', 'uq_vaccines_name_live', 'uq_colors_name_live',
+      'uq_antiparasitics_name_live', 'uq_vaccines_species_name_live', 'uq_colors_name_live',
       'uq_breeds_species_name_live', 'uq_species_name_live',
       'uq_clients_person_live', 'uq_employees_code_live', 'uq_employees_person_live',
       'uq_users_email_live', 'uq_users_person_live', 'uq_persons_document_live', 'uq_roles_name_live',
