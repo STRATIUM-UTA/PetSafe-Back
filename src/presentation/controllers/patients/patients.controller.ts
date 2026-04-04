@@ -62,6 +62,23 @@ export class PatientsController {
     );
   }
 
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Post('admin/without-tutor')
+  @UseInterceptors(FileInterceptor('image', patientImageUploadOptions))
+  createWithoutTutor(
+    @Body() dto: CreatePatientDto,
+    @UploadedFile() imageFile: any,
+    @Request() req: PatientImageRequest,
+  ): Promise<PatientResponseDto> {
+    return this.patientsService.createWithoutTutor(
+      dto,
+      req.user.userId,
+      req.user.roles ?? [],
+      imageFile,
+      this.buildPatientImageBaseUrl(req),
+    );
+  }
+
   // Todos los pacientes con su info basica y paginada
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/all-basic')

@@ -3,7 +3,6 @@ import {
   IsArray,
   IsEmail,
   IsInt,
-  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -11,12 +10,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class CreateAdoptionDto {
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  patientId!: number;
-
+export class UpdateAdoptionBasicDto {
   @IsOptional()
   @IsString()
   @MaxLength(2000)
@@ -37,10 +31,10 @@ export class CreateAdoptionDto {
   @MaxLength(120)
   contactName?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   @MaxLength(25)
-  contactPhone!: string;
+  contactPhone?: string;
 
   @IsOptional()
   @IsEmail()

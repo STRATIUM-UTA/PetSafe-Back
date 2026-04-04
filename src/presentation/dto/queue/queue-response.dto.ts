@@ -1,4 +1,6 @@
 /** Paciente resumido para la cola */
+import { PatientImageResponseDto } from '../patients/patient-image.dto.js';
+
 export class QueuePatientDto {
   id!: number;
   name!: string;
@@ -6,6 +8,7 @@ export class QueuePatientDto {
   breed!: string;
   tutorName!: string;
   tutorPhone!: string | null;
+  image!: PatientImageResponseDto | null;
 }
 
 /** Veterinario resumido para la cola */

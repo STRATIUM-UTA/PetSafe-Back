@@ -114,6 +114,47 @@ export class PatientsService {
     return this.createWithOptionalImage(dto, userId, roles, imageFile, imageBaseUrl);
   }
 
+  async createWithoutTutor(
+    dto: CreatePatientDto,
+    userId: number,
+    roles: string[],
+    imageFile?: any,
+    imageBaseUrl?: string,
+  ): Promise<PatientResponseDto> {
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        if (!this.canAccessAnyPatient(roles)) {
+          throw new NotFoundException('Mascota no encontrada');
+        }
+
+        await this.ensurePatientTaxonomyIsValid(dto.speciesId, dto.breedId ?? null, manager);
+
+        const patient = manager.create(Patient, {
+          name: dto.name,
+          speciesId: dto.speciesId,
+          sex: dto.sex as any,
+          breedId: dto.breedId ?? null,
+          colorId: dto.colorId ?? null,
+          birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
+          currentWeight: dto.currentWeight ?? null,
+          isSterilized: dto.sterilized ?? false,
+          microchipCode: dto.microchipCode ?? null,
+          distinguishingMarks: dto.distinguishingMarks ?? null,
+          generalAllergies: dto.generalAllergies ?? null,
+          generalHistory: dto.generalHistory ?? null,
+        });
+        const saved = await manager.save(Patient, patient);
+
+        await this.upsertPatientImage(saved.id, imageFile, imageBaseUrl, userId, manager);
+
+        return this.findOneInternal(saved.id, userId, manager, roles);
+      });
+    } catch (error) {
+      await this.deleteStoredFileIfExists(imageFile?.filename);
+      throw error;
+    }
+  }
+
   async createWithOptionalImage(
     dto: CreatePatientDto,
     userId: number,

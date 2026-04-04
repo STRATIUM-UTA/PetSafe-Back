@@ -11,6 +11,7 @@ import { PatientTutor } from '../../../domain/entities/patients/patient-tutor.en
 import { Employee } from '../../../domain/entities/persons/employee.entity.js';
 import { Client } from '../../../domain/entities/persons/client.entity.js';
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
+import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
       Employee,
       Client,
       UserRole,
+      MediaFile,
     ]),
   ],
   controllers: [QueueController],

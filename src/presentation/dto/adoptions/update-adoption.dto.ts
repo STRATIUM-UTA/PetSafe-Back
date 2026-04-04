@@ -1,4 +1,14 @@
-import { IsEnum, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { AdoptionStatusEnum } from '../../../domain/enums/index.js';
 
@@ -27,4 +37,27 @@ export class UpdateAdoptionDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  contactName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(25)
+  contactPhone?: string;
+
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(255)
+  contactEmail?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  tagIds?: number[];
 }
