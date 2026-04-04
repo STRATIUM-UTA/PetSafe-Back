@@ -20,6 +20,7 @@ import { CreatePatientDto } from '../../../presentation/dto/patients/create-pati
 import { UpdatePatientDto } from '../../../presentation/dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../../presentation/dto/patients/create-condition.dto.js';
 import { AddPatientTutorDto } from '../../../presentation/dto/patients/add-patient-tutor.dto.js';
+import { InitializePatientVaccinationPlanDto } from '../../../presentation/dto/patients/initialize-patient-vaccination-plan.dto.js';
 import {
   UpdatePatientVaccinationSchemeDto,
 } from '../../../presentation/dto/patients/update-patient-vaccination-scheme.dto.js';
@@ -158,13 +159,22 @@ export class PatientsService {
           relationship: 'Propietario',
         });
         await manager.save(PatientTutor, tutor);
-        await this.vaccinationPlanService.initializePlanForPatient(
-          saved.id,
-          saved.speciesId,
-          saved.birthDate ?? null,
-          dto.vaccinationSchemeId ?? null,
-          manager,
-        );
+        const shouldInitializeVaccinationPlan =
+          dto.vaccinationSchemeId !== undefined ||
+          (await this.vaccinationPlanService.hasUsableSchemeForSpecies(
+            saved.speciesId,
+            manager,
+          ));
+
+        if (shouldInitializeVaccinationPlan) {
+          await this.vaccinationPlanService.initializePlanForPatient(
+            saved.id,
+            saved.speciesId,
+            saved.birthDate ?? null,
+            dto.vaccinationSchemeId ?? null,
+            manager,
+          );
+        }
 
         return this.findOneInternal(saved.id, userId, manager, roles);
       });
@@ -437,6 +447,22 @@ export class PatientsService {
         dto.notes ?? null,
         manager,
       );
+    });
+  }
+
+  async initializeVaccinationPlan(
+    patientId: number,
+    dto: InitializePatientVaccinationPlanDto,
+    roles: string[],
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      await this.ensurePatientAccessibleForStaff(patientId, roles, manager);
+      await this.vaccinationPlanService.initializePlanForExistingPatient(
+        patientId,
+        dto.vaccinationSchemeId ?? null,
+        manager,
+      );
+      return this.vaccinationPlanService.getPatientPlanDetail(patientId, manager);
     });
   }
 

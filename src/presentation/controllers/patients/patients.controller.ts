@@ -21,6 +21,7 @@ import { CreatePatientDto } from '../../dto/patients/create-patient.dto.js';
 import { UpdatePatientDto } from '../../dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../dto/patients/create-condition.dto.js';
 import { AddPatientTutorDto } from '../../dto/patients/add-patient-tutor.dto.js';
+import { InitializePatientVaccinationPlanDto } from '../../dto/patients/initialize-patient-vaccination-plan.dto.js';
 import { UpdatePatientVaccinationSchemeDto } from '../../dto/patients/update-patient-vaccination-scheme.dto.js';
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
@@ -165,6 +166,16 @@ export class PatientsController {
     @Request() req: { user: { userId: number; roles: string[] } },
   ) {
     return this.patientsService.removeTutor(id, clientId, req.user.userId, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
+  @Post(':id/vaccination-plan')
+  initializeVaccinationPlan(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: InitializePatientVaccinationPlanDto,
+    @Request() req: { user: { roles: string[] } },
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    return this.patientsService.initializeVaccinationPlan(id, dto, req.user.roles);
   }
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)

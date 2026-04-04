@@ -33,8 +33,16 @@ export class VaccinationController {
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
   @Get('products')
-  getProducts(@Query('speciesId') speciesId?: string) {
-    return this.vaccinationService.getProducts(speciesId ? Number(speciesId) : undefined);
+  getProducts(
+    @Query('speciesId') speciesId?: string,
+    @Query('onlyActive') onlyActive?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.vaccinationService.getProducts(
+      speciesId ? Number(speciesId) : undefined,
+      onlyActive === undefined ? true : onlyActive === 'true',
+      search,
+    );
   }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
@@ -62,9 +70,14 @@ export class VaccinationController {
   @Delete('products/:productId')
   deactivateProduct(
     @Param('productId', ParseIntPipe) productId: number,
-    @Request() req: { user: { userId: number } },
   ) {
-    return this.vaccinationService.deactivateProduct(productId, req.user.userId);
+    return this.vaccinationService.deactivateProduct(productId);
+  }
+
+  @Roles(RoleEnum.ADMIN)
+  @Patch('products/:productId/reactivate')
+  reactivateProduct(@Param('productId', ParseIntPipe) productId: number) {
+    return this.vaccinationService.reactivateProduct(productId);
   }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)

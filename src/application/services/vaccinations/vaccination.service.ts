@@ -61,20 +61,36 @@ export class VaccinationService {
     private readonly vaccinationPlanService: VaccinationPlanService,
   ) {}
 
-  async getProducts(speciesId?: number): Promise<VaccineCatalogItemDto[]> {
-    const where: Record<string, unknown> = {
-      deletedAt: IsNull(),
-    };
+  async getProducts(
+    speciesId?: number,
+    onlyActive = true,
+    search?: string,
+  ): Promise<VaccineCatalogItemDto[]> {
     if (speciesId) {
       await this.ensureSpeciesExists(speciesId);
-      where['speciesId'] = speciesId;
     }
 
-    const vaccines = await this.vaccineRepo.find({
-      where: where as never,
-      relations: ['species'],
-      order: { name: 'ASC' },
-    });
+    const qb = this.vaccineRepo
+      .createQueryBuilder('vaccine')
+      .innerJoinAndSelect('vaccine.species', 'species')
+      .where('vaccine.deleted_at IS NULL')
+      .orderBy('vaccine.name', 'ASC');
+
+    if (speciesId) {
+      qb.andWhere('vaccine.species_id = :speciesId', { speciesId });
+    }
+
+    if (onlyActive) {
+      qb.andWhere('vaccine.is_active = true');
+    }
+
+    if (search?.trim()) {
+      qb.andWhere('vaccine.name ILIKE :search', {
+        search: `%${search.trim()}%`,
+      });
+    }
+
+    const vaccines = await qb.getMany();
 
     return vaccines.map((vaccine) => this.toProductResponse(vaccine));
   }
@@ -147,17 +163,13 @@ export class VaccinationService {
     return this.getProduct(productId);
   }
 
-  async deactivateProduct(
-    productId: number,
-    userId: number,
-  ): Promise<{ message: string }> {
+  async deactivateProduct(productId: number): Promise<{ message: string }> {
     const vaccine = await this.findVaccineOrFail(productId);
 
     await this.dataSource.transaction(async (manager) => {
-      vaccine.isActive = false;
-      vaccine.deletedAt = new Date();
-      vaccine.deletedByUserId = userId;
-      await manager.getRepository(Vaccine).save(vaccine);
+      await manager.getRepository(Vaccine).update(productId, {
+        isActive: false,
+      });
       await this.vaccinationPlanService.blockPendingDosesForInactiveProduct(
         productId,
         manager,
@@ -165,6 +177,22 @@ export class VaccinationService {
     });
 
     return { message: `Producto biológico "${vaccine.name}" desactivado correctamente.` };
+  }
+
+  async reactivateProduct(productId: number): Promise<{ message: string }> {
+    const vaccine = await this.findVaccineOrFail(productId);
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.getRepository(Vaccine).update(productId, {
+        isActive: true,
+      });
+      await this.vaccinationPlanService.unblockPendingDosesForReactivatedProduct(
+        productId,
+        manager,
+      );
+    });
+
+    return { message: `Producto biológico "${vaccine.name}" reactivado correctamente.` };
   }
 
   async getSchemes(speciesId?: number): Promise<VaccinationSchemeResponseDto[]> {
