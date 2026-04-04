@@ -11,6 +11,11 @@ function randomEmail(prefix: string) {
   return `${prefix}.${randomUUID()}@example.com`.toLowerCase();
 }
 
+function randomDocumentId() {
+  const digits = randomUUID().replace(/\D/g, '');
+  return digits.padEnd(10, '0').slice(0, 10);
+}
+
 async function getRoleId(dataSource: DataSource, roleName: string): Promise<number> {
   const rows = (await dataSource.query(
     `SELECT id FROM roles WHERE name = $1 AND deleted_at IS NULL LIMIT 1`,
@@ -31,6 +36,7 @@ async function seedUser(
     personType,
     firstName,
     lastName,
+    documentId = randomDocumentId(),
     email,
     password,
     createClient = false,
@@ -39,6 +45,7 @@ async function seedUser(
     personType: 'EMPLEADO' | 'CLIENTE';
     firstName: string;
     lastName: string;
+    documentId?: string;
     email: string;
     password: string;
     createClient?: boolean;
@@ -49,9 +56,9 @@ async function seedUser(
 
   const personRows = (await dataSource.query(
     `INSERT INTO persons (person_type, first_name, last_name, document_id, phone, address, gender, birth_date, is_active)
-     VALUES ($1, $2, $3, NULL, NULL, NULL, NULL, NULL, true)
+     VALUES ($1, $2, $3, $4, NULL, NULL, NULL, NULL, true)
      RETURNING id`,
-    [personType, firstName, lastName],
+    [personType, firstName, lastName, documentId],
   )) as Array<{ id: number }>;
 
   const personId = personRows[0].id;

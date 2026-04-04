@@ -20,6 +20,9 @@ import { PatientsService } from '../../../application/services/patients/patients
 import { CreatePatientDto } from '../../dto/patients/create-patient.dto.js';
 import { UpdatePatientDto } from '../../dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../dto/patients/create-condition.dto.js';
+import { AddPatientTutorDto } from '../../dto/patients/add-patient-tutor.dto.js';
+import { InitializePatientVaccinationPlanDto } from '../../dto/patients/initialize-patient-vaccination-plan.dto.js';
+import { UpdatePatientVaccinationSchemeDto } from '../../dto/patients/update-patient-vaccination-scheme.dto.js';
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
 import { Roles } from '../../../infra/security/decorators/roles.decorator.js';
@@ -28,6 +31,7 @@ import { ListPatientTutorQueryDto } from '../../dto/patients/list-patient-tutor-
 import { ListPatientTutorResponseDto } from '../../dto/patients/list-patient-tutor-response.dto.js';
 import { PatientResponseDto } from '../../dto/patients/patient-response.dto.js';
 import { PaginatedPatientsBasicForAdminResponse, PatientAdminBasicDetailResponse } from '../../dto/patients/patient-basic-response.dto.js';
+import { PatientVaccinationPlanResponseDto } from '../../dto/vaccinations/vaccination-response.dto.js';
 import {
   PATIENT_UPLOADS_URL_PREFIX,
   patientImageUploadOptions,
@@ -149,6 +153,56 @@ export class PatientsController {
     @Request() req: { user: { userId: number } },
   ) {
     return this.patientsService.removeCondition(id, conditionId, req.user.userId);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Post(':id/tutors')
+  addTutor(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AddPatientTutorDto,
+    @Request() req: { user: { roles: string[] } },
+  ) {
+    return this.patientsService.addTutor(id, dto, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Patch(':id/tutors/:clientId/primary')
+  setPrimaryTutor(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Request() req: { user: { roles: string[] } },
+  ) {
+    return this.patientsService.setPrimaryTutor(id, clientId, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Delete(':id/tutors/:clientId')
+  removeTutor(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ) {
+    return this.patientsService.removeTutor(id, clientId, req.user.userId, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
+  @Post(':id/vaccination-plan')
+  initializeVaccinationPlan(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: InitializePatientVaccinationPlanDto,
+    @Request() req: { user: { roles: string[] } },
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    return this.patientsService.initializeVaccinationPlan(id, dto, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
+  @Patch(':id/vaccination-scheme')
+  updateVaccinationScheme(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePatientVaccinationSchemeDto,
+    @Request() req: { user: { roles: string[] } },
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    return this.patientsService.updateVaccinationScheme(id, dto, req.user.roles);
   }
 
   // Todos los pacientes en base a un tutor especifico

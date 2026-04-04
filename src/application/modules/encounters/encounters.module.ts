@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { VaccinationModule } from '../vaccinations/vaccination.module.js';
 
 import { EncountersService } from '../../services/encounters/encounters.service.js';
 import { EncounterCoreService } from '../../services/encounters/encounter-core.service.js';
@@ -34,6 +35,7 @@ import { User } from '../../../domain/entities/auth/user.entity.js';
 
 @Module({
   imports: [
+    VaccinationModule,
     TypeOrmModule.forFeature([
       Encounter,
       EncounterConsultationReason,

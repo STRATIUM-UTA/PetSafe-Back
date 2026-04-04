@@ -33,13 +33,17 @@ export class SeedData1742518800010 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      INSERT INTO vaccines (name, species, is_revaccination, is_active)
-      VALUES
-        ('Triple Canina', 'PERRO', false, true),
-        ('Antirrábica Canina', 'PERRO', false, true),
-        ('Séxtuple Canina', 'PERRO', false, true),
-        ('Triple Felina', 'GATO', false, true),
-        ('Antirrábica Felina', 'GATO', false, true)
+      INSERT INTO vaccines (name, species_id, is_revaccination, is_mandatory, dose_order, is_active)
+      SELECT data.name, s.id, data.is_revaccination, false, NULL, true
+      FROM (
+        VALUES
+          ('Triple Canina', 'Perro', false),
+          ('Antirrábica Canina', 'Perro', false),
+          ('Séxtuple Canina', 'Perro', false),
+          ('Triple Felina', 'Gato', false),
+          ('Antirrábica Felina', 'Gato', false)
+      ) AS data(name, species_name, is_revaccination)
+      INNER JOIN species s ON LOWER(s.name) = LOWER(data.species_name)
     `);
 
     await queryRunner.query(`

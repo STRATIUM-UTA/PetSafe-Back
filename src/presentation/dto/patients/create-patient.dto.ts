@@ -72,4 +72,8 @@ export class CreatePatientDto {
   @IsOptional()
   @IsInt({ message: 'El cliente asignado no es válido.' })
   clientId?: number;
+
+  @IsOptional()
+  @IsInt({ message: 'El esquema vacunal proporcionado no es válido.' })
+  vaccinationSchemeId?: number;
 }

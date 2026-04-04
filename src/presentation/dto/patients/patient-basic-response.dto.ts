@@ -1,4 +1,7 @@
-import { PatientConditionResponseDto } from './patient-response.dto.js';
+import {
+  PatientConditionResponseDto,
+  PatientTutorResponseDto,
+} from './patient-response.dto.js';
 import { PatientImageResponseDto } from './patient-image.dto.js';
 
 export type PatientBasicByClientResponse = {
@@ -76,6 +79,7 @@ export type PatientAdminBasicDetailResponse = {
   generalAllergies: string | null;
   generalHistory: string | null;
   image: PatientImageResponseDto | null;
+  tutors: PatientTutorResponseDto[];
   clinicalObservations: PatientConditionResponseDto[];
   recentActivity: null;
 };

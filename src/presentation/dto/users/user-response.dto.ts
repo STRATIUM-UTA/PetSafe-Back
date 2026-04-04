@@ -18,4 +18,15 @@ export class UserProfileResponseDto {
   lastLoginAt?: Date | null;
   person!: PersonResponseDto;
   roles!: string[];
+  employeeId!: number | null;
+  isVeterinarian!: boolean;
+}
+
+export class VeterinarianListItemResponseDto {
+  id!: number;
+  personId!: number;
+  fullName!: string;
+  documentId!: string;
+  code!: string | null;
+  professionalRegistration!: string | null;
 }

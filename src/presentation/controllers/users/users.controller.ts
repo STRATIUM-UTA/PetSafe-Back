@@ -5,6 +5,7 @@ import {
   Body,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
@@ -24,6 +25,12 @@ export class UsersController {
   @Get('me')
   getProfile(@Request() req: { user: { userId: number } }) {
     return this.usersService.findProfile(req.user.userId);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get('veterinarians')
+  listVeterinarians(@Query('search') search?: string) {
+    return this.usersService.listVeterinarians(search);
   }
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)

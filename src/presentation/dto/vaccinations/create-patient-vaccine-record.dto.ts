@@ -1,12 +1,4 @@
-import {
-  IsNotEmpty,
-  IsInt,
-  IsOptional,
-  IsDateString,
-  IsString,
-  IsBoolean,
-  MaxLength,
-} from 'class-validator';
+import { IsNotEmpty, IsInt, IsOptional, IsDateString, IsString, IsBoolean, MaxLength } from 'class-validator';
 import {
   IsAfterProperty,
   IsNotBeforeDate,
@@ -28,9 +20,8 @@ export class CreatePatientVaccineRecordDto {
   applicationDate!: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  administeredBy?: string;
+  @IsInt({ message: 'administeredByEmployeeId debe ser un entero.' })
+  administeredByEmployeeId?: number;
 
   @IsOptional()
   @IsString()

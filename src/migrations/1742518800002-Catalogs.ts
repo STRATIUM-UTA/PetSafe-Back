@@ -46,13 +46,16 @@ export class Catalogs1742518800002 implements MigrationInterface {
       CREATE TABLE IF NOT EXISTS vaccines (
         id SERIAL PRIMARY KEY,
         name varchar(120) NOT NULL,
-        species vaccine_species_enum NOT NULL,
+        species_id int NOT NULL,
         is_revaccination boolean NOT NULL DEFAULT false,
+        is_mandatory boolean NOT NULL DEFAULT false,
+        dose_order integer,
         is_active boolean NOT NULL DEFAULT true,
         created_at timestamp without time zone NOT NULL DEFAULT now(),
         updated_at timestamp without time zone NOT NULL DEFAULT now(),
         deleted_at timestamp without time zone,
-        deleted_by_user_id int
+        deleted_by_user_id int,
+        CONSTRAINT fk_vaccines_species FOREIGN KEY (species_id) REFERENCES species(id) ON DELETE RESTRICT
       )
     `);
 

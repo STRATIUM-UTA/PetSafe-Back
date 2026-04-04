@@ -2,67 +2,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class ClinicalSeedData1742518800017 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    
-    // 1. ELIMINAR LAS VACUNAS DE PRUEBA DE LA MIGRACIÓN ANTERIOR (Limpiar el canvas)
-    // Aquellas del Bootstrap que no sean profesionales. Las borramos para reemplazarlas.
-    await queryRunner.query(`
-      DELETE FROM vaccines 
-      WHERE name IN (
-        'Triple Canina', 'Antirrábica Canina', 'Séxtuple Canina', 'Parvovirus Canino Refuerzo',
-        'Triple Felina', 'Antirrábica Felina', 'Leucemia Felina'
-      )
-    `);
-
-    // 2. SEED PROFUNDO DE VACUNAS - ESQUEMAS REALES POR ESPECIE
-    await queryRunner.query(`
-      INSERT INTO vaccines (name, species_id, is_revaccination, is_mandatory, dose_order, is_active)
-      SELECT data.name, s.id, data.is_revaccination, data.is_mandatory, data.dose_order, true
-      FROM (
-        VALUES
-          -- ESQUEMA CANINO (PERROS)
-          ('Puppy DP (Parvovirus/Distemper) - 1ra Dosis', 'Perro', false, true, 1),
-          ('Puppy DP (Parvovirus/Distemper) - 2da Dosis', 'Perro', false, true, 2),
-          ('Múltiple Canina (Sextuple/Octúple) - 1ra Dosis', 'Perro', false, true, 1),
-          ('Múltiple Canina (Sextuple/Octúple) - 2da Dosis', 'Perro', false, true, 2),
-          ('Múltiple Canina (Sextuple/Octúple) - 3ra Dosis', 'Perro', false, true, 3),
-          ('Múltiple Canina - Refuerzo Anual', 'Perro', true, true, NULL),
-          ('Antirrábica Canina - 1ra Dosis', 'Perro', false, true, 1),
-          ('Antirrábica Canina - Refuerzo Anual', 'Perro', true, true, NULL),
-          ('KC (Traqueobronquitis/Tos de las perreras) - 1ra Dosis', 'Perro', false, false, 1),
-          ('KC (Traqueobronquitis/Tos de las perreras) - Refuerzo Anual', 'Perro', true, false, NULL),
-          ('Giardia Canina - Única Dosis', 'Perro', false, false, 1),
-          ('Lyme Canina - 1ra Dosis', 'Perro', false, false, 1),
-          ('Lyme Canina - 2da Dosis', 'Perro', false, false, 2),
-          ('Lyme Canina - Refuerzo Anual', 'Perro', true, false, NULL),
-          ('Leptospirosis Cepa Adicional', 'Perro', false, false, NULL),
-          
-          -- ESQUEMA FELINO (GATOS)
-          ('Triple Felina (Rinotraqueítis/Calicivirus/Panleucopenia) - 1ra Dosis', 'Gato', false, true, 1),
-          ('Triple Felina (Rinotraqueítis/Calicivirus/Panleucopenia) - 2da Dosis', 'Gato', false, true, 2),
-          ('Triple Felina (Rinotraqueítis/Calicivirus/Panleucopenia) - 3ra Dosis', 'Gato', false, true, 3),
-          ('Triple Felina - Refuerzo Anual', 'Gato', true, true, NULL),
-          ('Leucemia Felina (Test Negativo Previo) - 1ra Dosis', 'Gato', false, false, 1),
-          ('Leucemia Felina - 2da Dosis', 'Gato', false, false, 2),
-          ('Leucemia Felina - Refuerzo Anual', 'Gato', true, false, NULL),
-          ('Antirrábica Felina - 1ra Dosis', 'Gato', false, true, 1),
-          ('Antirrábica Felina - Refuerzo Anual', 'Gato', true, true, NULL),
-          ('PIF (Peritonitis Infecciosa Felina) Intranasal', 'Gato', false, false, NULL),
-          
-          -- ESQUEMA CONEJOS Y HURONES
-          ('Mixomatosis y Enfermedad Hemorrágica Viral', 'Conejo', false, true, 1),
-          ('Mixomatosis y EHV - Refuerzo Anual', 'Conejo', true, true, NULL),
-          ('Moquillo para Hurones', 'Hurón', false, true, 1),
-          ('Moquillo Hurón - Refuerzo Anual', 'Hurón', true, true, NULL),
-          ('Rabia para Hurones', 'Hurón', false, true, 1)
-
-      ) AS data(name, species_name, is_revaccination, is_mandatory, dose_order)
-      INNER JOIN species s ON LOWER(s.name) = LOWER(data.species_name)
-      WHERE NOT EXISTS (
-        SELECT 1 FROM vaccines v WHERE LOWER(v.name) = LOWER(data.name) AND v.species_id = s.id
-      )
-    `);
-
-    // 3. SEED PROFUNDO DE PROCEDIMIENTOS CLÍNICOS Y DIAGNÓSTICOS
+    // 1. SEED PROFUNDO DE PROCEDIMIENTOS CLÍNICOS Y DIAGNÓSTICOS
     await queryRunner.query(`
       INSERT INTO procedure_catalog (name, description, is_active)
       SELECT data.name, data.description, true
@@ -105,7 +45,7 @@ export class ClinicalSeedData1742518800017 implements MigrationInterface {
       )
     `);
 
-    // 4. SEED PROFUNDO DE CIRUGÍAS
+    // 2. SEED PROFUNDO DE CIRUGÍAS
     await queryRunner.query(`
       INSERT INTO surgery_catalog (name, description, requires_anesthesia, is_active)
       SELECT data.name, data.description, data.anesthesia, true
@@ -149,9 +89,6 @@ export class ClinicalSeedData1742518800017 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Si queremos hacer un rollback de todos los inserts
-    await queryRunner.query(`DELETE FROM vaccines WHERE name LIKE 'Puppy DP%' OR name LIKE 'Múltiple Canina%' OR name LIKE 'Triple Felina%' OR name LIKE '%Refuerzo Anual%'`);
-    
     // El catálogo de procedimientos
     await queryRunner.query(`DELETE FROM procedure_catalog WHERE description LIKE '%Rutinario%' OR name LIKE 'Consulta%'`);
     

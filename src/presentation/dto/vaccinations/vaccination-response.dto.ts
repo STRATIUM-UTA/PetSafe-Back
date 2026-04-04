@@ -1,20 +1,23 @@
-// ── Vaccine catalog item ──────────────────────────────────────────────────
+export class VaccinationSpeciesSummaryDto {
+  id!: number;
+  name!: string;
+}
 
 export class VaccineCatalogItemDto {
   id!: number;
   name!: string;
-  isMandatory!: boolean;
+  species!: VaccinationSpeciesSummaryDto;
   isRevaccination!: boolean;
-  doseOrder!: number | null;
+  isActive!: boolean;
 }
-
-// ── Patient vaccine record ────────────────────────────────────────────────
 
 export class PatientVaccineRecordResponseDto {
   id!: number;
   vaccineId!: number;
   vaccineName!: string;
+  species!: VaccinationSpeciesSummaryDto | null;
   applicationDate!: string;
+  administeredByEmployeeId!: number | null;
   administeredBy!: string | null;
   administeredAt!: string | null;
   isExternal!: boolean;
@@ -22,30 +25,84 @@ export class PatientVaccineRecordResponseDto {
   nextDoseDate!: string | null;
   notes!: string | null;
   encounterId!: number | null;
+  planDoseId!: number | null;
   createdAt!: string;
 }
 
-// ── Coverage item (per mandatory vaccine) ────────────────────────────────
-
-export class VaccineCoverageItemDto {
+export class VaccinationSchemeDoseResponseDto {
+  id!: number;
+  doseOrder!: number;
   vaccineId!: number;
   vaccineName!: string;
-  doseOrder!: number | null;
-  isRevaccination!: boolean;
-  /** La última aplicación registrada en el carnet del paciente, null si no la tiene */
-  lastApplied!: string | null;
-  /** Próxima dosis sugerida según el último registro, null si no aplica */
-  nextDoseDate!: string | null;
-  /** true = tiene al menos un registro de esta vacuna */
-  isCovered!: boolean;
+  ageStartWeeks!: number | null;
+  ageEndWeeks!: number | null;
+  intervalDays!: number | null;
+  isRequired!: boolean;
+  notes!: string | null;
 }
 
-// ── Full coverage response ────────────────────────────────────────────────
+export class VaccinationSchemeVersionResponseDto {
+  id!: number;
+  version!: number;
+  status!: string;
+  validFrom!: string;
+  validTo!: string | null;
+  changeReason!: string | null;
+  revaccinationRule!: string | null;
+  generalIntervalDays!: number | null;
+  doses!: VaccinationSchemeDoseResponseDto[];
+}
 
-export class PatientVaccineCoverageResponseDto {
-  patientId!: number;
-  speciesId!: number;
-  speciesName!: string;
-  mandatoryVaccines!: VaccineCoverageItemDto[];
+export class VaccinationSchemeResponseDto {
+  id!: number;
+  name!: string;
+  description!: string | null;
+  species!: VaccinationSpeciesSummaryDto;
+  activeVersionId!: number | null;
+  versions!: VaccinationSchemeVersionResponseDto[];
+}
+
+export class PatientVaccinationPlanDoseResponseDto {
+  id!: number;
+  schemeDoseId!: number;
+  vaccineId!: number;
+  vaccineName!: string;
+  doseOrder!: number;
+  status!: string;
+  expectedDate!: string | null;
+  appliedAt!: string | null;
+  applicationRecordId!: number | null;
+  ageStartWeeks!: number | null;
+  ageEndWeeks!: number | null;
+  intervalDays!: number | null;
+  isRequired!: boolean;
+  notes!: string | null;
+}
+
+export class PatientVaccinationPlanCoverageDto {
+  totalRequired!: number;
+  applied!: number;
+  unknown!: number;
+  notApplied!: number;
+  blocked!: number;
+  requiresReview!: number;
   coveragePercent!: number;
+}
+
+export class PatientVaccinationPlanResponseDto {
+  id!: number;
+  patientId!: number;
+  status!: string;
+  assignedAt!: string;
+  notes!: string | null;
+  scheme!: {
+    id: number;
+    name: string;
+    species: VaccinationSpeciesSummaryDto;
+  };
+  version!: VaccinationSchemeVersionResponseDto;
+  doses!: PatientVaccinationPlanDoseResponseDto[];
+  applications!: PatientVaccineRecordResponseDto[];
+  coverage!: PatientVaccinationPlanCoverageDto;
+  alerts!: string[];
 }

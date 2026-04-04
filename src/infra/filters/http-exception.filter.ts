@@ -25,6 +25,12 @@ interface PgErrorMapping {
   message: string;
 }
 
+interface PgConstraintMapping {
+  status: number;
+  error: string;
+  message: string;
+}
+
 const PG_ERROR_MAP: Record<string, PgErrorMapping> = {
   '23505': {
     status: HttpStatus.CONFLICT,
@@ -83,6 +89,15 @@ const PG_ERROR_MAP: Record<string, PgErrorMapping> = {
   },
 };
 
+const PG_CONSTRAINT_MAP: Record<string, PgConstraintMapping> = {
+  uq_vaccination_scheme_versions_one_active: {
+    status: HttpStatus.CONFLICT,
+    error: 'Conflict',
+    message:
+      'Ya existe una versión vigente para este esquema vacunal. Debes reemplazar o desactivar la versión vigente antes de activar otra.',
+  },
+};
+
 // ── Handlers ─────────────────────────────────────────
 
 function handleHttpException(exception: HttpException): Pick<ErrorResponse, 'statusCode' | 'message' | 'error'> {
@@ -117,6 +132,17 @@ function handleQueryFailed(
   );
 
   const mapping = pgError.code ? PG_ERROR_MAP[pgError.code] : undefined;
+
+  if (pgError.constraint) {
+    const constraintMapping = PG_CONSTRAINT_MAP[pgError.constraint];
+    if (constraintMapping) {
+      return {
+        statusCode: constraintMapping.status,
+        message: constraintMapping.message,
+        error: constraintMapping.error,
+      };
+    }
+  }
 
   if (mapping) {
     return { statusCode: mapping.status, message: `${mapping.message} (${pgError.message})`, error: mapping.error };

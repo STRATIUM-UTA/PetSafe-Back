@@ -11,6 +11,7 @@ import {
 import type { Patient } from '../patients/patient.entity.js';
 import type { Vaccine } from '../catalogs/vaccine.entity.js';
 import type { Encounter } from '../encounters/encounter.entity.js';
+import type { Employee } from '../persons/employee.entity.js';
 
 @Entity({ name: 'patient_vaccine_records' })
 export class PatientVaccineRecord {
@@ -36,6 +37,13 @@ export class PatientVaccineRecord {
 
   @Column({ name: 'administered_by', type: 'varchar', length: 120, nullable: true })
   administeredBy!: string | null;
+
+  @Column({ name: 'administered_by_employee_id', type: 'int', nullable: true })
+  administeredByEmployeeId!: number | null;
+
+  @ManyToOne('Employee', { onDelete: 'RESTRICT', nullable: true })
+  @JoinColumn({ name: 'administered_by_employee_id' })
+  administeredByEmployee!: Employee | null;
 
   @Column({ name: 'administered_at', type: 'varchar', length: 180, nullable: true })
   administeredAt!: string | null;
