@@ -25,7 +25,7 @@ export class EncounterSharedService {
     private readonly employeeRepo: Repository<Employee>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-  ) {}
+  ) { }
 
   /**
    * Carga una atenciÃ³n con todas sus relaciones clÃ­nicas principales.
@@ -103,7 +103,7 @@ export class EncounterSharedService {
 
     if (!vet.isVeterinarian) {
       throw new BadRequestException(
-        'El empleado seleccionado existe, pero no estÃ¡ registrado como veterinario.',
+        'El empleado seleccionado existe, pero no está registrado como veterinario.',
       );
     }
 

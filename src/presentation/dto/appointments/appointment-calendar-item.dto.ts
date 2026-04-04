@@ -13,5 +13,8 @@ export class AppointmentCalendarItemDto {
   reason!: string | null;
   notes!: string | null;
   status!: string;
+  hasQueueEntry!: boolean;
+  queueEntryId!: number | null;
+  queueStatus!: string | null;
   isActive!: boolean;
 }

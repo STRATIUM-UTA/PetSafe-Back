@@ -12,7 +12,8 @@ import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.en
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { Employee } from '../../../domain/entities/persons/employee.entity.js';
 import { User } from '../../../domain/entities/auth/user.entity.js';
-import { QueueEntryTypeEnum, QueueStatusEnum } from '../../../domain/enums/index.js';
+import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
+import { QueueEntryTypeEnum, QueueStatusEnum, MediaOwnerTypeEnum, MediaTypeEnum } from '../../../domain/enums/index.js';
 
 import { CreateQueueEntryDto } from '../../../presentation/dto/queue/create-queue-entry.dto.js';
 import { ListQueueQueryDto } from '../../../presentation/dto/queue/list-queue-query.dto.js';
@@ -24,12 +25,23 @@ import {
   QueueSummaryDto,
   QueueVeterinarianDto,
 } from '../../../presentation/dto/queue/queue-response.dto.js';
+import { PatientMapper } from '../../mappers/patient.mapper.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatTime(raw: string | null | undefined): string | null {
+function formatTime(raw: string | Date | null | undefined): string | null {
   if (!raw) return null;
   return String(raw).substring(0, 5); // "HH:MM:SS" → "HH:MM"
+}
+
+function formatClockTime(raw: Date | string | null | undefined): string | null {
+  if (!raw) return null;
+  if (raw instanceof Date) {
+    const hours = String(raw.getHours()).padStart(2, '0');
+    const minutes = String(raw.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+  return formatTime(raw);
 }
 
 function formatDate(raw: Date | string): string {
@@ -50,7 +62,7 @@ function formatTimestamp(raw: Date | null | undefined): string {
 /** Minutos transcurridos desde arrivalTime (HH:MM) hasta ahora */
 function calcWaitMinutes(entry: QueueEntry): number {
   if (entry.status !== QueueStatusEnum.EN_ESPERA) return 0;
-  const [h, m] = (formatTime(entry.arrivalTime as unknown as string) ?? '00:00').split(':').map(Number);
+  const [h, m] = (formatClockTime(entry.arrivalTime) ?? '00:00').split(':').map(Number);
   const now = new Date();
   const arrivalToday = new Date();
   arrivalToday.setHours(h, m, 0, 0);
@@ -95,6 +107,8 @@ export class QueueService {
     private readonly patientRepo: Repository<Patient>,
     @InjectRepository(Employee)
     private readonly employeeRepo: Repository<Employee>,
+    @InjectRepository(MediaFile)
+    private readonly mediaFileRepo: Repository<MediaFile>,
   ) {}
 
   private async syncCancelledAppointmentsIntoQueue(): Promise<void> {
@@ -139,7 +153,7 @@ export class QueueService {
   }
 
   // ── Mapea una QueueEntry a lo que espera el front ──
-  private toDto(entry: QueueEntry): QueueEntryRecordDto {
+  private toDto(entry: QueueEntry, patientImage?: MediaFile | null): QueueEntryRecordDto {
     const patient = entry.patient;
     const vet = entry.veterinarian;
     const vetPerson = vet?.person;
@@ -157,6 +171,7 @@ export class QueueService {
       ? `${tutorPerson.firstName} ${tutorPerson.lastName}`.trim()
       : '';
     patientDto.tutorPhone = tutorPerson?.phone ?? null;
+    patientDto.image = PatientMapper.toImageDto(patientImage);
 
     const vetDto = new QueueVeterinarianDto();
     vetDto.id = vet?.id ?? entry.vetId;
@@ -172,7 +187,7 @@ export class QueueService {
     dto.patient = patientDto;
     dto.veterinarian = vetDto;
     dto.entryType = entry.entryType;
-    dto.arrivalTime = formatTime(entry.arrivalTime as unknown as string) ?? '';
+    dto.arrivalTime = formatClockTime(entry.arrivalTime) ?? '';
     dto.scheduledTime = formatTime(entry.scheduledTime) ?? null;
     dto.queueStatus = entry.status;
     dto.notes = entry.notes ?? null;
@@ -180,6 +195,34 @@ export class QueueService {
     dto.createdAt = formatTimestamp(entry.createdAt);
     dto.updatedAt = formatTimestamp(entry.updatedAt);
     return dto;
+  }
+
+  private async findImagesByPatientIds(patientIds: number[]): Promise<Map<number, MediaFile>> {
+    const imagesByPatientId = new Map<number, MediaFile>();
+
+    if (patientIds.length === 0) {
+      return imagesByPatientId;
+    }
+
+    const images = await this.mediaFileRepo
+      .createQueryBuilder('media')
+      .where('media.owner_type = :ownerType', { ownerType: MediaOwnerTypeEnum.PACIENTE })
+      .andWhere('media.media_type = :mediaType', { mediaType: MediaTypeEnum.IMAGEN })
+      .andWhere('media.is_active = true')
+      .andWhere('media.owner_id IN (:...patientIds)', { patientIds })
+      .andWhere('media.deleted_at IS NULL')
+      .orderBy('media.owner_id', 'ASC')
+      .addOrderBy('media.created_at', 'DESC')
+      .addOrderBy('media.id', 'DESC')
+      .getMany();
+
+    for (const image of images) {
+      if (!imagesByPatientId.has(image.ownerId)) {
+        imagesByPatientId.set(image.ownerId, image);
+      }
+    }
+
+    return imagesByPatientId;
   }
 
   // ── Construye el query base con relaciones ──
@@ -269,7 +312,12 @@ export class QueueService {
       });
     }
     const allEntities = this.sortEntries(await allQb.getMany());
-    const allDtos = allEntities.map((e) => this.toDto(e));
+    const allImagesByPatientId = await this.findImagesByPatientIds(
+      allEntities.map((entry) => entry.patient?.id ?? entry.patientId),
+    );
+    const allDtos = allEntities.map((e) =>
+      this.toDto(e, allImagesByPatientId.get(e.patient?.id ?? e.patientId)),
+    );
     const summary = this.buildSummary(allDtos);
 
     // Query filtrada para la lista paginada
@@ -301,8 +349,13 @@ export class QueueService {
     const filteredEntities = this.sortEntries(await filteredQb.getMany());
     const total = filteredEntities.length;
     const entities = filteredEntities.slice((page - 1) * limit, page * limit);
+    const imagesByPatientId = await this.findImagesByPatientIds(
+      entities.map((entry) => entry.patient?.id ?? entry.patientId),
+    );
 
-    const dtos = entities.map((e) => this.toDto(e));
+    const dtos = entities.map((e) =>
+      this.toDto(e, imagesByPatientId.get(e.patient?.id ?? e.patientId)),
+    );
 
     const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
     const currentPage = Math.min(page, totalPages);
@@ -467,6 +520,9 @@ export class QueueService {
   private async findOneDto(id: number): Promise<QueueEntryRecordDto> {
     const full = await this.baseQb().andWhere('q.id = :id', { id }).getOne();
     if (!full) throw new NotFoundException('Entrada de cola no encontrada.');
-    return this.toDto(full);
+    const imagesByPatientId = await this.findImagesByPatientIds([
+      full.patient?.id ?? full.patientId,
+    ]);
+    return this.toDto(full, imagesByPatientId.get(full.patient?.id ?? full.patientId));
   }
 }

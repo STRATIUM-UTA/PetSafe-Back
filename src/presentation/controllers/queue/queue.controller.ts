@@ -22,7 +22,7 @@ import { RoleEnum } from '../../../domain/enums/index.js';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('queue')
 export class QueueController {
-  constructor(private readonly queueService: QueueService) {}
+  constructor(private readonly queueService: QueueService) { }
 
   /**
    * GET /queue?date=YYYY-MM-DD&status=EN_ESPERA&search=Luna&page=1&limit=15

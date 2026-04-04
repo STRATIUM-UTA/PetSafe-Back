@@ -3,6 +3,7 @@ import * as Enums from '../../../domain/enums/index.js';
 
 @Controller('metadata')
 export class MetadataController {
+
   @Get('enums')
   getEnums() {
     // We convert TypeScript enums to plain arrays or key-value objects for easy consumption by the frontend.
