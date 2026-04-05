@@ -36,6 +36,8 @@ Variables usadas:
 - `DB_PORT`
 - `DB_USERNAME`
 - `DB_PASSWORD`
+- `DB_PROD_USERNAME` (opcional, solo para migraciones)
+- `DB_PROD_PASSWORD` (opcional, solo para migraciones)
 - `DB_NAME`
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
@@ -58,6 +60,8 @@ Variables usadas:
 4) Corre migraciones (incluye seed de usuarios):
 
 `npm run migration:run`
+
+Si defines `DB_PROD_USERNAME` y `DB_PROD_PASSWORD`, el CLI de migraciones usara esas credenciales. Si no, hara fallback a `DB_USERNAME` y `DB_PASSWORD`.
 
 5) Inicia el API:
 
