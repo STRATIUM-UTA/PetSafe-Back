@@ -26,6 +26,8 @@ export class AuthNotificationContentFactory {
       '',
       'Recibimos una solicitud para restablecer tu contraseña en SafePet.',
       `Tu código de verificación es: ${input.pin}`,
+      'Ingresa este PIN en la pantalla de recuperación de SafePet y registra una nueva contraseña.',
+      'La nueva contraseña debe tener al menos 8 caracteres y ser diferente a la anterior.',
       `Este PIN expira en ${input.expiresInMinutes} minutos y solo se puede usar una vez.`,
       'Si no realizaste esta solicitud, puedes ignorar este mensaje.',
     ].join('\n');
@@ -39,6 +41,8 @@ export class AuthNotificationContentFactory {
         <div style="display: inline-block; padding: 12px 18px; font-size: 28px; font-weight: 700; letter-spacing: 6px; background: #f3f4f6; border-radius: 10px;">
           ${input.pin}
         </div>
+        <p style="margin-top: 16px;">Ingresa este PIN en la pantalla de recuperación de SafePet y registra una nueva contraseña.</p>
+        <p>La nueva contraseña debe tener al menos 8 caracteres y ser diferente a la anterior.</p>
         <p style="margin-top: 16px;">Este PIN expira en ${input.expiresInMinutes} minutos y solo se puede usar una vez.</p>
         <p>Si no realizaste esta solicitud, puedes ignorar este mensaje.</p>
       </div>
