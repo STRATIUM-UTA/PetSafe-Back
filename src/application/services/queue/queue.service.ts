@@ -394,7 +394,7 @@ export class QueueService {
     });
     if (existingActive && !existingActive.deletedAt) {
       throw new BadRequestException(
-        'El paciente ya tiene un ingreso activo en la cola de hoy.',
+        'El paciente ya se encuentra en la lista de espera de hoy.',
       );
     }
 
