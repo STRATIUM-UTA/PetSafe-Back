@@ -5,8 +5,8 @@ const BRAND = '#134e4a';
 const BRAND_ALT = '#0f766e';
 const BRAND_SOFT = '#ecfeff';
 const BORDER = '#cbd5e1';
-const TEXT = '#1f2937';
-const MUTED = '#64748b';
+const TEXT = '#111827';
+const MUTED = '#6b7280';
 const WHITE = '#ffffff';
 const NO_DATA = 'Sin registro';
 const EMPTY_SECTION_TEXT = 'No hay datos registrados para esta seccion.';
@@ -123,7 +123,7 @@ function drawPrimarySectionTitle(doc: any, title: string, patientName: string): 
   doc
     .fillColor(BRAND)
     .font('Helvetica-Bold')
-    .fontSize(9.5)
+    .fontSize(9.1)
     .text(title, doc.page.margins.left + 8, y + 4, { lineBreak: false });
   doc.fillColor(TEXT);
   doc.y = y + 32;
@@ -136,7 +136,7 @@ function drawVisitHeader(doc: any, title: string, meta: string, patientName: str
   doc
     .fillColor(WHITE)
     .font('Helvetica-Bold')
-    .fontSize(11)
+    .fontSize(10.2)
     .text(title, doc.page.margins.left + 12, y + 9, { lineBreak: false });
   doc
     .fillColor('#d1fae5')
@@ -170,8 +170,8 @@ function drawVisitSectionTitle(doc: any, title: string, patientName: string, lef
 }
 
 function measureCellHeight(doc: any, text: string, width: number): number {
-  doc.font('Helvetica').fontSize(8.8);
-  return doc.heightOfString(text, { width }) + 12;
+  doc.font('Helvetica').fontSize(9.4);
+  return doc.heightOfString(text, { width }) + 15;
 }
 
 function drawGrid(
@@ -204,17 +204,17 @@ function drawGrid(
       const x = left + columnIndex * (columnWidth + gap);
       doc
         .fillColor(MUTED)
-        .font('Helvetica-Bold')
-        .fontSize(7.2)
-        .text(item.label.toUpperCase(), x, rowY, {
+        .font('Helvetica')
+        .fontSize(7.1)
+        .text(item.label, x, rowY, {
           width: columnWidth,
           lineBreak: false,
         });
       doc
         .fillColor(TEXT)
         .font('Helvetica')
-        .fontSize(8.8)
-        .text(textValue(item.value), x, rowY + 10, {
+        .fontSize(9.4)
+        .text(textValue(item.value), x, rowY + 11, {
           width: columnWidth,
         });
     });
@@ -239,17 +239,18 @@ function drawParagraph(
 
   ensureSpace(doc, 36, patientName);
   doc
-    .fillColor(TEXT)
-    .font('Helvetica-Bold')
-    .fontSize(8.8)
-    .text(`${label}:`, left, doc.y);
-  doc
+    .fillColor(MUTED)
     .font('Helvetica')
-    .fontSize(8.8)
-    .text(printableValue, left + 8, doc.y + 2, {
-      width: sectionWidth(doc, left) - 8,
+    .fontSize(7.3)
+    .text(label, left, doc.y);
+  doc
+    .fillColor(TEXT)
+    .font('Helvetica')
+    .fontSize(9.2)
+    .text(printableValue, left, doc.y + 3, {
+      width: sectionWidth(doc, left),
     });
-  doc.moveDown(0.55);
+  doc.moveDown(0.75);
 }
 
 function drawBulletList(
@@ -467,11 +468,10 @@ export class ClinicalHistoryFullPdfService {
 
     drawPageHeader(doc, patientName);
 
-    drawPrimarySectionTitle(doc, 'PACIENTE', patientName);
+    drawPrimarySectionTitle(doc, 'Paciente', patientName);
     drawGrid(
       doc,
       [
-        { label: 'ID', value: String(data.patient.id) },
         { label: 'Nombre', value: data.patient.name },
         { label: 'Especie', value: data.patient.species },
         { label: 'Raza', value: data.patient.breed },
@@ -498,7 +498,7 @@ export class ClinicalHistoryFullPdfService {
       patientName,
     );
 
-    drawPrimarySectionTitle(doc, 'TUTORES', patientName);
+    drawPrimarySectionTitle(doc, 'Tutores', patientName);
     if (data.tutors.length === 0) {
       drawEmptySection(doc, patientName);
     } else {
@@ -520,7 +520,7 @@ export class ClinicalHistoryFullPdfService {
       });
     }
 
-    drawPrimarySectionTitle(doc, 'HISTORIAL CLINICO', patientName);
+    drawPrimarySectionTitle(doc, 'Historial clinico', patientName);
     if (data.encounters.length === 0) {
       drawParagraph(doc, 'Visitas', 'Este paciente no tiene visitas clinicas registradas.', patientName);
     }
@@ -528,7 +528,7 @@ export class ClinicalHistoryFullPdfService {
     data.encounters.forEach((encounter, index) => {
       drawVisitHeader(
         doc,
-        `VISITA #${index + 1}`,
+        `Visita #${index + 1}`,
         `${formatDate(encounter.startTime, true)} | ${textValue(encounter.vetName)} | ${formatEncounterStatus(encounter.status)}`,
         patientName,
       );
