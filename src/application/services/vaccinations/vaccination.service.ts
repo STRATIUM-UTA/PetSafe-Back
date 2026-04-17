@@ -35,6 +35,8 @@ import {
   VaccinationSchemeVersionResponseDto,
 } from '../../../presentation/dto/vaccinations/vaccination-response.dto.js';
 import { VaccinationPlanService } from './vaccination-plan.service.js';
+import { ListVaccinationsQueryDto } from '../../../presentation/dto/vaccinations/list-vaccinations-query.dto.js';
+import { PaginatedVaccinationsBasicResponse } from '../../../presentation/dto/vaccinations/vaccination-basic-response.dto.js';
 
 @Injectable()
 export class VaccinationService {
@@ -59,7 +61,69 @@ export class VaccinationService {
     private readonly schemeDoseRepo: Repository<VaccinationSchemeVersionDose>,
     private readonly dataSource: DataSource,
     private readonly vaccinationPlanService: VaccinationPlanService,
-  ) {}
+  ) { }
+
+  async findAllBasic(query: ListVaccinationsQueryDto): Promise<PaginatedVaccinationsBasicResponse> {
+    console.log("ListVaccinationsQueryDto", query);
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+
+    const qb = this.recordRepo
+      .createQueryBuilder('record')
+      .innerJoinAndSelect('record.vaccine', 'vaccine')
+      .innerJoinAndSelect('record.patient', 'patient')
+      .where('record.deletedAt IS NULL');
+
+    if (query.search) {
+      qb.andWhere('LOWER(patient.name) LIKE LOWER(:search)', {
+        search: `%${query.search}%`,
+      });
+    }
+
+    if (query.isExternal === 'true') {
+      qb.andWhere('record.isExternal IS TRUE');
+    } else if (query.isExternal === 'false') {
+      qb.andWhere('record.isExternal IS NOT TRUE');
+    }
+
+
+    qb.orderBy('record.applicationDate', 'DESC').addOrderBy('record.id', 'DESC');
+
+    const [records, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: records.map((r) => ({
+        id: r.id,
+        vaccineName: r.vaccine.name,
+        applicationDate: this.toDateStringFindAllBasic(r.applicationDate),
+        nextDoseDate: r.nextDoseDate ? this.toDateStringFindAllBasic(r.nextDoseDate) : null,
+        isExternal: r.isExternal,
+        notes: r.notes,
+        patientId: r.patientId,
+        patientName: r.patient.name,
+        encounterId: r.encounterId ?? null,
+      })),
+      meta: {
+        totalItems: total,
+        itemCount: records.length,
+        itemsPerPage: limit,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page,
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1,
+      },
+    };
+  }
+
+  private toDateStringFindAllBasic(value: Date | string): string {
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+    return String(value).substring(0, 10);
+  }
 
   async getProducts(
     speciesId?: number,

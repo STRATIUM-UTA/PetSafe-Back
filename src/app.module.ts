@@ -20,6 +20,8 @@ import { VaccinationModule } from './application/modules/vaccinations/vaccinatio
 
 import { UsersModule } from './application/modules/users/users.module.js';
 import { ProcedureSurgeryCatalogModule } from './application/modules/catalogs/procedure-surgery-catalog.module.js';
+import { TreatmentsModule } from './application/modules/treatments/treatments.module.js';
+import { ProceduresModule } from './application/modules/procedures/procedures.module.js';
 import { HealthController } from './presentation/controllers/health/health.controller.js';
 
 @Module({
@@ -43,6 +45,8 @@ import { HealthController } from './presentation/controllers/health/health.contr
     MetadataModule,
     VaccinationModule,
     ProcedureSurgeryCatalogModule,
+    TreatmentsModule,
+    ProceduresModule,
   ],
   controllers: [HealthController],
   providers: [],

@@ -144,6 +144,7 @@ export class EncounterActionsService {
 
     const procedure = this.procedureRepo.create({
       encounterId,
+      catalogId: dto.catalogId ?? null,
       procedureType: dto.procedureType,
       performedDate: new Date(dto.performedDate),
       description: dto.description ?? null,
