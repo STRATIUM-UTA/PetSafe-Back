@@ -12,9 +12,8 @@ import {
   IsNotBeforeDate,
   IsNotFutureDate,
 } from '../../validators/date-range.validator.js';
-import { UpsertPatientSurgeryCollectionDto } from './upsert-patient-surgery.dto.js';
 
-export class CreatePatientDto extends UpsertPatientSurgeryCollectionDto {
+export class CreatePatientDto {
   @IsNotEmpty({ message: 'El nombre de la mascota es obligatorio.' })
   @IsString({ message: 'El nombre debe ser un texto.' })
   name!: string;
