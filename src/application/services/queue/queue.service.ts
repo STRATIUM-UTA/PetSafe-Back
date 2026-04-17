@@ -109,7 +109,7 @@ export class QueueService {
     private readonly employeeRepo: Repository<Employee>,
     @InjectRepository(MediaFile)
     private readonly mediaFileRepo: Repository<MediaFile>,
-  ) {}
+  ) { }
 
   private async syncCancelledAppointmentsIntoQueue(): Promise<void> {
     await this.queueRepo.query(
@@ -384,6 +384,20 @@ export class QueueService {
       throw new NotFoundException('Paciente no encontrado.');
     }
 
+    // 1b) Verificar que el paciente no tenga ya una entrada activa hoy
+    const today = formatDate(new Date());
+    const existingActive = await this.queueRepo.findOne({
+      where: [
+        { patientId: dto.patientId, date: today as unknown as Date, status: QueueStatusEnum.EN_ESPERA },
+        { patientId: dto.patientId, date: today as unknown as Date, status: QueueStatusEnum.EN_ATENCION },
+      ],
+    });
+    if (existingActive && !existingActive.deletedAt) {
+      throw new BadRequestException(
+        'El paciente ya se encuentra en la lista de espera de hoy.',
+      );
+    }
+
     let linkedAppointment: Appointment | null = null;
     if (dto.appointmentId) {
       linkedAppointment = await this.appointmentRepo.findOne({
@@ -466,6 +480,16 @@ export class QueueService {
     }
     if (entry.status !== QueueStatusEnum.EN_ESPERA) {
       throw new BadRequestException('Solo se puede iniciar una atención que esté en espera.');
+    }
+
+    // Verificar que el mismo paciente no tenga ya otra entrada EN_ATENCION hoy
+    const activeAttention = await this.queueRepo.findOne({
+      where: { patientId: entry.patientId, status: QueueStatusEnum.EN_ATENCION, date: entry.date },
+    });
+    if (activeAttention && activeAttention.id !== id) {
+      throw new BadRequestException(
+        'El paciente ya tiene una atención en curso.',
+      );
     }
 
     if (entry.appointmentId) {

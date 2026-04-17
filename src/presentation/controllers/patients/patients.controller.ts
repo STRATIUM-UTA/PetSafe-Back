@@ -31,6 +31,7 @@ import { ListPatientTutorQueryDto } from '../../dto/patients/list-patient-tutor-
 import { ListPatientTutorResponseDto } from '../../dto/patients/list-patient-tutor-response.dto.js';
 import { PatientResponseDto } from '../../dto/patients/patient-response.dto.js';
 import { PaginatedPatientsBasicForAdminResponse, PatientAdminBasicDetailResponse } from '../../dto/patients/patient-basic-response.dto.js';
+import { PatientClinicalHistoryResponse } from '../../dto/patients/patient-clinical-history-response.dto.js';
 import { PatientVaccinationPlanResponseDto } from '../../dto/vaccinations/vaccination-response.dto.js';
 import {
   PATIENT_UPLOADS_URL_PREFIX,
@@ -224,6 +225,16 @@ export class PatientsController {
   @Get('admin/:id/basic')
   findAdminBasic(@Param('id', ParseIntPipe) id: number, @Request() req: { user: { userId: number; roles: string[] } }): Promise<PatientAdminBasicDetailResponse> {
     return this.patientsService.findAdminBasic(id, req.user.roles);
+  }
+
+  // Historial clínico completo de un paciente
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get('admin/:id/clinical-history')
+  findClinicalHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ): Promise<PatientClinicalHistoryResponse> {
+    return this.patientsService.findClinicalHistory(id, req.user.roles);
   }
 
   // Actualizar campos basicos de un paciente

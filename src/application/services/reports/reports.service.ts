@@ -1,18 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 
 import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
 import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
+import { PatientCondition } from '../../../domain/entities/patients/patient-condition.entity.js';
 import { PatientVaccineRecord } from '../../../domain/entities/patients/patient-vaccine-record.entity.js';
+import { PatientVaccinationPlan } from '../../../domain/entities/vaccinations/patient-vaccination-plan.entity.js';
 import { User } from '../../../domain/entities/auth/user.entity.js';
 import { AppointmentsPdfService } from './appointments-pdf.service.js';
 import {
   ClinicalHistoryPdfData,
   ClinicalHistoryPdfService,
 } from './clinical-history-pdf.service.js';
+import {
+  ClinicalHistoryFullPdfService,
+  ClinicalHistoryFullPdfData,
+} from './clinical-history-full-pdf.service.js';
 import { AgendaReportItemDto } from '../../../presentation/dto/reports/agenda-report-item.dto.js';
 
 function patientSexLabel(sex: string | null | undefined): string {
@@ -102,6 +108,23 @@ function queueEntryTypeLabel(type: string | null | undefined): string {
   return type ? (map[type] ?? type) : 'N/A';
 }
 
+function calculateAgeYears(raw: string | Date | null | undefined): number | null {
+  if (!raw) return null;
+
+  const date = raw instanceof Date ? raw : new Date(String(raw));
+  if (Number.isNaN(date.getTime())) return null;
+
+  const now = new Date();
+  let years = now.getFullYear() - date.getFullYear();
+  const monthDiff = now.getMonth() - date.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
+    years -= 1;
+  }
+
+  return Math.max(years, 0);
+}
+
 @Injectable()
 export class ReportsService {
   constructor(
@@ -113,12 +136,17 @@ export class ReportsService {
     private readonly patientRepo: Repository<Patient>,
     @InjectRepository(Encounter)
     private readonly encounterRepo: Repository<Encounter>,
+    @InjectRepository(PatientCondition)
+    private readonly patientConditionRepo: Repository<PatientCondition>,
     @InjectRepository(PatientVaccineRecord)
     private readonly patientVaccineRecordRepo: Repository<PatientVaccineRecord>,
+    @InjectRepository(PatientVaccinationPlan)
+    private readonly patientVaccinationPlanRepo: Repository<PatientVaccinationPlan>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly appointmentsPdfService: AppointmentsPdfService,
     private readonly clinicalHistoryPdfService: ClinicalHistoryPdfService,
+    private readonly clinicalHistoryFullPdfService: ClinicalHistoryFullPdfService,
   ) {}
 
   private async buildAgendaRows(from: string, to: string): Promise<AgendaReportItemDto[]> {
@@ -262,24 +290,44 @@ export class ReportsService {
   async generateClinicalHistoryPdf(patientId: number): Promise<Buffer> {
     const patient = await this.patientRepo.findOne({
       where: { id: patientId },
-      relations: ['species', 'breed', 'color', 'tutors', 'tutors.client', 'tutors.client.person'],
+      relations: [
+        'species', 'breed', 'color',
+        'tutors', 'tutors.client', 'tutors.client.person',
+      ],
     });
 
     if (!patient || patient.deletedAt) {
       throw new NotFoundException('Paciente no encontrado.');
     }
 
-    const encounters = await this.encounterRepo.find({
-      where: { patientId },
-      relations: ['treatments', 'treatments.items', 'surgeries', 'surgeries.catalog'],
-      order: { startTime: 'ASC' },
-    });
-
-    const vaccineRecords = await this.patientVaccineRecordRepo.find({
-      where: { patientId },
-      relations: ['vaccine'],
-      order: { applicationDate: 'ASC', createdAt: 'ASC' },
-    });
+    const [encounters, conditions, vaccinationPlan] = await Promise.all([
+      this.encounterRepo.find({
+        where: { patientId, deletedAt: IsNull() },
+        relations: [
+          'vet', 'vet.person',
+          'consultationReason',
+          'anamnesis',
+          'clinicalExam',
+          'environmentalData',
+          'clinicalImpression',
+          'plan',
+          'treatments', 'treatments.items',
+          'vaccinationEvents', 'vaccinationEvents.vaccine',
+          'dewormingEvents', 'dewormingEvents.product',
+          'surgeries', 'surgeries.catalog',
+          'procedures',
+        ],
+        order: { startTime: 'DESC' },
+      }),
+      this.patientConditionRepo.find({
+        where: { patientId, deletedAt: IsNull() },
+      }),
+      this.patientVaccinationPlanRepo.findOne({
+        where: { patientId, deletedAt: IsNull() },
+        relations: ['schemeVersion', 'schemeVersion.scheme', 'doses', 'doses.vaccine'],
+        order: { assignedAt: 'DESC' },
+      }),
+    ]);
 
     const tutors = (patient.tutors ?? [])
       .filter((tutor) => tutor.isActive && !tutor.deletedAt)
@@ -287,102 +335,185 @@ export class ReportsService {
 
     const tutorPersonIds = tutors
       .map((tutor) => tutor.client?.personId)
-      .filter((personId): personId is number => typeof personId === 'number');
+      .filter((id): id is number => typeof id === 'number');
     const tutorUsers = tutorPersonIds.length
       ? await this.userRepo.find({ where: { personId: In(tutorPersonIds) } })
       : [];
     const tutorEmailByPersonId = new Map<number, string>();
     tutorUsers
-      .filter((user) => user.isActive && !user.deletedAt)
-      .forEach((user) => {
-        if (!tutorEmailByPersonId.has(user.personId)) {
-          tutorEmailByPersonId.set(user.personId, user.email);
-        }
+      .filter((u) => u.isActive && !u.deletedAt)
+      .forEach((u) => {
+        if (!tutorEmailByPersonId.has(u.personId)) tutorEmailByPersonId.set(u.personId, u.email);
       });
 
-    const activeEncounters = encounters
-      .filter((encounter) => encounter.isActive && !encounter.deletedAt)
-      .sort((a, b) => toMillis(a.startTime) - toMillis(b.startTime));
-
-    const activeVaccineRecords = vaccineRecords
-      .filter((record) => record.isActive && !record.deletedAt)
-      .sort((a, b) => toMillis(a.applicationDate) - toMillis(b.applicationDate));
-
-    const allTreatments = activeEncounters.flatMap((encounter) =>
-      (encounter.treatments ?? [])
-        .filter((treatment) => treatment.isActive && !treatment.deletedAt)
-        .map((treatment) => treatment),
-    );
-
-    const allSurgeries = activeEncounters.flatMap((encounter) =>
-      (encounter.surgeries ?? [])
-        .filter((surgery) => surgery.isActive && !surgery.deletedAt)
-        .map((surgery) => surgery),
-    );
-
-    const payload: ClinicalHistoryPdfData = {
+    const payload: ClinicalHistoryFullPdfData = {
       patient: {
+        id: patient.id,
         name: noData(patient.name),
         species: noData(patient.species?.name),
         breed: noData(patient.breed?.name),
         color: noData(patient.color?.name),
         sex: patientSexLabel(patient.sex),
+        ageYears: calculateAgeYears(patient.birthDate),
         birthDate: patient.birthDate ?? null,
-        currentWeight: patient.currentWeight
-          ? `${patient.currentWeight} kg`
-          : 'No se han encontrado datos.',
-        isSterilized: boolLabel(patient.isSterilized),
-        microchipCode: noData(patient.microchipCode),
+        currentWeight: patient.currentWeight ? `${patient.currentWeight} kg` : '',
+        isSterilized: patient.isSterilized,
+        microchipCode: patient.microchipCode ?? '',
+        generalAllergies: patient.generalAllergies ?? '',
+        generalHistory: patient.generalHistory ?? '',
       },
       tutors: tutors.map((tutor) => ({
-        firstName: noData(tutor.client?.person?.firstName),
-        lastName: noData(tutor.client?.person?.lastName),
-        documentId: noData(tutor.client?.person?.documentId),
-        phone: noData(tutor.client?.person?.phone),
-        email:
-          tutor.client?.personId !== undefined
-            ? noData(tutorEmailByPersonId.get(tutor.client.personId))
-            : 'No se han encontrado datos.',
-        relationship: noData(tutor.relationship),
+        fullName: fullName(tutor.client?.person?.firstName, tutor.client?.person?.lastName),
+        documentId: tutor.client?.person?.documentId ?? '',
+        phone: tutor.client?.person?.phone ?? '',
+        email: tutor.client?.personId !== undefined
+          ? (tutorEmailByPersonId.get(tutor.client.personId) ?? '')
+          : '',
+        relationship: tutor.relationship ?? '',
         isPrimary: tutor.isPrimary,
       })),
-      vaccines: activeVaccineRecords.map((record) => ({
-        vaccineName: noData(record.vaccine?.name),
-        applicationDate: record.applicationDate ?? null,
-        administeredBy: noData(record.administeredBy),
-        administeredAt: noData(record.administeredAt),
-        origin: record.isExternal ? 'Externa' : 'Interna',
-        nextDoseDate: record.nextDoseDate ?? null,
-      })),
-      treatments: allTreatments.map((treatment) => ({
-        status: treatmentStatusLabel(treatment.status),
-        startDate: treatment.startDate ?? null,
-        endDate: treatment.endDate ?? null,
-        generalInstructions: noData(treatment.generalInstructions),
-        items: (treatment.items ?? [])
-          .filter((item) => item.isActive && !item.deletedAt)
-          .map((item) => ({
-            medication: noData(item.medication),
-            dose: noData(item.dose),
-            frequency: noData(item.frequency),
-            durationDays:
-              item.durationDays !== null && item.durationDays !== undefined
-                ? String(item.durationDays)
-                : 'No se han encontrado datos.',
-            notes: noData(item.notes),
-            status: treatmentStatusLabel(item.status),
+      conditions: conditions.map((c) => ({ name: c.name, type: c.type, active: c.isActive })),
+      vaccinationPlan: vaccinationPlan
+        ? {
+            schemeName: vaccinationPlan.schemeVersion?.scheme?.name ?? '',
+            schemeVersion: vaccinationPlan.schemeVersion?.version ?? 0,
+            status: vaccinationPlan.status,
+            doses: (vaccinationPlan.doses ?? [])
+              .sort((a, b) => a.doseOrder - b.doseOrder)
+              .map((d) => ({
+                doseOrder: d.doseOrder,
+                vaccineName: d.vaccine?.name ?? '',
+                status: d.status,
+                expectedDate: d.expectedDate ? String(d.expectedDate) : null,
+                appliedAt: d.appliedAt ? String(d.appliedAt) : null,
+              })),
+          }
+        : null,
+      encounters: encounters.map((enc) => ({
+        id: enc.id,
+        startTime: enc.startTime,
+        endTime: enc.endTime,
+        vetName: fullName(enc.vet?.person?.firstName, enc.vet?.person?.lastName),
+        status: enc.status,
+        generalNotes: enc.generalNotes ?? '',
+        consultationReason: enc.consultationReason
+          ? {
+              reason: enc.consultationReason.consultationReason ?? '',
+              currentIllnessHistory: enc.consultationReason.currentIllnessHistory ?? '',
+              previousDiagnoses: enc.consultationReason.referredPreviousDiagnoses ?? '',
+              previousTreatments: enc.consultationReason.referredPreviousTreatments ?? '',
+            }
+          : null,
+        clinicalExam: enc.clinicalExam
+          ? {
+              temperatureC: enc.clinicalExam.temperatureC != null ? String(enc.clinicalExam.temperatureC) : '',
+              heartRate: enc.clinicalExam.heartRate != null ? String(enc.clinicalExam.heartRate) : '',
+              pulse: enc.clinicalExam.pulse != null ? String(enc.clinicalExam.pulse) : '',
+              respiratoryRate: enc.clinicalExam.respiratoryRate != null ? String(enc.clinicalExam.respiratoryRate) : '',
+              weightKg: enc.clinicalExam.weightKg != null ? String(enc.clinicalExam.weightKg) : '',
+              mucousMembranes: enc.clinicalExam.mucousMembranes ?? '',
+              lymphNodes: enc.clinicalExam.lymphNodes ?? '',
+              hydration: enc.clinicalExam.hydration ?? '',
+              crtSeconds: enc.clinicalExam.crtSeconds != null ? String(enc.clinicalExam.crtSeconds) : '',
+              notes: enc.clinicalExam.examNotes ?? '',
+            }
+          : null,
+        anamnesis: enc.anamnesis
+          ? {
+              problemStart: enc.anamnesis.problemStartText ?? '',
+              previousSurgeries: enc.anamnesis.previousSurgeriesText ?? '',
+              howProblemStarted: enc.anamnesis.howProblemStartedText ?? '',
+              vaccinesUpToDate: boolLabel(enc.anamnesis.vaccinesUpToDate),
+              dewormingUpToDate: boolLabel(enc.anamnesis.dewormingUpToDate),
+              hasPetAtHome: boolLabel(enc.anamnesis.hasPetAtHome),
+              medication: enc.anamnesis.administeredMedicationText ?? '',
+              appetite: enc.anamnesis.appetiteStatus ?? '',
+              waterIntake: enc.anamnesis.waterIntakeStatus ?? '',
+              feces: enc.anamnesis.fecesText ?? '',
+              vomit: enc.anamnesis.vomitText ?? '',
+              bowelMovements: enc.anamnesis.numberOfBowelMovements != null ? String(enc.anamnesis.numberOfBowelMovements) : '',
+              urine: enc.anamnesis.urineText ?? '',
+              respiratoryProblems: enc.anamnesis.respiratoryProblemsText ?? '',
+              difficultyWalking: enc.anamnesis.difficultyWalkingText ?? '',
+              notes: enc.anamnesis.notes ?? '',
+            }
+          : null,
+        environmentalData: enc.environmentalData
+          ? {
+              environment: enc.environmentalData.environmentNotes ?? '',
+              nutrition: enc.environmentalData.nutritionNotes ?? '',
+              lifestyle: enc.environmentalData.lifestyleNotes ?? '',
+              feedingType: enc.environmentalData.feedingTypeNotes ?? '',
+            }
+          : null,
+        clinicalImpression: enc.clinicalImpression
+          ? {
+              presumptiveDiagnosis: enc.clinicalImpression.presumptiveDiagnosis ?? '',
+              differentialDiagnosis: enc.clinicalImpression.differentialDiagnosis ?? '',
+              prognosis: enc.clinicalImpression.prognosis ?? '',
+              clinicalNotes: enc.clinicalImpression.clinicalNotes ?? '',
+            }
+          : null,
+        plan: enc.plan
+          ? {
+              clinicalPlan: enc.plan.clinicalPlan ?? '',
+              followUpDate: enc.plan.suggestedFollowUpDate ? String(enc.plan.suggestedFollowUpDate) : null,
+              planNotes: enc.plan.planNotes ?? '',
+            }
+          : null,
+        treatments: (enc.treatments ?? [])
+          .filter((t) => !t.deletedAt)
+          .map((t) => ({
+            status: treatmentStatusLabel(t.status),
+            startDate: t.startDate ? String(t.startDate) : null,
+            endDate: t.endDate ? String(t.endDate) : null,
+            instructions: t.generalInstructions ?? '',
+            items: (t.items ?? [])
+              .filter((item) => !item.deletedAt)
+              .map((item) => ({
+                medication: item.medication,
+                dose: item.dose,
+                frequency: item.frequency,
+                durationDays: String(item.durationDays),
+                route: item.administrationRoute ?? '',
+              })),
           })),
-      })),
-      surgeries: allSurgeries.map((surgery) => ({
-        surgeryType: noData(surgery.catalog?.name ?? surgery.surgeryType),
-        scheduledDate: surgery.scheduledDate ?? null,
-        performedDate: surgery.performedDate ?? null,
-        status: surgeryStatusLabel(surgery.surgeryStatus),
-        description: noData(surgery.description),
-        postoperativeInstructions: noData(surgery.postoperativeInstructions),
+        vaccinations: (enc.vaccinationEvents ?? [])
+          .filter((v) => !v.deletedAt)
+          .map((v) => ({
+            vaccineName: v.vaccine?.name ?? '',
+            applicationDate: v.applicationDate ? String(v.applicationDate) : null,
+            nextDate: v.suggestedNextDate ? String(v.suggestedNextDate) : null,
+            notes: v.notes ?? '',
+          })),
+        dewormings: (enc.dewormingEvents ?? [])
+          .filter((d) => !d.deletedAt)
+          .map((d) => ({
+            productName: d.product?.name ?? '',
+            applicationDate: d.applicationDate ? String(d.applicationDate) : null,
+            nextDate: d.suggestedNextDate ? String(d.suggestedNextDate) : null,
+            notes: d.notes ?? '',
+          })),
+        surgeries: (enc.surgeries ?? [])
+          .filter((s) => !s.deletedAt)
+          .map((s) => ({
+            type: s.catalog?.name ?? s.surgeryType,
+            performedDate: s.performedDate ? String(s.performedDate) : null,
+            status: surgeryStatusLabel(s.surgeryStatus),
+            description: s.description ?? '',
+            postOp: s.postoperativeInstructions ?? '',
+          })),
+        procedures: (enc.procedures ?? [])
+          .filter((p) => !p.deletedAt)
+          .map((p) => ({
+            type: p.procedureType,
+            performedDate: p.performedDate ? String(p.performedDate) : null,
+            description: p.description ?? '',
+            result: p.result ?? '',
+          })),
       })),
     };
 
-    return this.clinicalHistoryPdfService.render(payload);
+    return this.clinicalHistoryFullPdfService.render(payload);
   }
 }
