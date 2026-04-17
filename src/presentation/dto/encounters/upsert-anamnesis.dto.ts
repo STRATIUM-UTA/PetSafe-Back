@@ -6,7 +6,9 @@ import {
   IsInt,
   Min,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { AppetiteStatusEnum, WaterIntakeStatusEnum } from '../../../domain/enums/index.js';
+import { normalizeWaterIntakeStatusEnum } from './encounter-clinical-enum-normalizer.util.js';
 
 export class UpsertAnamnesisDto {
   @IsOptional()
@@ -54,6 +56,7 @@ export class UpsertAnamnesisDto {
    * Valores válidos: NORMAL | DISMINUIDO | AUMENTADO
    */
   @IsOptional()
+  @Transform(({ value }) => normalizeWaterIntakeStatusEnum(value))
   @IsEnum(WaterIntakeStatusEnum, {
     message: `El consumo de agua no es válido. Valores aceptados: ${Object.values(WaterIntakeStatusEnum).join(', ')}`,
   })

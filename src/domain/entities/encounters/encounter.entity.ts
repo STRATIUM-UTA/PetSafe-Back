@@ -24,6 +24,9 @@ import type { VaccinationEvent } from './vaccination-event.entity.js';
 import type { DewormingEvent } from './deworming-event.entity.js';
 import type { Surgery } from './surgery.entity.js';
 import type { Procedure } from './procedure.entity.js';
+import type { EncounterVaccinationDraft } from './encounter-vaccination-draft.entity.js';
+import type { EncounterTreatmentDraft } from './encounter-treatment-draft.entity.js';
+import type { EncounterProcedureDraft } from './encounter-procedure-draft.entity.js';
 
 @Entity({ name: 'encounters' })
 export class Encounter extends BaseAuditEntity {
@@ -121,4 +124,13 @@ export class Encounter extends BaseAuditEntity {
 
   @OneToMany('Procedure', 'encounter', { cascade: true })
   procedures!: Procedure[];
+
+  @OneToMany('EncounterVaccinationDraft', 'encounter', { cascade: true })
+  vaccinationDrafts!: EncounterVaccinationDraft[];
+
+  @OneToMany('EncounterTreatmentDraft', 'encounter', { cascade: true })
+  treatmentDrafts!: EncounterTreatmentDraft[];
+
+  @OneToMany('EncounterProcedureDraft', 'encounter', { cascade: true })
+  procedureDrafts!: EncounterProcedureDraft[];
 }

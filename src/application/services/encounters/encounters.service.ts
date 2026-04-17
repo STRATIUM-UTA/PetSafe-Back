@@ -13,6 +13,7 @@ import { CreateDewormingEventDto } from '../../../presentation/dto/encounters/cr
 import { CreateTreatmentDto } from '../../../presentation/dto/encounters/create-treatment.dto.js';
 import { CreateSurgeryDto } from '../../../presentation/dto/encounters/create-surgery.dto.js';
 import { CreateProcedureDto } from '../../../presentation/dto/encounters/create-procedure.dto.js';
+import { UpsertVaccinationDraftDto } from '../../../presentation/dto/encounters/upsert-vaccination-draft.dto.js';
 import {
   EncounterListItemDto,
   EncounterResponseDto,
@@ -21,6 +22,7 @@ import { EncounterCoreService } from './encounter-core.service.js';
 import { EncounterRecordsService } from './encounter-records.service.js';
 import { EncounterActionsService } from './encounter-actions.service.js';
 import { EncounterTreatmentService } from './encounter-treatment.service.js';
+import { EncounterActionDraftService } from './encounter-action-draft.service.js';
 
 @Injectable()
 export class EncountersService {
@@ -29,6 +31,7 @@ export class EncountersService {
     private readonly recordsService: EncounterRecordsService,
     private readonly actionsService: EncounterActionsService,
     private readonly treatmentService: EncounterTreatmentService,
+    private readonly draftService: EncounterActionDraftService,
   ) {}
 
   /**
@@ -63,8 +66,19 @@ export class EncountersService {
   /**
    * Finaliza una atención abierta.
    */
-  async closeEncounter(id: number, dto: CloseEncounterDto): Promise<EncounterResponseDto> {
-    return this.coreService.closeEncounter(id, dto);
+  async closeEncounter(
+    id: number,
+    dto: CloseEncounterDto,
+    userId: number,
+  ): Promise<EncounterResponseDto> {
+    return this.coreService.closeEncounter(id, dto, userId);
+  }
+
+  /**
+   * Reactiva una atención finalizada dentro de la ventana de gracia.
+   */
+  async reactivateEncounter(id: number, userId: number): Promise<EncounterResponseDto> {
+    return this.coreService.reactivateEncounter(id, userId);
   }
 
   /**
@@ -189,6 +203,81 @@ export class EncountersService {
     dto: CreateProcedureDto,
   ): Promise<EncounterResponseDto> {
     await this.actionsService.addProcedure(encounterId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async createVaccinationDraft(
+    encounterId: number,
+    dto: UpsertVaccinationDraftDto,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.createVaccinationDraft(encounterId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async updateVaccinationDraft(
+    encounterId: number,
+    draftId: number,
+    dto: UpsertVaccinationDraftDto,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.updateVaccinationDraft(encounterId, draftId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async deleteVaccinationDraft(
+    encounterId: number,
+    draftId: number,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.deleteVaccinationDraft(encounterId, draftId);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async createTreatmentDraft(
+    encounterId: number,
+    dto: CreateTreatmentDto,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.createTreatmentDraft(encounterId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async updateTreatmentDraft(
+    encounterId: number,
+    draftId: number,
+    dto: CreateTreatmentDto,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.updateTreatmentDraft(encounterId, draftId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async deleteTreatmentDraft(
+    encounterId: number,
+    draftId: number,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.deleteTreatmentDraft(encounterId, draftId);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async createProcedureDraft(
+    encounterId: number,
+    dto: CreateProcedureDto,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.createProcedureDraft(encounterId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async updateProcedureDraft(
+    encounterId: number,
+    draftId: number,
+    dto: CreateProcedureDto,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.updateProcedureDraft(encounterId, draftId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async deleteProcedureDraft(
+    encounterId: number,
+    draftId: number,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.deleteProcedureDraft(encounterId, draftId);
     return this.coreService.findOne(encounterId);
   }
 }

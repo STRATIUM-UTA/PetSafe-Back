@@ -9,16 +9,20 @@ import { Repository } from 'typeorm';
 
 import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
 import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
+import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { Employee } from '../../../domain/entities/persons/employee.entity.js';
 import { User } from '../../../domain/entities/auth/user.entity.js';
 import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
+import { ENCOUNTER_REACTIVATION_GRACE_MINUTES } from '../../../domain/constants/encounter.constants.js';
+import { EncounterStatusEnum } from '../../../domain/enums/index.js';
 import { QueueEntryTypeEnum, QueueStatusEnum, MediaOwnerTypeEnum, MediaTypeEnum } from '../../../domain/enums/index.js';
 
 import { CreateQueueEntryDto } from '../../../presentation/dto/queue/create-queue-entry.dto.js';
 import { ListQueueQueryDto } from '../../../presentation/dto/queue/list-queue-query.dto.js';
 import {
   QueueEntryRecordDto,
+  QueueEncounterSummaryDto,
   QueueListResponseDto,
   QueuePaginationMetaDto,
   QueuePatientDto,
@@ -57,6 +61,10 @@ function formatDate(raw: Date | string): string {
 function formatTimestamp(raw: Date | null | undefined): string {
   if (!raw) return new Date().toISOString();
   return raw instanceof Date ? raw.toISOString() : String(raw);
+}
+
+function addMinutes(date: Date, minutes: number): Date {
+  return new Date(date.getTime() + minutes * 60_000);
 }
 
 /** Minutos transcurridos desde arrivalTime (HH:MM) hasta ahora */
@@ -103,6 +111,8 @@ export class QueueService {
     private readonly appointmentRepo: Repository<Appointment>,
     @InjectRepository(QueueEntry)
     private readonly queueRepo: Repository<QueueEntry>,
+    @InjectRepository(Encounter)
+    private readonly encounterRepo: Repository<Encounter>,
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
     @InjectRepository(Employee)
@@ -153,7 +163,62 @@ export class QueueService {
   }
 
   // ── Mapea una QueueEntry a lo que espera el front ──
-  private toDto(entry: QueueEntry, patientImage?: MediaFile | null): QueueEntryRecordDto {
+  private buildEncounterSummary(encounter: Encounter): QueueEncounterSummaryDto {
+    const summary = new QueueEncounterSummaryDto();
+    const reactivationGraceEndsAt =
+      encounter.status === EncounterStatusEnum.FINALIZADA && encounter.endTime
+        ? addMinutes(encounter.endTime, ENCOUNTER_REACTIVATION_GRACE_MINUTES)
+        : null;
+
+    summary.id = encounter.id;
+    summary.status = encounter.status;
+    summary.reactivationGraceEndsAt = reactivationGraceEndsAt
+      ? formatTimestamp(reactivationGraceEndsAt)
+      : null;
+    summary.canReactivate = Boolean(
+      reactivationGraceEndsAt && reactivationGraceEndsAt.getTime() >= Date.now(),
+    );
+    return summary;
+  }
+
+  private async findEncounterSummariesByQueueEntryIds(
+    queueEntryIds: number[],
+  ): Promise<Map<number, QueueEncounterSummaryDto>> {
+    const encounterByQueueEntryId = new Map<number, QueueEncounterSummaryDto>();
+
+    if (queueEntryIds.length === 0) {
+      return encounterByQueueEntryId;
+    }
+
+    const encounters = await this.encounterRepo
+      .createQueryBuilder('encounter')
+      .where('encounter.queueEntryId IN (:...queueEntryIds)', { queueEntryIds })
+      .andWhere('encounter.deletedAt IS NULL')
+      .orderBy('encounter.queueEntryId', 'ASC')
+      .addOrderBy('encounter.updatedAt', 'DESC')
+      .addOrderBy('encounter.id', 'DESC')
+      .getMany();
+
+    for (const encounter of encounters) {
+      if (
+        encounter.queueEntryId !== null
+        && !encounterByQueueEntryId.has(encounter.queueEntryId)
+      ) {
+        encounterByQueueEntryId.set(
+          encounter.queueEntryId,
+          this.buildEncounterSummary(encounter),
+        );
+      }
+    }
+
+    return encounterByQueueEntryId;
+  }
+
+  private toDto(
+    entry: QueueEntry,
+    patientImage?: MediaFile | null,
+    encounterSummary?: QueueEncounterSummaryDto | null,
+  ): QueueEntryRecordDto {
     const patient = entry.patient;
     const vet = entry.veterinarian;
     const vetPerson = vet?.person;
@@ -191,6 +256,7 @@ export class QueueService {
     dto.scheduledTime = formatTime(entry.scheduledTime) ?? null;
     dto.queueStatus = entry.status;
     dto.notes = entry.notes ?? null;
+    dto.encounter = encounterSummary ?? null;
     dto.waitMinutes = calcWaitMinutes(entry);
     dto.createdAt = formatTimestamp(entry.createdAt);
     dto.updatedAt = formatTimestamp(entry.updatedAt);
@@ -312,11 +378,18 @@ export class QueueService {
       });
     }
     const allEntities = this.sortEntries(await allQb.getMany());
+    const allEncounterSummariesByQueueEntryId = await this.findEncounterSummariesByQueueEntryIds(
+      allEntities.map((entry) => entry.id),
+    );
     const allImagesByPatientId = await this.findImagesByPatientIds(
       allEntities.map((entry) => entry.patient?.id ?? entry.patientId),
     );
     const allDtos = allEntities.map((e) =>
-      this.toDto(e, allImagesByPatientId.get(e.patient?.id ?? e.patientId)),
+      this.toDto(
+        e,
+        allImagesByPatientId.get(e.patient?.id ?? e.patientId),
+        allEncounterSummariesByQueueEntryId.get(e.id) ?? null,
+      ),
     );
     const summary = this.buildSummary(allDtos);
 
@@ -349,12 +422,19 @@ export class QueueService {
     const filteredEntities = this.sortEntries(await filteredQb.getMany());
     const total = filteredEntities.length;
     const entities = filteredEntities.slice((page - 1) * limit, page * limit);
+    const encounterSummariesByQueueEntryId = await this.findEncounterSummariesByQueueEntryIds(
+      entities.map((entry) => entry.id),
+    );
     const imagesByPatientId = await this.findImagesByPatientIds(
       entities.map((entry) => entry.patient?.id ?? entry.patientId),
     );
 
     const dtos = entities.map((e) =>
-      this.toDto(e, imagesByPatientId.get(e.patient?.id ?? e.patientId)),
+      this.toDto(
+        e,
+        imagesByPatientId.get(e.patient?.id ?? e.patientId),
+        encounterSummariesByQueueEntryId.get(e.id) ?? null,
+      ),
     );
 
     const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
@@ -547,6 +627,13 @@ export class QueueService {
     const imagesByPatientId = await this.findImagesByPatientIds([
       full.patient?.id ?? full.patientId,
     ]);
-    return this.toDto(full, imagesByPatientId.get(full.patient?.id ?? full.patientId));
+    const encounterSummariesByQueueEntryId = await this.findEncounterSummariesByQueueEntryIds([
+      full.id,
+    ]);
+    return this.toDto(
+      full,
+      imagesByPatientId.get(full.patient?.id ?? full.patientId),
+      encounterSummariesByQueueEntryId.get(full.id) ?? null,
+    );
   }
 }

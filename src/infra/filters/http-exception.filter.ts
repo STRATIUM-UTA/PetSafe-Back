@@ -8,6 +8,10 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { QueryFailedError, EntityNotFoundError, CannotCreateEntityIdMapError } from 'typeorm';
+import {
+  ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MAX,
+  ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MIN,
+} from '../../domain/constants/encounter-clinical-exam.constants.js';
 
 // ── Response shape ───────────────────────────────────
 interface ErrorResponse {
@@ -95,6 +99,36 @@ const PG_CONSTRAINT_MAP: Record<string, PgConstraintMapping> = {
     error: 'Conflict',
     message:
       'Ya existe una versión vigente para este esquema vacunal. Debes reemplazar o desactivar la versión vigente antes de activar otra.',
+  },
+  ck_exam_weight: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'El peso debe ser mayor a 0.',
+  },
+  ck_exam_temperature: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: `La temperatura debe estar entre ${ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MIN} y ${ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MAX} °C.`,
+  },
+  ck_exam_pulse: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'El pulso no puede ser negativo.',
+  },
+  ck_exam_hr: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'La frecuencia cardiaca no puede ser negativa.',
+  },
+  ck_exam_rr: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'La frecuencia respiratoria no puede ser negativa.',
+  },
+  ck_exam_crt: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'El TRC no puede ser negativo.',
   },
 };
 

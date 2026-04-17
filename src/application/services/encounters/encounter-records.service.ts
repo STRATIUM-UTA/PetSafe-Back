@@ -8,6 +8,7 @@ import { EncounterClinicalExam } from '../../../domain/entities/encounters/encou
 import { EncounterEnvironmentalData } from '../../../domain/entities/encounters/encounter-environmental-data.entity.js';
 import { EncounterClinicalImpression } from '../../../domain/entities/encounters/encounter-clinical-impression.entity.js';
 import { EncounterPlan } from '../../../domain/entities/encounters/encounter-plan.entity.js';
+import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { UpsertConsultationReasonDto } from '../../../presentation/dto/encounters/upsert-consultation-reason.dto.js';
 import { UpsertAnamnesisDto } from '../../../presentation/dto/encounters/upsert-anamnesis.dto.js';
 import { UpsertClinicalExamDto } from '../../../presentation/dto/encounters/upsert-clinical-exam.dto.js';
@@ -31,6 +32,8 @@ export class EncounterRecordsService {
     private readonly clinicalImpressionRepo: Repository<EncounterClinicalImpression>,
     @InjectRepository(EncounterPlan)
     private readonly planRepo: Repository<EncounterPlan>,
+    @InjectRepository(Patient)
+    private readonly patientRepo: Repository<Patient>,
     private readonly sharedService: EncounterSharedService,
   ) {}
 
@@ -105,6 +108,12 @@ export class EncounterRecordsService {
       crtSeconds: dto.crtSeconds ?? null,
       examNotes: dto.examNotes ?? null,
     });
+
+    if (dto.weightKg !== undefined && dto.weightKg !== null) {
+      await this.patientRepo.update(encounter.patientId, {
+        currentWeight: dto.weightKg,
+      });
+    }
   }
 
   /**

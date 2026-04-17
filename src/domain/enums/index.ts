@@ -49,6 +49,7 @@ export enum QueueStatusEnum {
 
 export enum EncounterStatusEnum {
   ACTIVA = 'ACTIVA',
+  REACTIVADA = 'REACTIVADA',
   FINALIZADA = 'FINALIZADA',
   ANULADA = 'ANULADA',
 }

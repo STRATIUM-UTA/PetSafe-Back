@@ -18,6 +18,14 @@ export class QueueVeterinarianDto {
   code!: string | null;
 }
 
+/** Resumen mínimo de la consulta ligada a la entrada operativa */
+export class QueueEncounterSummaryDto {
+  id!: number;
+  status!: string;
+  canReactivate!: boolean;
+  reactivationGraceEndsAt!: string | null;
+}
+
 /** Una entrada en la cola de atención */
 export class QueueEntryRecordDto {
   id!: number;
@@ -30,6 +38,7 @@ export class QueueEntryRecordDto {
   scheduledTime!: string | null;  // HH:MM
   queueStatus!: string;
   notes!: string | null;
+  encounter!: QueueEncounterSummaryDto | null;
   waitMinutes!: number;
   createdAt!: string;
   updatedAt!: string;

@@ -22,8 +22,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
     "typeorm": "typeorm-ts-node-esm",
-    "migration:run": "npm run typeorm -- migration:run -d src/infra/config/data-source.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/infra/config/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run --transaction each -d src/infra/config/data-source.ts",
+    "migration:revert": "npm run typeorm -- migration:revert --transaction each -d src/infra/config/data-source.ts",
     "migration:create": "npm run typeorm -- migration:create",
     "migration:generate": "npm run typeorm -- migration:generate -d src/infra/config/data-source.ts",
     "rollback:vps": "bash ./scripts/rollback.sh"

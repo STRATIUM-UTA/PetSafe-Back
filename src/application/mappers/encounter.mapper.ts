@@ -11,6 +11,12 @@ import { Treatment } from '../../domain/entities/encounters/treatment.entity.js'
 import { TreatmentItem } from '../../domain/entities/encounters/treatment-item.entity.js';
 import { Surgery } from '../../domain/entities/encounters/surgery.entity.js';
 import { Procedure } from '../../domain/entities/encounters/procedure.entity.js';
+import { EncounterVaccinationDraft } from '../../domain/entities/encounters/encounter-vaccination-draft.entity.js';
+import { EncounterTreatmentDraft } from '../../domain/entities/encounters/encounter-treatment-draft.entity.js';
+import { EncounterTreatmentDraftItem } from '../../domain/entities/encounters/encounter-treatment-draft-item.entity.js';
+import { EncounterProcedureDraft } from '../../domain/entities/encounters/encounter-procedure-draft.entity.js';
+import { ENCOUNTER_REACTIVATION_GRACE_MINUTES } from '../../domain/constants/encounter.constants.js';
+import { EncounterStatusEnum } from '../../domain/enums/index.js';
 import {
   EncounterResponseDto,
   EncounterListItemDto,
@@ -22,11 +28,15 @@ import {
   ClinicalImpressionResponseDto,
   PlanResponseDto,
   VaccinationEventResponseDto,
+  VaccinationDraftResponseDto,
   DewormingEventResponseDto,
   TreatmentResponseDto,
   TreatmentItemResponseDto,
+  TreatmentDraftResponseDto,
+  TreatmentDraftItemResponseDto,
   SurgeryResponseDto,
   ProcedureResponseDto,
+  ProcedureDraftResponseDto,
 } from '../../presentation/dto/encounters/encounter-response.dto.js';
 
 const toDate = (d: Date | string | null | undefined): string | null => {
@@ -34,7 +44,23 @@ const toDate = (d: Date | string | null | undefined): string | null => {
   return d instanceof Date ? d.toISOString() : String(d);
 };
 
+const addMinutes = (date: Date, minutes: number): Date =>
+  new Date(date.getTime() + minutes * 60_000);
+
 export class EncounterMapper {
+  private static reactivationGraceEndsAt(enc: Encounter): Date | null {
+    if (enc.status !== EncounterStatusEnum.FINALIZADA || !enc.endTime) {
+      return null;
+    }
+
+    return addMinutes(enc.endTime, ENCOUNTER_REACTIVATION_GRACE_MINUTES);
+  }
+
+  private static canReactivate(enc: Encounter): boolean {
+    const graceEndsAt = this.reactivationGraceEndsAt(enc);
+    return graceEndsAt !== null && graceEndsAt.getTime() >= Date.now();
+  }
+
   static toPatientDto(enc: Encounter): EncounterPatientResponseDto {
     return {
       id: enc.patientId,
@@ -129,6 +155,18 @@ export class EncounterMapper {
     };
   }
 
+  static toVaccinationDraftDto(e: EncounterVaccinationDraft): VaccinationDraftResponseDto {
+    return {
+      id: e.id,
+      planDoseId: e.planDoseId ?? null,
+      vaccineId: e.vaccineId,
+      vaccineName: e.vaccine?.name ?? null,
+      applicationDate: toDate(e.applicationDate)!,
+      suggestedNextDate: e.suggestedNextDate ? toDate(e.suggestedNextDate) : null,
+      notes: e.notes ?? null,
+    };
+  }
+
   static toDewormingEventDto(e: DewormingEvent): DewormingEventResponseDto {
     return {
       id: e.id,
@@ -153,6 +191,19 @@ export class EncounterMapper {
     };
   }
 
+  static toTreatmentDraftItemDto(e: EncounterTreatmentDraftItem): TreatmentDraftItemResponseDto {
+    return {
+      id: e.id,
+      medication: e.medication,
+      dose: e.dose,
+      frequency: e.frequency,
+      durationDays: e.durationDays,
+      administrationRoute: e.administrationRoute,
+      notes: e.notes ?? null,
+      status: e.status,
+    };
+  }
+
   static toTreatmentDto(e: Treatment): TreatmentResponseDto {
     return {
       id: e.id,
@@ -161,6 +212,16 @@ export class EncounterMapper {
       endDate: e.endDate ? toDate(e.endDate) : null,
       generalInstructions: e.generalInstructions ?? null,
       items: (e.items ?? []).map((i) => this.toTreatmentItemDto(i)),
+    };
+  }
+
+  static toTreatmentDraftDto(e: EncounterTreatmentDraft): TreatmentDraftResponseDto {
+    return {
+      id: e.id,
+      startDate: toDate(e.startDate)!,
+      endDate: e.endDate ? toDate(e.endDate) : null,
+      generalInstructions: e.generalInstructions ?? null,
+      items: (e.items ?? []).map((item) => this.toTreatmentDraftItemDto(item)),
     };
   }
 
@@ -187,7 +248,21 @@ export class EncounterMapper {
     };
   }
 
+  static toProcedureDraftDto(e: EncounterProcedureDraft): ProcedureDraftResponseDto {
+    return {
+      id: e.id,
+      catalogId: e.catalogId ?? null,
+      procedureType: e.procedureType ?? e.catalog?.name ?? null,
+      performedDate: toDate(e.performedDate)!,
+      description: e.description ?? null,
+      result: e.result ?? null,
+      notes: e.notes ?? null,
+    };
+  }
+
   static toResponseDto(enc: Encounter): EncounterResponseDto {
+    const reactivationGraceEndsAt = this.reactivationGraceEndsAt(enc);
+
     return {
       id: enc.id,
       patientId: enc.patientId,
@@ -198,6 +273,8 @@ export class EncounterMapper {
       startTime: toDate(enc.startTime)!,
       endTime: enc.endTime ? toDate(enc.endTime) : null,
       status: enc.status,
+      canReactivate: this.canReactivate(enc),
+      reactivationGraceEndsAt: reactivationGraceEndsAt ? toDate(reactivationGraceEndsAt) : null,
       generalNotes: enc.generalNotes ?? null,
       createdByUserId: enc.createdByUserId ?? null,
       patient: this.toPatientDto(enc),
@@ -216,10 +293,17 @@ export class EncounterMapper {
       plan: enc.plan ? this.toPlanDto(enc.plan) : null,
 
       vaccinationEvents: (enc.vaccinationEvents ?? []).map((v) => this.toVaccinationEventDto(v)),
+      vaccinationDrafts: (enc.vaccinationDrafts ?? []).map((draft) =>
+        this.toVaccinationDraftDto(draft),
+      ),
       dewormingEvents: (enc.dewormingEvents ?? []).map((d) => this.toDewormingEventDto(d)),
       treatments: (enc.treatments ?? []).map((t) => this.toTreatmentDto(t)),
+      treatmentDrafts: (enc.treatmentDrafts ?? []).map((draft) => this.toTreatmentDraftDto(draft)),
       surgeries: (enc.surgeries ?? []).map((s) => this.toSurgeryDto(s)),
       procedures: (enc.procedures ?? []).map((p) => this.toProcedureDto(p)),
+      procedureDrafts: (enc.procedureDrafts ?? []).map((draft) =>
+        this.toProcedureDraftDto(draft),
+      ),
       vaccinesCount: enc.vaccinationEvents?.length ?? 0,
       dewormingCount: enc.dewormingEvents?.length ?? 0,
       treatmentsCount: enc.treatments?.length ?? 0,

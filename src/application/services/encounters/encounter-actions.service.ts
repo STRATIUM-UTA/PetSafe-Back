@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 
@@ -8,6 +8,8 @@ import { Surgery } from '../../../domain/entities/encounters/surgery.entity.js';
 import { Procedure } from '../../../domain/entities/encounters/procedure.entity.js';
 import { Vaccine } from '../../../domain/entities/catalogs/vaccine.entity.js';
 import { Antiparasitic } from '../../../domain/entities/catalogs/antiparasitic.entity.js';
+import { SurgeryCatalog } from '../../../domain/entities/catalogs/surgery-catalog.entity.js';
+import { ProcedureCatalog } from '../../../domain/entities/catalogs/procedure-catalog.entity.js';
 import { PatientVaccineRecord } from '../../../domain/entities/patients/patient-vaccine-record.entity.js';
 import { SurgeryStatusEnum } from '../../../domain/enums/index.js';
 import { CreateVaccinationEventDto } from '../../../presentation/dto/encounters/create-vaccination-event.dto.js';
@@ -32,6 +34,10 @@ export class EncounterActionsService {
     private readonly vaccineRepo: Repository<Vaccine>,
     @InjectRepository(Antiparasitic)
     private readonly antiparasiticRepo: Repository<Antiparasitic>,
+    @InjectRepository(SurgeryCatalog)
+    private readonly surgeryCatalogRepo: Repository<SurgeryCatalog>,
+    @InjectRepository(ProcedureCatalog)
+    private readonly procedureCatalogRepo: Repository<ProcedureCatalog>,
     @InjectRepository(PatientVaccineRecord)
     private readonly patientVaccineRecordRepo: Repository<PatientVaccineRecord>,
     private readonly dataSource: DataSource,
@@ -77,8 +83,9 @@ export class EncounterActionsService {
     });
 
     await this.dataSource.transaction(async (manager: EntityManager) => {
-      await manager.save(VaccinationEvent, event);
       const savedRecord = await manager.save(PatientVaccineRecord, carnetRecord);
+      event.patientVaccineRecordId = savedRecord.id;
+      await manager.save(VaccinationEvent, event);
       await this.vaccinationPlanService.registerApplication(
         encounter.patientId,
         dto.vaccineId,
@@ -122,9 +129,30 @@ export class EncounterActionsService {
     const encounter = await this.sharedService.findEncounterOrFail(encounterId);
     this.sharedService.ensureActive(encounter);
 
+    const normalizedSurgeryType = dto.surgeryType?.trim() || null;
+    let catalogId: number | null = null;
+    let surgeryType = normalizedSurgeryType;
+
+    if (dto.catalogId !== undefined) {
+      const catalog = await this.surgeryCatalogRepo.findOne({ where: { id: dto.catalogId } });
+      if (!catalog || catalog.deletedAt || !catalog.isActive) {
+        throw new NotFoundException('La cirugía seleccionada no está disponible en el catálogo.');
+      }
+
+      catalogId = catalog.id;
+      surgeryType = surgeryType || catalog.name;
+    }
+
+    if (!surgeryType) {
+      throw new BadRequestException(
+        'Debes indicar una cirugía del catálogo o escribir el tipo de cirugía.',
+      );
+    }
+
     const surgery = this.surgeryRepo.create({
       encounterId,
-      surgeryType: dto.surgeryType,
+      catalogId,
+      surgeryType,
       scheduledDate: dto.scheduledDate ? new Date(dto.scheduledDate) : null,
       performedDate: dto.performedDate ? new Date(dto.performedDate) : null,
       surgeryStatus: dto.surgeryStatus ?? SurgeryStatusEnum.PROGRAMADA,
@@ -142,9 +170,32 @@ export class EncounterActionsService {
     const encounter = await this.sharedService.findEncounterOrFail(encounterId);
     this.sharedService.ensureActive(encounter);
 
+    const normalizedProcedureType = dto.procedureType?.trim() || null;
+    let catalogId: number | null = null;
+    let procedureType = normalizedProcedureType;
+
+    if (dto.catalogId !== undefined) {
+      const catalog = await this.procedureCatalogRepo.findOne({ where: { id: dto.catalogId } });
+      if (!catalog || catalog.deletedAt || !catalog.isActive) {
+        throw new NotFoundException(
+          'El procedimiento seleccionado no está disponible en el catálogo.',
+        );
+      }
+
+      catalogId = catalog.id;
+      procedureType = procedureType || catalog.name;
+    }
+
+    if (!procedureType) {
+      throw new BadRequestException(
+        'Debes indicar un procedimiento del catálogo o escribir el tipo de procedimiento.',
+      );
+    }
+
     const procedure = this.procedureRepo.create({
       encounterId,
-      procedureType: dto.procedureType,
+      catalogId,
+      procedureType,
       performedDate: new Date(dto.performedDate),
       description: dto.description ?? null,
       result: dto.result ?? null,

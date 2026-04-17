@@ -238,6 +238,97 @@ export class VaccinationPlanService {
     return candidate.id;
   }
 
+  async registerApplicationForPlanDose(
+    patientId: number,
+    planDoseId: number,
+    vaccineId: number,
+    applicationDate: Date,
+    applicationRecordId: number,
+    manager?: EntityManager,
+  ): Promise<number> {
+    await this.initializePlanForExistingPatient(patientId, null, manager);
+
+    const planDoseRepo = this.getRepo(PatientVaccinationPlanDose, this.planDoseRepo, manager);
+    const targetDose = await planDoseRepo.findOne({
+      where: {
+        id: planDoseId,
+        deletedAt: IsNull(),
+      } as never,
+      relations: ['plan'],
+    });
+
+    if (
+      !targetDose
+      || !targetDose.plan
+      || targetDose.plan.deletedAt
+      || targetDose.plan.patientId !== patientId
+      || targetDose.plan.status !== PatientVaccinationPlanStatusEnum.ACTIVO
+    ) {
+      throw new BadRequestException(
+        'La dosis pendiente ya no pertenece al plan vacunal activo del paciente.',
+      );
+    }
+
+    if (targetDose.vaccineId !== vaccineId) {
+      throw new BadRequestException(
+        'La vacuna aplicada no coincide con la dosis pendiente seleccionada del plan vacunal.',
+      );
+    }
+
+    if (
+      targetDose.status === PatientVaccinationPlanDoseStatusEnum.APLICADA
+      || targetDose.applicationRecordId
+    ) {
+      throw new BadRequestException(
+        'La dosis pendiente seleccionada ya fue aplicada previamente.',
+      );
+    }
+
+    targetDose.status = PatientVaccinationPlanDoseStatusEnum.APLICADA;
+    targetDose.appliedAt = applicationDate;
+    targetDose.applicationRecordId = applicationRecordId;
+    await planDoseRepo.save(targetDose);
+
+    return targetDose.id;
+  }
+
+  async rollbackApplicationRecord(
+    patientId: number,
+    applicationRecordId: number,
+    manager?: EntityManager,
+  ): Promise<number | null> {
+    const planDoseRepo = this.getRepo(PatientVaccinationPlanDose, this.planDoseRepo, manager);
+    const targetDose = await planDoseRepo.findOne({
+      where: {
+        applicationRecordId,
+        deletedAt: IsNull(),
+      } as never,
+      relations: ['plan', 'plan.patient', 'schemeDose'],
+    });
+
+    if (!targetDose) {
+      return null;
+    }
+
+    if (!targetDose.plan || targetDose.plan.patientId !== patientId) {
+      throw new BadRequestException(
+        'La aplicación vacunal no coincide con el plan activo del paciente.',
+      );
+    }
+
+    targetDose.status = this.getRestoredDoseStatus(
+      targetDose.plan.patient?.birthDate ?? null,
+      targetDose.schemeDose,
+      targetDose.expectedDate ?? null,
+      new Date(),
+    );
+    targetDose.appliedAt = null;
+    targetDose.applicationRecordId = null;
+    await planDoseRepo.save(targetDose);
+
+    return targetDose.id;
+  }
+
   async blockPendingDosesForInactiveProduct(
     vaccineId: number,
     manager?: EntityManager,

@@ -63,6 +63,18 @@ export class ProcedureSurgeryCatalogController {
     return this.catalogService.updateProcedureItem(id, req.user.userId, dto);
   }
 
+  @Patch('procedures/:id/deactivate')
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
+  deactivateProcedure(@Param('id', ParseIntPipe) id: number) {
+    return this.catalogService.deactivateProcedureItem(id);
+  }
+
+  @Patch('procedures/:id/reactivate')
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
+  reactivateProcedure(@Param('id', ParseIntPipe) id: number) {
+    return this.catalogService.reactivateProcedureItem(id);
+  }
+
   @Delete('procedures/:id')
   @Roles(RoleEnum.ADMIN)
   removeProcedure(
@@ -105,6 +117,18 @@ export class ProcedureSurgeryCatalogController {
     @Request() req: { user: { userId: number } },
   ) {
     return this.catalogService.updateSurgeryItem(id, req.user.userId, dto);
+  }
+
+  @Patch('surgeries/:id/deactivate')
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
+  deactivateSurgery(@Param('id', ParseIntPipe) id: number) {
+    return this.catalogService.deactivateSurgeryItem(id);
+  }
+
+  @Patch('surgeries/:id/reactivate')
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
+  reactivateSurgery(@Param('id', ParseIntPipe) id: number) {
+    return this.catalogService.reactivateSurgeryItem(id);
   }
 
   @Delete('surgeries/:id')

@@ -26,6 +26,7 @@ import { CreateDewormingEventDto } from '../../dto/encounters/create-deworming-e
 import { CreateTreatmentDto } from '../../dto/encounters/create-treatment.dto.js';
 import { CreateSurgeryDto } from '../../dto/encounters/create-surgery.dto.js';
 import { CreateProcedureDto } from '../../dto/encounters/create-procedure.dto.js';
+import { UpsertVaccinationDraftDto } from '../../dto/encounters/upsert-vaccination-draft.dto.js';
 
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
@@ -73,8 +74,9 @@ export class EncountersController {
   closeEncounter(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CloseEncounterDto,
+    @Request() req: { user: { userId: number } },
   ) {
-    return this.encountersService.closeEncounter(id, dto);
+    return this.encountersService.closeEncounter(id, dto, req.user.userId);
   }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
@@ -82,8 +84,18 @@ export class EncountersController {
   finishEncounter(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CloseEncounterDto,
+    @Request() req: { user: { userId: number } },
   ) {
-    return this.encountersService.closeEncounter(id, dto);
+    return this.encountersService.closeEncounter(id, dto, req.user.userId);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Patch(':id/reactivate')
+  reactivateEncounter(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: { user: { userId: number } },
+  ) {
+    return this.encountersService.reactivateEncounter(id, req.user.userId);
   }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
@@ -193,5 +205,89 @@ export class EncountersController {
     @Body() dto: CreateProcedureDto,
   ) {
     return this.encountersService.addProcedure(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Post(':id/vaccination-drafts')
+  createVaccinationDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertVaccinationDraftDto,
+  ) {
+    return this.encountersService.createVaccinationDraft(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Put(':id/vaccination-drafts/:draftId')
+  updateVaccinationDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('draftId', ParseIntPipe) draftId: number,
+    @Body() dto: UpsertVaccinationDraftDto,
+  ) {
+    return this.encountersService.updateVaccinationDraft(id, draftId, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Patch(':id/vaccination-drafts/:draftId/delete')
+  deleteVaccinationDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('draftId', ParseIntPipe) draftId: number,
+  ) {
+    return this.encountersService.deleteVaccinationDraft(id, draftId);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Post(':id/treatment-drafts')
+  createTreatmentDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateTreatmentDto,
+  ) {
+    return this.encountersService.createTreatmentDraft(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Put(':id/treatment-drafts/:draftId')
+  updateTreatmentDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('draftId', ParseIntPipe) draftId: number,
+    @Body() dto: CreateTreatmentDto,
+  ) {
+    return this.encountersService.updateTreatmentDraft(id, draftId, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Patch(':id/treatment-drafts/:draftId/delete')
+  deleteTreatmentDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('draftId', ParseIntPipe) draftId: number,
+  ) {
+    return this.encountersService.deleteTreatmentDraft(id, draftId);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Post(':id/procedure-drafts')
+  createProcedureDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateProcedureDto,
+  ) {
+    return this.encountersService.createProcedureDraft(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Put(':id/procedure-drafts/:draftId')
+  updateProcedureDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('draftId', ParseIntPipe) draftId: number,
+    @Body() dto: CreateProcedureDto,
+  ) {
+    return this.encountersService.updateProcedureDraft(id, draftId, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Patch(':id/procedure-drafts/:draftId/delete')
+  deleteProcedureDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('draftId', ParseIntPipe) draftId: number,
+  ) {
+    return this.encountersService.deleteProcedureDraft(id, draftId);
   }
 }

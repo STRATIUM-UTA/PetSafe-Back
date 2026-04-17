@@ -7,6 +7,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import {
+  EDITABLE_ENCOUNTER_STATUSES,
+  ENCOUNTER_REACTIVATION_GRACE_MINUTES,
+} from '../../../domain/constants/encounter.constants.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { Vaccine } from '../../../domain/entities/catalogs/vaccine.entity.js';
@@ -45,12 +49,20 @@ export class EncounterSharedService {
         'plan',
         'vaccinationEvents',
         'vaccinationEvents.vaccine',
+        'vaccinationEvents.patientVaccineRecord',
+        'vaccinationDrafts',
+        'vaccinationDrafts.vaccine',
+        'vaccinationDrafts.planDose',
         'dewormingEvents',
         'dewormingEvents.product',
         'treatments',
         'treatments.items',
+        'treatmentDrafts',
+        'treatmentDrafts.items',
         'surgeries',
         'procedures',
+        'procedureDrafts',
+        'procedureDrafts.catalog',
       ],
     });
 
@@ -65,9 +77,48 @@ export class EncounterSharedService {
    * Asegura que la atenciÃ³n siga abierta para aceptar cambios clÃ­nicos.
    */
   ensureActive(encounter: Encounter): void {
-    if (encounter.status !== EncounterStatusEnum.ACTIVA) {
+    if (!this.isEditableStatus(encounter.status)) {
       throw new ConflictException(
         `La atenciÃ³n ya estÃ¡ en estado "${encounter.status}". No se puede modificar.`,
+      );
+    }
+  }
+
+  isEditableStatus(status: EncounterStatusEnum): boolean {
+    return EDITABLE_ENCOUNTER_STATUSES.includes(status);
+  }
+
+  getReactivationGraceEndsAt(encounter: Encounter): Date | null {
+    if (encounter.status !== EncounterStatusEnum.FINALIZADA || !encounter.endTime) {
+      return null;
+    }
+
+    return new Date(
+      encounter.endTime.getTime() + ENCOUNTER_REACTIVATION_GRACE_MINUTES * 60_000,
+    );
+  }
+
+  canReactivate(encounter: Encounter, now = new Date()): boolean {
+    const graceEndsAt = this.getReactivationGraceEndsAt(encounter);
+    return graceEndsAt !== null && now.getTime() <= graceEndsAt.getTime();
+  }
+
+  ensureCanReactivate(encounter: Encounter, now = new Date()): void {
+    if (encounter.status !== EncounterStatusEnum.FINALIZADA) {
+      throw new ConflictException(
+        `La atención está en estado "${encounter.status}" y no puede reactivarse.`,
+      );
+    }
+
+    if (!encounter.endTime) {
+      throw new ConflictException(
+        'La atención no tiene una hora de finalización registrada y no puede reactivarse.',
+      );
+    }
+
+    if (!this.canReactivate(encounter, now)) {
+      throw new ConflictException(
+        `La atención solo puede reactivarse dentro de los ${ENCOUNTER_REACTIVATION_GRACE_MINUTES} minutos posteriores a su finalización.`,
       );
     }
   }

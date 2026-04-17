@@ -22,5 +22,6 @@ export default new DataSource({
   database: process.env.DB_NAME || 'safepet_db',
   migrations: [migrationsGlob],
   entities: [entitiesGlob],
+  migrationsTransactionMode: 'each',
   synchronize: false,
 });

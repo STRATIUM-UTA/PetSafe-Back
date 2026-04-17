@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { EDITABLE_ENCOUNTER_STATUSES } from '../../../domain/constants/encounter.constants.js';
 import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
 import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
@@ -36,7 +37,7 @@ export class DashboardService {
 
     const activeEncounters = await this.encounterRepo
       .createQueryBuilder('e')
-      .where('e.status = :status', { status: EncounterStatusEnum.ACTIVA })
+      .where('e.status IN (:...statuses)', { statuses: [...EDITABLE_ENCOUNTER_STATUSES] })
       .andWhere('e.deleted_at IS NULL')
       .getCount();
 

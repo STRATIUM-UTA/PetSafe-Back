@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 
 import { Appointment } from '../../../domain/entities/appointments/appointment.entity.js';
 import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.entity.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
+import { EDITABLE_ENCOUNTER_STATUSES } from '../../../domain/constants/encounter.constants.js';
 import { CreateEncounterDto } from '../../../presentation/dto/encounters/create-encounter.dto.js';
 import { CloseEncounterDto } from '../../../presentation/dto/encounters/update-encounter-status.dto.js';
 import {
@@ -15,6 +16,7 @@ import { EncounterMapper } from '../../mappers/encounter.mapper.js';
 import { EncounterStatusEnum, QueueStatusEnum } from '../../../domain/enums/index.js';
 import { EncounterSharedService } from './encounter-shared.service.js';
 import { EncounterTreatmentService } from './encounter-treatment.service.js';
+import { EncounterActionDraftService } from './encounter-action-draft.service.js';
 
 @Injectable()
 export class EncounterCoreService {
@@ -25,8 +27,10 @@ export class EncounterCoreService {
     private readonly appointmentRepo: Repository<Appointment>,
     @InjectRepository(QueueEntry)
     private readonly queueRepo: Repository<QueueEntry>,
+    private readonly dataSource: DataSource,
     private readonly sharedService: EncounterSharedService,
     private readonly treatmentService: EncounterTreatmentService,
+    private readonly draftService: EncounterActionDraftService,
   ) {}
 
   /**
@@ -46,7 +50,7 @@ export class EncounterCoreService {
       const existingEncounter = await this.encounterRepo.findOne({
         where: {
           queueEntryId: dto.queueEntryId,
-          status: EncounterStatusEnum.ACTIVA,
+          status: In([...EDITABLE_ENCOUNTER_STATUSES]),
         },
       });
       if (existingEncounter && !existingEncounter.deletedAt) {
@@ -170,9 +174,19 @@ export class EncounterCoreService {
   /**
    * Finaliza una atención validando que la hora de cierre no sea inválida.
    */
-  async closeEncounter(id: number, dto: CloseEncounterDto): Promise<EncounterResponseDto> {
+  async closeEncounter(
+    id: number,
+    dto: CloseEncounterDto,
+    userId: number,
+  ): Promise<EncounterResponseDto> {
     const encounter = await this.sharedService.findEncounterOrFail(id);
     this.sharedService.ensureActive(encounter);
+
+    if (!encounter.consultationReason?.consultationReason?.trim()) {
+      throw new BadRequestException(
+        'No se puede finalizar la atención sin registrar el motivo de consulta.',
+      );
+    }
 
     const endTime = new Date(dto.endTime);
     if (endTime < encounter.startTime) {
@@ -181,23 +195,57 @@ export class EncounterCoreService {
       );
     }
 
-    await this.encounterRepo.update(id, {
-      status: EncounterStatusEnum.FINALIZADA,
-      endTime,
-      generalNotes: dto.generalNotes ?? encounter.generalNotes,
+    await this.dataSource.transaction(async (manager) => {
+      await this.draftService.materializeDrafts(encounter, manager);
+
+      await manager.update(Encounter, id, {
+        status: EncounterStatusEnum.FINALIZADA,
+        endTime,
+        generalNotes: dto.generalNotes ?? encounter.generalNotes,
+        updatedAt: new Date(),
+      });
+
+      if (encounter.queueEntryId) {
+        await manager.update(QueueEntry, encounter.queueEntryId, {
+          status: QueueStatusEnum.FINALIZADA,
+        });
+      }
+
+      if (encounter.appointmentId) {
+        await manager.update(Appointment, encounter.appointmentId, {
+          status: 'FINALIZADA' as any,
+        });
+      }
     });
 
-    if (encounter.queueEntryId) {
-      await this.queueRepo.update(encounter.queueEntryId, {
-        status: QueueStatusEnum.FINALIZADA,
-      });
-    }
+    return this.findOne(id);
+  }
 
-    if (encounter.appointmentId) {
-      await this.appointmentRepo.update(encounter.appointmentId, {
-        status: 'FINALIZADA' as any,
+  async reactivateEncounter(id: number, userId: number): Promise<EncounterResponseDto> {
+    const encounter = await this.sharedService.findEncounterOrFail(id);
+    this.sharedService.ensureCanReactivate(encounter);
+
+    await this.dataSource.transaction(async (manager) => {
+      await this.draftService.restoreDraftsFromMaterializedActions(encounter, userId, manager);
+
+      await manager.update(Encounter, id, {
+        status: EncounterStatusEnum.REACTIVADA,
+        endTime: null,
+        updatedAt: new Date(),
       });
-    }
+
+      if (encounter.queueEntryId) {
+        await manager.update(QueueEntry, encounter.queueEntryId, {
+          status: QueueStatusEnum.EN_ATENCION,
+        });
+      }
+
+      if (encounter.appointmentId) {
+        await manager.update(Appointment, encounter.appointmentId, {
+          status: 'EN_PROCESO' as any,
+        });
+      }
+    });
 
     return this.findOne(id);
   }
@@ -209,8 +257,12 @@ export class EncounterCoreService {
     const encounter = await this.sharedService.findEncounterOrFail(id);
     this.sharedService.ensureActive(encounter);
 
-    await this.encounterRepo.update(id, {
-      status: EncounterStatusEnum.ANULADA,
+    await this.dataSource.transaction(async (manager) => {
+      await this.draftService.deleteAllDrafts(id, manager);
+      await manager.update(Encounter, id, {
+        status: EncounterStatusEnum.ANULADA,
+        updatedAt: new Date(),
+      });
     });
 
     return this.findOne(id);

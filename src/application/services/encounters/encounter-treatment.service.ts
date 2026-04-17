@@ -9,6 +9,7 @@ import {
   TreatmentStatusEnum,
 } from '../../../domain/enums/index.js';
 import { CreateTreatmentDto } from '../../../presentation/dto/encounters/create-treatment.dto.js';
+import { EncounterSharedService } from './encounter-shared.service.js';
 
 @Injectable()
 export class EncounterTreatmentService {
@@ -18,12 +19,16 @@ export class EncounterTreatmentService {
     @InjectRepository(TreatmentItem)
     private readonly treatmentItemRepo: Repository<TreatmentItem>,
     private readonly dataSource: DataSource,
+    private readonly sharedService: EncounterSharedService,
   ) {}
 
   /**
    * Registra un tratamiento y decide su estado inicial según las fechas.
    */
   async addTreatment(encounterId: number, dto: CreateTreatmentDto): Promise<void> {
+    const encounter = await this.sharedService.findEncounterOrFail(encounterId);
+    this.sharedService.ensureActive(encounter);
+
     const startDate = new Date(dto.startDate);
     const endDate = dto.endDate ? new Date(dto.endDate) : null;
 
