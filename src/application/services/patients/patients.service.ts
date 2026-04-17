@@ -15,16 +15,11 @@ import { PatientCondition } from '../../../domain/entities/patients/patient-cond
 import { Client } from '../../../domain/entities/persons/client.entity.js';
 import { Species } from '../../../domain/entities/catalogs/species.entity.js';
 import { Breed } from '../../../domain/entities/catalogs/breed.entity.js';
-import { SurgeryCatalog } from '../../../domain/entities/catalogs/surgery-catalog.entity.js';
 import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
-import { Surgery } from '../../../domain/entities/encounters/surgery.entity.js';
-import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
-import { Procedure } from '../../../domain/entities/encounters/procedure.entity.js';
 import { CreatePatientDto } from '../../../presentation/dto/patients/create-patient.dto.js';
 import { UpdatePatientDto } from '../../../presentation/dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../../presentation/dto/patients/create-condition.dto.js';
 import { AddPatientTutorDto } from '../../../presentation/dto/patients/add-patient-tutor.dto.js';
-import { UpsertPatientSurgeryDto } from '../../../presentation/dto/patients/upsert-patient-surgery.dto.js';
 import { InitializePatientVaccinationPlanDto } from '../../../presentation/dto/patients/initialize-patient-vaccination-plan.dto.js';
 import {
   UpdatePatientVaccinationSchemeDto,
@@ -34,11 +29,6 @@ import {
   PatientAdminBasicDetailResponse,
   PatientAdminBasicResponse,
   PatientBasicByClientResponse,
-  PatientRecentActivityResponse,
-  PatientRecentConsultationActivityResponse,
-  PatientProcedureHistoryResponse,
-  PatientRecentProcedureActivityResponse,
-  PatientRecentSurgeryActivityResponse,
   PaginatedPatientsBasicForAdminResponse,
 } from '../../../presentation/dto/patients/patient-basic-response.dto.js';
 import { PatientVaccinationPlanResponseDto } from '../../../presentation/dto/vaccinations/vaccination-response.dto.js';
@@ -47,7 +37,6 @@ import {
   MediaOwnerTypeEnum,
   MediaTypeEnum,
   RoleEnum,
-  SurgeryStatusEnum,
   StorageProviderEnum,
 } from '../../../domain/enums/index.js';
 import { ListPatientTutorQueryDto } from 'src/presentation/dto/patients/list-patient-tutor-query.dto.js';
@@ -83,12 +72,6 @@ export class PatientsService {
     private readonly speciesRepo: Repository<Species>,
     @InjectRepository(Breed)
     private readonly breedRepo: Repository<Breed>,
-    @InjectRepository(Encounter)
-    private readonly encounterRepo: Repository<Encounter>,
-    @InjectRepository(Procedure)
-    private readonly procedureRepo: Repository<Procedure>,
-    @InjectRepository(SurgeryCatalog)
-    private readonly surgeryCatalogRepo: Repository<SurgeryCatalog>,
     @InjectRepository(MediaFile)
     private readonly mediaFileRepo: Repository<MediaFile>,
     private readonly dataSource: DataSource,
@@ -174,12 +157,6 @@ export class PatientsService {
         });
         const saved = await manager.save(Patient, patient);
 
-        await this.syncExternalPatientSurgeries(
-          saved.id,
-          dto.surgeries,
-          userId,
-          manager,
-        );
         await this.upsertPatientImage(saved.id, imageFile, imageBaseUrl, userId, manager);
 
         return this.findOneInternal(saved.id, userId, manager, roles);
@@ -218,12 +195,6 @@ export class PatientsService {
         });
         const saved = await manager.save(Patient, patient);
 
-        await this.syncExternalPatientSurgeries(
-          saved.id,
-          dto.surgeries,
-          userId,
-          manager,
-        );
         await this.upsertPatientImage(saved.id, imageFile, imageBaseUrl, userId, manager);
 
         const tutor = manager.create(PatientTutor, {
@@ -331,7 +302,6 @@ export class PatientsService {
         if (dto.generalHistory !== undefined) updateData.generalHistory = dto.generalHistory ?? null;
 
         await manager.update(Patient, patientId, updateData);
-        await this.syncExternalPatientSurgeries(patientId, dto.surgeries, userId, manager);
         previousImage = imageFile ? await this.findPatientImage(patientId, manager) : null;
         await this.upsertPatientImage(patientId, imageFile, imageBaseUrl, userId, manager);
         if (dto.speciesId !== undefined || dto.birthDate !== undefined) {
@@ -541,210 +511,6 @@ export class PatientsService {
     });
   }
 
-  async createAdminSurgery(
-    patientId: number,
-    dto: UpsertPatientSurgeryDto,
-    userId: number,
-    roles: string[],
-  ) {
-    return this.dataSource.transaction(async (manager) => {
-      await this.ensurePatientAccessibleForStaff(patientId, roles, manager);
-      const surgery = await this.upsertAdminSurgeryEntity(patientId, dto, userId, manager);
-      return PatientMapper.toSurgeryDto(surgery);
-    });
-  }
-
-  async updateAdminSurgery(
-    patientId: number,
-    surgeryId: number,
-    dto: UpsertPatientSurgeryDto,
-    userId: number,
-    roles: string[],
-  ) {
-    return this.dataSource.transaction(async (manager) => {
-      await this.ensurePatientAccessibleForStaff(patientId, roles, manager);
-      const surgeryRepo = manager.getRepository(Surgery);
-      const surgery = await surgeryRepo.findOne({ where: { id: surgeryId, patientId } });
-
-      if (!surgery || surgery.deletedAt) {
-        throw new NotFoundException('Cirugía no encontrada para esta mascota.');
-      }
-
-      if (!surgery.isExternal || surgery.encounterId !== null) {
-        throw new BadRequestException(
-          'Solo puedes editar desde el perfil cirugías externas no vinculadas a una atención.',
-        );
-      }
-
-      const saved = await this.upsertAdminSurgeryEntity(patientId, dto, userId, manager, surgery);
-      return PatientMapper.toSurgeryDto(saved);
-    });
-  }
-
-  async removeAdminSurgery(
-    patientId: number,
-    surgeryId: number,
-    userId: number,
-    roles: string[],
-  ): Promise<{ message: string }> {
-    return this.dataSource.transaction(async (manager) => {
-      await this.ensurePatientAccessibleForStaff(patientId, roles, manager);
-      const surgeryRepo = manager.getRepository(Surgery);
-      const surgery = await surgeryRepo.findOne({ where: { id: surgeryId, patientId } });
-
-      if (!surgery || surgery.deletedAt) {
-        throw new NotFoundException('Cirugía no encontrada para esta mascota.');
-      }
-
-      if (!surgery.isExternal || surgery.encounterId !== null) {
-        throw new BadRequestException(
-          'Solo puedes eliminar desde el perfil cirugías externas no vinculadas a una atención.',
-        );
-      }
-
-      surgery.deletedAt = new Date();
-      surgery.deletedByUserId = userId;
-      surgery.isActive = false;
-      await surgeryRepo.save(surgery);
-
-      return { message: 'Cirugía eliminada correctamente.' };
-    });
-  }
-
-  private async upsertAdminSurgeryEntity(
-    patientId: number,
-    dto: UpsertPatientSurgeryDto,
-    _userId: number,
-    manager: EntityManager,
-    surgery?: Surgery,
-  ): Promise<Surgery> {
-    const normalizedType = dto.surgeryType?.trim() || null;
-    let catalogId: number | null = null;
-    let surgeryType = normalizedType;
-
-    if (dto.catalogId !== undefined) {
-      const catalog = await this.findSurgeryCatalogOrFail(dto.catalogId, manager);
-      catalogId = catalog.id;
-      surgeryType = surgeryType || catalog.name;
-    }
-
-    if (!surgeryType) {
-      throw new BadRequestException(
-        'Debes seleccionar una cirugía del catálogo o escribir el nombre manual.',
-      );
-    }
-
-    const target = surgery ?? manager.getRepository(Surgery).create();
-    target.patientId = patientId;
-    target.encounterId = null;
-    target.catalogId = catalogId;
-    target.surgeryType = surgeryType;
-    target.scheduledDate = dto.scheduledDate ? new Date(dto.scheduledDate) : null;
-    target.performedDate = dto.performedDate ? new Date(dto.performedDate) : null;
-    target.surgeryStatus = dto.surgeryStatus ?? SurgeryStatusEnum.FINALIZADA;
-    target.isExternal = true;
-    target.description = dto.description?.trim() || null;
-    target.postoperativeInstructions = dto.postoperativeInstructions?.trim() || null;
-    target.deletedAt = null;
-    target.deletedByUserId = null;
-    target.isActive = true;
-
-    return manager.getRepository(Surgery).save(target);
-  }
-
-  private async syncExternalPatientSurgeries(
-    patientId: number,
-    surgeries: UpsertPatientSurgeryDto[] | undefined,
-    userId: number,
-    manager: EntityManager,
-  ): Promise<void> {
-    if (surgeries === undefined) {
-      return;
-    }
-
-    const surgeryRepo = manager.getRepository(Surgery);
-    const existingExternal = await surgeryRepo.find({
-      where: {
-        patientId,
-        isExternal: true,
-      },
-      withDeleted: true,
-    });
-
-    const activeExternal = existingExternal.filter((item) => !item.deletedAt);
-    const retainedIds = new Set<number>();
-
-    for (const input of surgeries) {
-      const normalizedType = input.surgeryType?.trim() || null;
-      let catalogId: number | null = null;
-      let surgeryType = normalizedType;
-
-      if (input.catalogId !== undefined) {
-        const catalog = await this.findSurgeryCatalogOrFail(input.catalogId, manager);
-        catalogId = catalog.id;
-        surgeryType = surgeryType || catalog.name;
-      }
-
-      if (!surgeryType) {
-        throw new BadRequestException(
-          'Cada cirugía debe tener una opción del catálogo o un nombre manual.',
-        );
-      }
-
-      let entity: Surgery | null = null;
-
-      if (input.id !== undefined) {
-        entity =
-          activeExternal.find((item) => item.id === input.id)
-          ?? null;
-
-        if (!entity) {
-          throw new NotFoundException('No se encontró una cirugía externa de la mascota para actualizar.');
-        }
-      }
-
-      const surgery = entity ?? surgeryRepo.create();
-      surgery.patientId = patientId;
-      surgery.encounterId = null;
-      surgery.catalogId = catalogId;
-      surgery.surgeryType = surgeryType;
-      surgery.scheduledDate = input.scheduledDate ? new Date(input.scheduledDate) : null;
-      surgery.performedDate = input.performedDate ? new Date(input.performedDate) : null;
-      surgery.surgeryStatus = input.surgeryStatus ?? SurgeryStatusEnum.FINALIZADA;
-      surgery.isExternal = true;
-      surgery.description = input.description?.trim() || null;
-      surgery.postoperativeInstructions = input.postoperativeInstructions?.trim() || null;
-      surgery.deletedAt = null;
-      surgery.deletedByUserId = null;
-      surgery.isActive = true;
-
-      const saved = await surgeryRepo.save(surgery);
-      retainedIds.add(saved.id);
-    }
-
-    const staleSurgeries = activeExternal.filter((item) => !retainedIds.has(item.id));
-    for (const surgery of staleSurgeries) {
-      surgery.deletedAt = new Date();
-      surgery.deletedByUserId = userId;
-      surgery.isActive = false;
-      await surgeryRepo.save(surgery);
-    }
-  }
-
-  private async findSurgeryCatalogOrFail(
-    catalogId: number,
-    manager?: EntityManager,
-  ): Promise<SurgeryCatalog> {
-    const repo = manager ? manager.getRepository(SurgeryCatalog) : this.surgeryCatalogRepo;
-    const catalog = await repo.findOne({ where: { id: catalogId } });
-
-    if (!catalog || catalog.deletedAt) {
-      throw new NotFoundException('La cirugía seleccionada no existe en el catálogo.');
-    }
-
-    return catalog;
-  }
-
   private async findOneInternal(patientId: number, userId: number, manager?: EntityManager, roles: string[] = []): Promise<PatientResponseDto> {
     const repo = manager ? manager.getRepository(Patient) : this.patientRepo;
 
@@ -756,7 +522,6 @@ export class PatientsService {
           'breed',
           'color',
           'conditions',
-          'surgeries',
           'tutors',
           'tutors.client',
           'tutors.client.person',
@@ -766,7 +531,6 @@ export class PatientsService {
       if (!patient || patient.deletedAt) throw new NotFoundException('Mascota no encontrada');
 
       patient.conditions = patient.conditions?.filter((c) => !c.deletedAt) ?? [];
-      patient.surgeries = patient.surgeries?.filter((surgery) => !surgery.deletedAt) ?? [];
       const image = await this.findPatientImage(patient.id, manager);
       return PatientMapper.toResponseDto(patient, image);
     }
@@ -781,7 +545,6 @@ export class PatientsService {
       .leftJoinAndSelect('p.breed', 'breed')
       .leftJoinAndSelect('p.color', 'color')
       .leftJoinAndSelect('p.conditions', 'conditions', 'conditions.deleted_at IS NULL')
-      .leftJoinAndSelect('p.surgeries', 'surgeries', 'surgeries.deleted_at IS NULL')
       .leftJoinAndSelect('p.tutors', 'tutors', 'tutors.deleted_at IS NULL')
       .leftJoinAndSelect('tutors.client', 'tutorClient')
       .leftJoinAndSelect('tutorClient.person', 'tutorPerson')
@@ -794,165 +557,6 @@ export class PatientsService {
 
     const image = await this.findPatientImage(patient.id, manager);
     return PatientMapper.toResponseDto(patient, image);
-  }
-
-  private activityWindowStart(): Date {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - 30);
-    return date;
-  }
-
-  private buildPatientConsultationSequenceSql(encounterAlias: string): string {
-    return `(
-      SELECT COUNT(*)::int
-      FROM encounters enc_sequence
-      WHERE enc_sequence.patient_id = ${encounterAlias}.patient_id
-        AND enc_sequence.deleted_at IS NULL
-        AND (
-          enc_sequence.start_time < ${encounterAlias}.start_time
-          OR (
-            enc_sequence.start_time = ${encounterAlias}.start_time
-            AND enc_sequence.id <= ${encounterAlias}.id
-          )
-        )
-    )`;
-  }
-
-  private async buildProcedureHistory(
-    patientId: number,
-    manager?: EntityManager,
-  ): Promise<PatientProcedureHistoryResponse[]> {
-    const repoContext = manager ?? this.dataSource.manager;
-    const patientConsultationSequenceSql = this.buildPatientConsultationSequenceSql('enc');
-
-    const procedureRows = await repoContext
-      .getRepository(Procedure)
-      .createQueryBuilder('procedure')
-      .innerJoin('procedure.encounter', 'enc')
-      .leftJoin('enc.vet', 'vet')
-      .leftJoin('vet.person', 'person')
-      .where('enc.patient_id = :patientId', { patientId })
-      .andWhere('enc.deleted_at IS NULL')
-      .andWhere('procedure.deleted_at IS NULL')
-      .select([
-        'procedure.id AS id',
-        'procedure.encounter_id AS "encounterId"',
-        `${patientConsultationSequenceSql} AS "patientConsultationNumber"`,
-        'procedure.procedure_type AS "procedureType"',
-        'procedure.performed_date AS "performedDate"',
-        "TRIM(CONCAT(COALESCE(person.first_name, ''), ' ', COALESCE(person.last_name, ''))) AS \"clinicianName\"",
-        'procedure.description AS description',
-        'procedure.result AS result',
-        'procedure.notes AS notes',
-      ])
-      .orderBy('procedure.performed_date', 'DESC')
-      .addOrderBy('procedure.id', 'DESC')
-      .getRawMany<PatientProcedureHistoryResponse>();
-
-    return procedureRows.map((row) => ({
-      ...row,
-      clinicianName: row.clinicianName?.trim() || null,
-      description: row.description?.trim() || null,
-      result: row.result?.trim() || null,
-      notes: row.notes?.trim() || null,
-    }));
-  }
-
-  private async buildRecentActivity(
-    patientId: number,
-    manager?: EntityManager,
-  ): Promise<PatientRecentActivityResponse> {
-    const repoContext = manager ?? this.dataSource.manager;
-    const since = this.activityWindowStart();
-    const now = new Date();
-    const patientConsultationSequenceSql = this.buildPatientConsultationSequenceSql('enc');
-
-    const consultationRows = await repoContext
-      .getRepository(Encounter)
-      .createQueryBuilder('enc')
-      .leftJoin('enc.consultationReason', 'reason')
-      .leftJoin('enc.vet', 'vet')
-      .leftJoin('vet.person', 'person')
-      .where('enc.patient_id = :patientId', { patientId })
-      .andWhere('enc.deleted_at IS NULL')
-      .andWhere('enc.start_time >= :since', { since })
-      .select([
-        'enc.id AS id',
-        `${patientConsultationSequenceSql} AS "patientConsultationNumber"`,
-        'enc.start_time AS "startTime"',
-        'enc.status AS status',
-        "TRIM(CONCAT(COALESCE(person.first_name, ''), ' ', COALESCE(person.last_name, ''))) AS \"clinicianName\"",
-        'reason.consultation_reason AS "consultationReason"',
-      ])
-      .orderBy('enc.start_time', 'DESC')
-      .limit(5)
-      .getRawMany<PatientRecentConsultationActivityResponse>();
-
-    const procedureRows = await repoContext
-      .getRepository(Procedure)
-      .createQueryBuilder('procedure')
-      .innerJoin('procedure.encounter', 'enc')
-      .leftJoin('enc.vet', 'vet')
-      .leftJoin('vet.person', 'person')
-      .where('enc.patient_id = :patientId', { patientId })
-      .andWhere('enc.deleted_at IS NULL')
-      .andWhere('procedure.deleted_at IS NULL')
-      .andWhere('procedure.performed_date >= :since', { since })
-      .select([
-        'procedure.id AS id',
-        'procedure.encounter_id AS "encounterId"',
-        `${patientConsultationSequenceSql} AS "patientConsultationNumber"`,
-        'procedure.procedure_type AS "procedureType"',
-        'procedure.performed_date AS "performedDate"',
-        "TRIM(CONCAT(COALESCE(person.first_name, ''), ' ', COALESCE(person.last_name, ''))) AS \"clinicianName\"",
-      ])
-      .orderBy('procedure.performed_date', 'DESC')
-      .limit(5)
-      .getRawMany<PatientRecentProcedureActivityResponse>();
-
-    const surgeryRows = await repoContext
-      .getRepository(Surgery)
-      .createQueryBuilder('surgery')
-      .leftJoin('surgery.encounter', 'enc')
-      .leftJoin('enc.vet', 'vet')
-      .leftJoin('vet.person', 'person')
-      .where('surgery.patient_id = :patientId', { patientId })
-      .andWhere('surgery.deleted_at IS NULL')
-      .andWhere('COALESCE(surgery.performed_date, surgery.scheduled_date, surgery.created_at) >= :since', {
-        since,
-      })
-      .select([
-        'surgery.id AS id',
-        'surgery.encounter_id AS "encounterId"',
-        'surgery.surgery_type AS "surgeryType"',
-        'COALESCE(surgery.performed_date, surgery.scheduled_date, surgery.created_at) AS "activityDate"',
-        'surgery.surgery_status AS "surgeryStatus"',
-        'surgery.is_external AS "isExternal"',
-        "TRIM(CONCAT(COALESCE(person.first_name, ''), ' ', COALESCE(person.last_name, ''))) AS \"clinicianName\"",
-      ])
-      .orderBy('COALESCE(surgery.performed_date, surgery.scheduled_date, surgery.created_at)', 'DESC')
-      .limit(5)
-      .getRawMany<PatientRecentSurgeryActivityResponse>();
-
-    return {
-      windowStart: since.toISOString(),
-      windowEnd: now.toISOString(),
-      consultations: consultationRows.map((row) => ({
-        ...row,
-        clinicianName: row.clinicianName?.trim() || null,
-        consultationReason: row.consultationReason?.trim() || null,
-      })),
-      procedures: procedureRows.map((row) => ({
-        ...row,
-        clinicianName: row.clinicianName?.trim() || null,
-      })),
-      surgeries: surgeryRows.map((row) => ({
-        ...row,
-        clinicianName: row.clinicianName?.trim() || null,
-        isExternal: Boolean(row.isExternal),
-      })),
-    };
   }
 
   private async resolveTargetClientId(dto: CreatePatientDto, userId: number, roles: string[], manager?: EntityManager): Promise<number> {
@@ -1204,8 +808,6 @@ export class PatientsService {
 
   async findAdminBasic(patientId: number, roles: string[]): Promise<PatientAdminBasicDetailResponse> {
     const patient = await this.findOneInternal(patientId, 0, undefined, roles);
-    const recentActivity = await this.buildRecentActivity(patientId);
-    const procedures = await this.buildProcedureHistory(patientId);
     const birthDate = patient.birthDate ?? null;
     const birthDateValue = birthDate ? new Date(birthDate as any) : null;
 
@@ -1255,9 +857,7 @@ export class PatientsService {
       image: patient.image ?? null,
       tutors: patient.tutors ?? [],
       clinicalObservations: patient.conditions ?? [],
-      surgeries: patient.surgeries ?? [],
-      procedures,
-      recentActivity,
+      recentActivity: null,
     };
   }
 
@@ -1308,7 +908,6 @@ export class PatientsService {
         }
 
         await manager.update(Patient, patientId, updateData);
-        await this.syncExternalPatientSurgeries(patientId, dto.surgeries, userId, manager);
         previousImage = imageFile ? await this.findPatientImage(patientId, manager) : null;
         await this.upsertPatientImage(patientId, imageFile, imageBaseUrl, userId, manager);
         if (dto.speciesId !== undefined || dto.birthDate !== undefined) {

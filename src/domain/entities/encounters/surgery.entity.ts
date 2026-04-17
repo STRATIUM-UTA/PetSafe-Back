@@ -3,23 +3,15 @@ import { BaseAuditEntity } from '../base-audit.entity.js';
 import { SurgeryStatusEnum } from '../../enums/index.js';
 import type { Encounter } from './encounter.entity.js';
 import type { SurgeryCatalog } from '../catalogs/surgery-catalog.entity.js';
-import type { Patient } from '../patients/patient.entity.js';
 
 @Entity({ name: 'surgeries' })
 export class Surgery extends BaseAuditEntity {
-  @Column({ name: 'patient_id', type: 'int' })
-  patientId!: number;
+  @Column({ name: 'encounter_id', type: 'int' })
+  encounterId!: number;
 
-  @ManyToOne('Patient', 'surgeries', { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'patient_id' })
-  patient!: Patient;
-
-  @Column({ name: 'encounter_id', type: 'int', nullable: true })
-  encounterId!: number | null;
-
-  @ManyToOne('Encounter', 'surgeries', { onDelete: 'CASCADE', nullable: true })
+  @ManyToOne('Encounter', 'surgeries', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'encounter_id' })
-  encounter!: Encounter | null;
+  encounter!: Encounter;
 
   @Column({ name: 'catalog_id', type: 'int', nullable: true })
   catalogId!: number | null;
@@ -53,9 +45,6 @@ export class Surgery extends BaseAuditEntity {
     default: SurgeryStatusEnum.PROGRAMADA,
   })
   surgeryStatus!: SurgeryStatusEnum;
-
-  @Column({ name: 'is_external', type: 'boolean', default: false })
-  isExternal!: boolean;
 
   @Column({ type: 'text', nullable: true })
   description!: string | null;

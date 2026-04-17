@@ -36,22 +36,6 @@ export class QueueController {
     return this.queueService.list(query);
   }
 
-  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
-  @Get('by-encounter/:encounterId')
-  findByEncounter(
-    @Param('encounterId', ParseIntPipe) encounterId: number,
-  ): Promise<QueueEntryRecordDto> {
-    return this.queueService.findByEncounter(encounterId);
-  }
-
-  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
-  @Get(':id')
-  findOne(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<QueueEntryRecordDto> {
-    return this.queueService.findOne(id);
-  }
-
   /**
    * POST /queue
    * Registra la llegada de un paciente (entrada en cola).
