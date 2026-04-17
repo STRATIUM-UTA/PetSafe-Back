@@ -13,8 +13,10 @@ export default new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || '127.0.0.1',
   port: parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DB_USERNAME || 'safepet_user',
-  password: process.env.DB_PASSWORD || 'safepet_secret',
+  // Para CLI de migraciones priorizamos credenciales de migración si existen.
+  // Si no están definidas, hacemos fallback a las credenciales de runtime.
+  username: process.env.DB_PROD_USERNAME || process.env.DB_USERNAME || 'safepet_user',
+  password: process.env.DB_PROD_PASSWORD || process.env.DB_PASSWORD || 'safepet_secret',
   database: process.env.DB_NAME || 'safepet_db',
   migrations: [migrationsGlob],
   entities: [entitiesGlob],
