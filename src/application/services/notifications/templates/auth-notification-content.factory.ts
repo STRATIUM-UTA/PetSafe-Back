@@ -15,6 +15,13 @@ interface AccountCreatedTemplateInput {
   expiresInHours: number;
 }
 
+interface EmailChangePinTemplateInput {
+  email: string;
+  fullName: string;
+  pin: string;
+  expiresInMinutes: number;
+}
+
 @Injectable()
 export class AuthNotificationContentFactory {
   buildPasswordResetPinMessage(
@@ -109,6 +116,52 @@ export class AuthNotificationContentFactory {
       },
       metadata: {
         notificationType: 'account_created',
+      },
+    };
+  }
+
+  buildEmailChangePinMessage(
+    input: EmailChangePinTemplateInput,
+  ): NotificationMessage {
+    const subject = 'Confirmacion de cambio de correo - SafePet';
+    const text = [
+      `Hola ${input.fullName},`,
+      '',
+      'Recibimos una solicitud para cambiar el correo asociado a tu cuenta de SafePet.',
+      `Tu codigo de verificacion es: ${input.pin}`,
+      'Ingresa este codigo en la pantalla de configuracion para confirmar el cambio.',
+      `Este codigo expira en ${input.expiresInMinutes} minutos y solo se puede usar una vez.`,
+      'Si no realizaste esta solicitud, puedes ignorar este mensaje.',
+    ].join('\n');
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; color: #1f2937; line-height: 1.6;">
+        <h2 style="margin-bottom: 8px;">SafePet</h2>
+        <p>Hola ${input.fullName},</p>
+        <p>Recibimos una solicitud para cambiar el correo asociado a tu cuenta.</p>
+        <p>Usa este codigo de verificacion:</p>
+        <div style="display: inline-block; padding: 12px 18px; font-size: 28px; font-weight: 700; letter-spacing: 6px; background: #f3f4f6; border-radius: 10px;">
+          ${input.pin}
+        </div>
+        <p style="margin-top: 16px;">Ingresa este codigo en la pantalla de configuracion para confirmar el cambio.</p>
+        <p>Este codigo expira en ${input.expiresInMinutes} minutos y solo se puede usar una vez.</p>
+        <p>Si no realizaste esta solicitud, puedes ignorar este mensaje.</p>
+      </div>
+    `;
+
+    return {
+      channel: 'email',
+      recipient: {
+        email: input.email,
+        name: input.fullName,
+      },
+      subject,
+      content: {
+        text,
+        html,
+      },
+      metadata: {
+        notificationType: 'email_change_pin',
       },
     };
   }

@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager } from 'typeorm';
+import { Repository, DataSource, EntityManager, IsNull } from 'typeorm';
 import { paginate, PaginateQuery, PaginateConfig, Paginated } from 'nestjs-paginate';
 import { unlink } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -43,6 +43,10 @@ import { ListPatientTutorQueryDto } from 'src/presentation/dto/patients/list-pat
 import { ListPatientTutorResponseDto } from 'src/presentation/dto/patients/list-patient-tutor-response.dto.js';
 import { PATIENT_UPLOADS_DIR } from '../../../infra/config/uploads.config.js';
 import { VaccinationPlanService } from '../vaccinations/vaccination-plan.service.js';
+import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
+import { PatientVaccinationPlan } from '../../../domain/entities/vaccinations/patient-vaccination-plan.entity.js';
+import { EncounterMapper } from '../../mappers/encounter.mapper.js';
+import { PatientClinicalHistoryResponse } from '../../../presentation/dto/patients/patient-clinical-history-response.dto.js';
 
 const PAGINATE_CONFIG: PaginateConfig<Patient> = {
   sortableColumns: ['id', 'name', 'code', 'createdAt'],
@@ -1058,6 +1062,103 @@ export class PatientsService {
     });
 
     await mediaRepo.save(mediaFile);
+  }
+
+  async findClinicalHistory(patientId: number, roles: string[]): Promise<PatientClinicalHistoryResponse> {
+    const patient = await this.findAdminBasic(patientId, roles);
+
+    const toDateStr = (d: Date | string | null | undefined): string | null => {
+      if (!d) return null;
+      return d instanceof Date ? d.toISOString() : String(d);
+    };
+
+    const encounterRepo = this.dataSource.getRepository(Encounter);
+    const encounters = await encounterRepo.find({
+      where: { patientId, deletedAt: IsNull() },
+      relations: [
+        'consultationReason',
+        'anamnesis',
+        'clinicalExam',
+        'environmentalData',
+        'clinicalImpression',
+        'plan',
+        'vaccinationEvents',
+        'vaccinationEvents.vaccine',
+        'dewormingEvents',
+        'dewormingEvents.product',
+        'treatments',
+        'treatments.items',
+        'surgeries',
+        'procedures',
+        'vet',
+        'vet.person',
+      ],
+      order: { startTime: 'DESC' },
+    });
+
+    const planRepo = this.dataSource.getRepository(PatientVaccinationPlan);
+    const plan = await planRepo.findOne({
+      where: { patientId, deletedAt: IsNull() },
+      relations: [
+        'schemeVersion',
+        'schemeVersion.scheme',
+        'doses',
+        'doses.vaccine',
+      ],
+      order: { assignedAt: 'DESC' },
+    });
+
+    return {
+      patient,
+      encounters: encounters.map((enc) => ({
+        id: enc.id,
+        startTime: toDateStr(enc.startTime)!,
+        endTime: enc.endTime ? toDateStr(enc.endTime) : null,
+        status: enc.status,
+        generalNotes: enc.generalNotes ?? null,
+        vetName: enc.vet?.person
+          ? `${enc.vet.person.firstName} ${enc.vet.person.lastName}`.trim()
+          : null,
+        consultationReason: enc.consultationReason
+          ? EncounterMapper.toConsultationReasonDto(enc.consultationReason)
+          : null,
+        anamnesis: enc.anamnesis ? EncounterMapper.toAnamnesisDto(enc.anamnesis) : null,
+        clinicalExam: enc.clinicalExam ? EncounterMapper.toClinicalExamDto(enc.clinicalExam) : null,
+        environmentalData: enc.environmentalData
+          ? EncounterMapper.toEnvironmentalDataDto(enc.environmentalData)
+          : null,
+        clinicalImpression: enc.clinicalImpression
+          ? EncounterMapper.toClinicalImpressionDto(enc.clinicalImpression)
+          : null,
+        plan: enc.plan ? EncounterMapper.toPlanDto(enc.plan) : null,
+        vaccinationEvents: (enc.vaccinationEvents ?? []).map((v) =>
+          EncounterMapper.toVaccinationEventDto(v),
+        ),
+        dewormingEvents: (enc.dewormingEvents ?? []).map((d) =>
+          EncounterMapper.toDewormingEventDto(d),
+        ),
+        treatments: (enc.treatments ?? []).map((t) => EncounterMapper.toTreatmentDto(t)),
+        surgeries: (enc.surgeries ?? []).map((s) => EncounterMapper.toSurgeryDto(s)),
+        procedures: (enc.procedures ?? []).map((p) => EncounterMapper.toProcedureDto(p)),
+      })),
+      vaccinationPlan: plan
+        ? {
+            status: plan.status,
+            schemeName: plan.schemeVersion?.scheme?.name ?? 'Esquema desconocido',
+            schemeVersion: plan.schemeVersion?.version ?? 0,
+            notes: plan.notes ?? null,
+            doses: (plan.doses ?? [])
+              .sort((a, b) => a.doseOrder - b.doseOrder)
+              .map((dose) => ({
+                doseOrder: dose.doseOrder,
+                vaccineName: dose.vaccine?.name ?? null,
+                status: dose.status,
+                expectedDate: dose.expectedDate ? toDateStr(dose.expectedDate) : null,
+                appliedAt: dose.appliedAt ? toDateStr(dose.appliedAt) : null,
+              })),
+          }
+        : null,
+    };
   }
 
   private buildPatientImageUrl(imageBaseUrl: string | undefined, fileName: string): string {
