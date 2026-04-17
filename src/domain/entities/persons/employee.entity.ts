@@ -14,18 +14,18 @@ export class Employee extends BaseAuditEntity {
   @Column({ type: 'varchar', length: 40, nullable: true })
   code!: string | null;
 
-  @Column({ type: 'varchar', length: 120, nullable: true })
+  @Column({ name: 'job_title', type: 'varchar', length: 120, nullable: true })
   position!: string | null;
 
   @Column({
-    name: 'professional_registration',
+    name: 'professional_license',
     type: 'varchar',
     length: 80,
     nullable: true,
   })
   professionalRegistration!: string | null;
 
-  @Column({ name: 'is_veterinarian', type: 'boolean', default: false })
+  @Column({ name: 'is_vet', type: 'boolean', default: false })
   isVeterinarian!: boolean;
 
   @Column({

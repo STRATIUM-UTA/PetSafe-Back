@@ -6,6 +6,7 @@ import {
   ValidateIf,
   IsNotEmpty,
 } from 'class-validator';
+import { IsTodayOrLater } from '../../validators/date-range.validator.js';
 
 export class UpsertPlanDto {
   @IsOptional()
@@ -19,6 +20,7 @@ export class UpsertPlanDto {
   @ValidateIf((o: UpsertPlanDto) => o.requiresFollowUp === true)
   @IsNotEmpty({ message: 'Si marcas que se requiere seguimiento, debes indicar la fecha sugerida.' })
   @IsDateString({}, { message: 'La fecha de seguimiento debe estar en formato válido (ej. 2027-03-29).' })
+  @IsTodayOrLater({ message: 'La fecha de seguimiento debe ser hoy o futura.' })
   suggestedFollowUpDate?: string;
 
   @IsOptional()

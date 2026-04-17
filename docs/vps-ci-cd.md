@@ -103,9 +103,15 @@ PORT=3000
 NODE_ENV=production
 DB_HOST=127.0.0.1
 DB_PORT=5432
+DB_USERNAME=pet_app
+DB_PASSWORD=tu_password_app
+DB_PROD_USERNAME=pet_migrations
+DB_PROD_PASSWORD=tu_password_migrations
 ```
 
 Eso ataca justo el problema real que ya viste: el backend no debe intentar salir a un puerto raro como `55423` si PostgreSQL esta local y escuchando en `5432`.
+
+Si defines `DB_PROD_USERNAME` y `DB_PROD_PASSWORD`, `npm run migration:run` usara esas credenciales dedicadas. La app NestJS seguira usando `DB_USERNAME` y `DB_PASSWORD`, lo que te permite separar permisos entre runtime y migraciones.
 
 ### 4. Desactivar PM2 levantado por `root`
 

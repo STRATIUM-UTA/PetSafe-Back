@@ -20,7 +20,7 @@ export class UsersAndAuth1742518800001 implements MigrationInterface {
         person_type person_type_enum NOT NULL,
         first_name varchar(120) NOT NULL,
         last_name varchar(120) NOT NULL,
-        document_id varchar(20),
+        document_id varchar(20) NOT NULL,
         phone varchar(25),
         address varchar(255),
         gender gender_enum,

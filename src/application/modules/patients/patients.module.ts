@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { PatientsService } from '../../services/patients/patients.service.js';
 import { PatientsController } from '../../../presentation/controllers/patients/patients.controller.js';
+import { VaccinationModule } from '../vaccinations/vaccination.module.js';
 
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PatientTutor } from '../../../domain/entities/patients/patient-tutor.entity.js';
@@ -11,9 +12,11 @@ import { Client } from '../../../domain/entities/persons/client.entity.js';
 import { Species } from '../../../domain/entities/catalogs/species.entity.js';
 import { Breed } from '../../../domain/entities/catalogs/breed.entity.js';
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
+import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
 
 @Module({
   imports: [
+    VaccinationModule,
     TypeOrmModule.forFeature([
       Patient,
       PatientTutor,
@@ -22,6 +25,7 @@ import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
       Species,
       Breed,
       UserRole,
+      MediaFile,
     ]),
   ],
   controllers: [PatientsController],

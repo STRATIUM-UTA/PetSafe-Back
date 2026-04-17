@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -10,14 +11,19 @@ import * as crypto from 'crypto';
 
 import { User } from '../../../domain/entities/auth/user.entity.js';
 import { Person } from '../../../domain/entities/persons/person.entity.js';
+import { Employee } from '../../../domain/entities/persons/employee.entity.js';
 import { Role } from '../../../domain/entities/auth/role.entity.js';
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
 import { PersonTypeEnum, RoleEnum } from '../../../domain/enums/index.js';
 import { RegisterDto } from '../../../presentation/dto/auth/register.dto.js';
 import { UpdateProfileDto } from '../../../presentation/dto/auth/update-profile.dto.js';
-import { UserProfileResponseDto } from '../../../presentation/dto/users/user-response.dto.js';
+import {
+  UserProfileResponseDto,
+  VeterinarianListItemResponseDto,
+} from '../../../presentation/dto/users/user-response.dto.js';
 import { UserMapper } from '../../mappers/user.mapper.js';
 import { TemporaryAccessService } from './temporary-access.service.js';
+import { normalizeDocumentId } from '../../../infra/utils/document-id.util.js';
 
 @Injectable()
 export class UsersService {
@@ -26,6 +32,8 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Person)
     private readonly personRepository: Repository<Person>,
+    @InjectRepository(Employee)
+    private readonly employeeRepository: Repository<Employee>,
     @InjectRepository(UserRole)
     private readonly userRoleRepository: Repository<UserRole>,
     private readonly temporaryAccessService: TemporaryAccessService,
@@ -37,11 +45,17 @@ export class UsersService {
     roleName: RoleEnum,
     manager: EntityManager,
   ): Promise<{ savedUser: User; savedPerson: Person; savedUserRole: UserRole | null }> {
+    const normalizedDocumentId = normalizeDocumentId(dto.documentId);
+    if (!normalizedDocumentId) {
+      throw new BadRequestException('La cédula es obligatoria y no puede quedar vacía');
+    }
+    await this.ensureDocumentIdAvailable(normalizedDocumentId, manager);
+
     const person = manager.create(Person, {
       personType: personType,
       firstName: dto.firstName,
       lastName: dto.lastName,
-      documentId: dto.documentId ?? null,
+      documentId: normalizedDocumentId,
       phone: dto.phone ?? null,
       address: dto.address ?? null,
       gender: dto.gender ?? null,
@@ -144,7 +158,47 @@ export class UsersService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    return UserMapper.toProfileDto(user);
+    const employee = await this.employeeRepository.findOne({
+      where: { personId: user.personId },
+    });
+
+    return UserMapper.toProfileDto(user, employee);
+  }
+
+  async listVeterinarians(search?: string): Promise<VeterinarianListItemResponseDto[]> {
+    const qb = this.employeeRepository
+      .createQueryBuilder('employee')
+      .innerJoinAndSelect('employee.person', 'person')
+      .where('employee.deleted_at IS NULL')
+      .andWhere('employee.is_vet = true')
+      .andWhere('person.deleted_at IS NULL')
+      .orderBy('person.first_name', 'ASC')
+      .addOrderBy('person.last_name', 'ASC');
+
+    const normalizedSearch = search?.trim();
+    if (normalizedSearch) {
+      qb.andWhere(
+        `(person.first_name ILIKE :search
+          OR person.last_name ILIKE :search
+          OR CONCAT(person.first_name, ' ', person.last_name) ILIKE :search
+          OR CONCAT(person.last_name, ' ', person.first_name) ILIKE :search
+          OR person.document_id ILIKE :search
+          OR employee.code ILIKE :search
+          OR employee.professional_license ILIKE :search)`,
+        { search: `%${normalizedSearch}%` },
+      );
+    }
+
+    const veterinarians = await qb.getMany();
+
+    return veterinarians.map((employee) => ({
+      id: employee.id,
+      personId: employee.personId,
+      fullName: `${employee.person.firstName} ${employee.person.lastName}`.trim(),
+      documentId: employee.person.documentId,
+      code: employee.code ?? null,
+      professionalRegistration: employee.professionalRegistration ?? null,
+    }));
   }
 
   async updateProfile(userId: number, dto: UpdateProfileDto) {
@@ -161,7 +215,14 @@ export class UsersService {
 
     if (dto.firstName !== undefined) person.firstName = dto.firstName;
     if (dto.lastName !== undefined) person.lastName = dto.lastName;
-    if (dto.documentId !== undefined) person.documentId = dto.documentId ?? null;
+    if (dto.documentId !== undefined) {
+      const normalizedDocumentId = normalizeDocumentId(dto.documentId);
+      if (!normalizedDocumentId) {
+        throw new BadRequestException('La cédula es obligatoria y no puede quedar vacía');
+      }
+      await this.ensureDocumentIdAvailable(normalizedDocumentId, undefined, person.id);
+      person.documentId = normalizedDocumentId;
+    }
     if (dto.phone !== undefined) person.phone = dto.phone ?? null;
     if (dto.address !== undefined) person.address = dto.address ?? null;
     if (dto.gender !== undefined) person.gender = dto.gender ?? null;
@@ -184,6 +245,32 @@ export class UsersService {
 
     if (existingUser) {
       throw new ConflictException('El correo electrónico ya está registrado');
+    }
+  }
+
+  private async ensureDocumentIdAvailable(
+    documentId: string | null,
+    manager?: EntityManager,
+    excludePersonId?: number,
+  ): Promise<void> {
+    if (!documentId) {
+      return;
+    }
+
+    const repo = manager ? manager.getRepository(Person) : this.personRepository;
+    const query = repo
+      .createQueryBuilder('p')
+      .where('p.document_id = :documentId', { documentId })
+      .andWhere('p.deleted_at IS NULL');
+
+    if (excludePersonId) {
+      query.andWhere('p.id != :excludePersonId', { excludePersonId });
+    }
+
+    const existingPerson = await query.getOne();
+
+    if (existingPerson) {
+      throw new ConflictException('La cédula ya está registrada');
     }
   }
 

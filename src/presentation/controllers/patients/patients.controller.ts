@@ -10,13 +10,19 @@ import {
   Request,
   ParseIntPipe,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { Paginate, type PaginateQuery } from 'nestjs-paginate';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { PatientsService } from '../../../application/services/patients/patients.service.js';
 import { CreatePatientDto } from '../../dto/patients/create-patient.dto.js';
 import { UpdatePatientDto } from '../../dto/patients/update-patient.dto.js';
 import { CreateConditionDto } from '../../dto/patients/create-condition.dto.js';
+import { AddPatientTutorDto } from '../../dto/patients/add-patient-tutor.dto.js';
+import { InitializePatientVaccinationPlanDto } from '../../dto/patients/initialize-patient-vaccination-plan.dto.js';
+import { UpdatePatientVaccinationSchemeDto } from '../../dto/patients/update-patient-vaccination-scheme.dto.js';
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
 import { Roles } from '../../../infra/security/decorators/roles.decorator.js';
@@ -25,6 +31,19 @@ import { ListPatientTutorQueryDto } from '../../dto/patients/list-patient-tutor-
 import { ListPatientTutorResponseDto } from '../../dto/patients/list-patient-tutor-response.dto.js';
 import { PatientResponseDto } from '../../dto/patients/patient-response.dto.js';
 import { PaginatedPatientsBasicForAdminResponse, PatientAdminBasicDetailResponse } from '../../dto/patients/patient-basic-response.dto.js';
+import { PatientClinicalHistoryResponse } from '../../dto/patients/patient-clinical-history-response.dto.js';
+import { PatientVaccinationPlanResponseDto } from '../../dto/vaccinations/vaccination-response.dto.js';
+import {
+  PATIENT_UPLOADS_URL_PREFIX,
+  patientImageUploadOptions,
+} from '../../../infra/config/uploads.config.js';
+
+type PatientImageRequest = {
+  user: { userId: number; roles?: string[] };
+  protocol?: string;
+  headers?: Record<string, string | string[] | undefined>;
+  get?: (name: string) => string | undefined;
+};
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('patients')
@@ -33,15 +52,40 @@ export class PatientsController {
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
   @Post()
+  @UseInterceptors(FileInterceptor('image', patientImageUploadOptions))
   create(
     @Body() dto: CreatePatientDto,
-    @Request() req: { user: { userId: number; roles: string[] } },
+    @UploadedFile() imageFile: any,
+    @Request() req: PatientImageRequest,
   ) {
-    return this.patientsService.create(dto, req.user.userId, req.user.roles);
+    return this.patientsService.create(
+      dto,
+      req.user.userId,
+      req.user.roles ?? [],
+      imageFile,
+      this.buildPatientImageBaseUrl(req),
+    );
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Post('admin/without-tutor')
+  @UseInterceptors(FileInterceptor('image', patientImageUploadOptions))
+  createWithoutTutor(
+    @Body() dto: CreatePatientDto,
+    @UploadedFile() imageFile: any,
+    @Request() req: PatientImageRequest,
+  ): Promise<PatientResponseDto> {
+    return this.patientsService.createWithoutTutor(
+      dto,
+      req.user.userId,
+      req.user.roles ?? [],
+      imageFile,
+      this.buildPatientImageBaseUrl(req),
+    );
   }
 
   // Todos los pacientes con su info basica y paginada
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/all-basic')
   findAllBasic(@Paginate() query: PaginateQuery): Promise<PaginatedPatientsBasicForAdminResponse> {
     return this.patientsService.findAllBasic(query);
@@ -67,12 +111,20 @@ export class PatientsController {
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
   @Patch(':id')
+  @UseInterceptors(FileInterceptor('image', patientImageUploadOptions))
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePatientDto,
-    @Request() req: { user: { userId: number } },
+    @UploadedFile() imageFile: any,
+    @Request() req: PatientImageRequest,
   ) {
-    return this.patientsService.update(id, dto, req.user.userId);
+    return this.patientsService.update(
+      id,
+      dto,
+      req.user.userId,
+      imageFile,
+      this.buildPatientImageBaseUrl(req),
+    );
   }
 
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
@@ -104,8 +156,58 @@ export class PatientsController {
     return this.patientsService.removeCondition(id, conditionId, req.user.userId);
   }
 
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Post(':id/tutors')
+  addTutor(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AddPatientTutorDto,
+    @Request() req: { user: { roles: string[] } },
+  ) {
+    return this.patientsService.addTutor(id, dto, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Patch(':id/tutors/:clientId/primary')
+  setPrimaryTutor(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Request() req: { user: { roles: string[] } },
+  ) {
+    return this.patientsService.setPrimaryTutor(id, clientId, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Delete(':id/tutors/:clientId')
+  removeTutor(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('clientId', ParseIntPipe) clientId: number,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ) {
+    return this.patientsService.removeTutor(id, clientId, req.user.userId, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
+  @Post(':id/vaccination-plan')
+  initializeVaccinationPlan(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: InitializePatientVaccinationPlanDto,
+    @Request() req: { user: { roles: string[] } },
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    return this.patientsService.initializeVaccinationPlan(id, dto, req.user.roles);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ)
+  @Patch(':id/vaccination-scheme')
+  updateVaccinationScheme(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePatientVaccinationSchemeDto,
+    @Request() req: { user: { roles: string[] } },
+  ): Promise<PatientVaccinationPlanResponseDto> {
+    return this.patientsService.updateVaccinationScheme(id, dto, req.user.roles);
+  }
+
   // Todos los pacientes en base a un tutor especifico
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/by-client/:clientId')
   findAllByClientId(
     @Param('clientId', ParseIntPipe) clientId: number,
@@ -119,24 +221,55 @@ export class PatientsController {
   }
 
   // Esto creo q era para el detalle de un paciente en el frontend
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/:id/basic')
   findAdminBasic(@Param('id', ParseIntPipe) id: number, @Request() req: { user: { userId: number; roles: string[] } }): Promise<PatientAdminBasicDetailResponse> {
     return this.patientsService.findAdminBasic(id, req.user.roles);
   }
 
+  // Historial clínico completo de un paciente
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get('admin/:id/clinical-history')
+  findClinicalHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ): Promise<PatientClinicalHistoryResponse> {
+    return this.patientsService.findClinicalHistory(id, req.user.roles);
+  }
+
   // Actualizar campos basicos de un paciente
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Patch('admin/:id/basic')
+  @UseInterceptors(FileInterceptor('image', patientImageUploadOptions))
   updateAdminBasic(
-    @Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePatientDto, @Request() req: { user: { userId: number; roles: string[] } }): Promise<PatientResponseDto> {
-    return this.patientsService.updateAdminBasic(id, dto, req.user.roles);
+    @Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePatientDto, @UploadedFile() imageFile: any, @Request() req: PatientImageRequest): Promise<PatientResponseDto> {
+    return this.patientsService.updateAdminBasic(
+      id,
+      dto,
+      req.user.userId,
+      req.user.roles ?? [],
+      imageFile,
+      this.buildPatientImageBaseUrl(req),
+    );
   }
 
   // Se utiliza en la parte de citas, para mostrar un resumen de los pacientes y tutores de manera basica y poder seleccionar al momento de generar una cita.
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/search-summary')
   searchSummary(@Query() query: ListPatientTutorQueryDto, @Request() req: { user: { userId: number; roles: string[] } }): Promise<ListPatientTutorResponseDto[]> {
     return this.patientsService.findSearchSummary(query, req.user.roles);
+  }
+
+  private buildPatientImageBaseUrl(req: {
+    protocol?: string;
+    headers?: Record<string, string | string[] | undefined>;
+    get?: (name: string) => string | undefined;
+  }): string {
+    const forwardedProto = req.headers?.['x-forwarded-proto'];
+    const protocol = Array.isArray(forwardedProto)
+      ? forwardedProto[0]
+      : forwardedProto || req.protocol || 'http';
+    const host = req.get?.('host') || 'localhost:3000';
+    return `${protocol}://${host}${PATIENT_UPLOADS_URL_PREFIX}`;
   }
 }

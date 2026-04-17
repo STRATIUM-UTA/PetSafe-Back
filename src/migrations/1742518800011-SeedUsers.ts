@@ -23,7 +23,7 @@ export class SeedUsers1742518800011 implements MigrationInterface {
         RETURNING id INTO v_user_id;
 
         INSERT INTO employees (person_id, code, job_title, is_vet, is_active)
-        VALUES (v_person_id, 'EMP-001', 'Administrador', false, true);
+        VALUES (v_person_id, 'EMP-001', 'Administrador', true, true);
 
         SELECT id INTO v_role_id FROM roles WHERE name = 'ADMIN' AND deleted_at IS NULL;
         IF v_role_id IS NOT NULL THEN

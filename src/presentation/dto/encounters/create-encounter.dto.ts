@@ -5,18 +5,26 @@ import {
   IsString,
   IsDateString,
 } from 'class-validator';
+import {
+  IsNotBeforeDate,
+  IsNotFutureDate,
+} from '../../validators/date-range.validator.js';
 
 export class CreateEncounterDto {
-  @IsNotEmpty({ message: 'Debes indicar el paciente.' })
+  @IsOptional()
   @IsInt({ message: 'El paciente no es válido.' })
   patientId!: number;
 
-  @IsNotEmpty({ message: 'Debes indicar el veterinario responsable.' })
+  @IsOptional()
   @IsInt({ message: 'El veterinario seleccionado no es válido.' })
   vetId!: number;
 
-  @IsNotEmpty({ message: 'La hora de inicio de la atención es obligatoria.' })
+  @IsOptional()
   @IsDateString({}, { message: 'La hora de inicio debe estar en formato válido (ej. 2026-03-29T15:00:00).' })
+  @IsNotFutureDate({ message: 'La hora de inicio no puede ser futura.' })
+  @IsNotBeforeDate('2000-01-01', {
+    message: 'La hora de inicio no puede ser demasiado antigua.',
+  })
   startTime!: string;
 
   @IsOptional()

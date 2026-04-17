@@ -14,6 +14,8 @@ import { RefreshTokenDto } from '../../dto/auth/refresh-token.dto.js';
 import { LogoutDto } from '../../dto/auth/logout.dto.js';
 import { RequestPasswordResetDto } from '../../dto/auth/request-password-reset.dto.js';
 import { ConfirmPasswordResetDto } from '../../dto/auth/confirm-password-reset.dto.js';
+import { RequestEmailChangeDto } from '../../dto/auth/request-email-change.dto.js';
+import { ConfirmEmailChangeDto } from '../../dto/auth/confirm-email-change.dto.js';
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
 import { Roles } from '../../../infra/security/decorators/roles.decorator.js';
@@ -61,5 +63,25 @@ export class AuthController {
   @Post('password-reset/confirm')
   confirmPasswordReset(@Body() dto: ConfirmPasswordResetDto) {
     return this.authService.confirmPasswordReset(dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
+  @Post('email-change/request')
+  requestEmailChange(
+    @Request() req: { user: { userId: number } },
+    @Body() dto: RequestEmailChangeDto,
+  ) {
+    return this.authService.requestEmailChange(req.user.userId, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
+  @Post('email-change/confirm')
+  confirmEmailChange(
+    @Request() req: { user: { userId: number } },
+    @Body() dto: ConfirmEmailChangeDto,
+  ) {
+    return this.authService.confirmEmailChange(req.user.userId, dto);
   }
 }

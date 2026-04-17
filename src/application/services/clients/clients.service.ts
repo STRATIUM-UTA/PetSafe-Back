@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
@@ -27,6 +29,7 @@ import {
 } from '../../../presentation/dto/clients/client-summary-response.dto.js';
 import { ClientAccessService } from './client-access.service.js';
 import { ClientMapper } from '../../mappers/client.mapper.js';
+import { normalizeDocumentId } from '../../../infra/utils/document-id.util.js';
 
 @Injectable()
 export class ClientsService {
@@ -45,11 +48,17 @@ export class ClientsService {
 
   async create(dto: CreateClientDto): Promise<ClientResponseDto> {
     return this.dataSource.transaction(async (manager) => {
+      const normalizedDocumentId = normalizeDocumentId(dto.documentId);
+      if (!normalizedDocumentId) {
+        throw new BadRequestException('La cédula es obligatoria y no puede quedar vacía');
+      }
+      await this.ensureDocumentIdAvailable(normalizedDocumentId, manager);
+
       const person = manager.create(Person, {
         personType: PersonTypeEnum.CLIENTE,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        documentId: dto.documentId ?? null,
+        documentId: normalizedDocumentId,
         phone: dto.phone ?? null,
         address: dto.address ?? null,
         gender: dto.gender ?? null,
@@ -198,7 +207,14 @@ export class ClientsService {
       const person = client.person;
       if (dto.firstName !== undefined) person.firstName = dto.firstName;
       if (dto.lastName !== undefined) person.lastName = dto.lastName;
-      if (dto.documentId !== undefined) person.documentId = dto.documentId;
+      if (dto.documentId !== undefined) {
+        const normalizedDocumentId = normalizeDocumentId(dto.documentId);
+        if (!normalizedDocumentId) {
+          throw new BadRequestException('La cédula es obligatoria y no puede quedar vacía');
+        }
+        await this.ensureDocumentIdAvailable(normalizedDocumentId, manager, person.id);
+        person.documentId = normalizedDocumentId;
+      }
       if (dto.phone !== undefined) person.phone = dto.phone;
       if (dto.address !== undefined) person.address = dto.address;
       if (dto.gender !== undefined) person.gender = dto.gender;
@@ -465,5 +481,31 @@ export class ClientsService {
       lastName: client.person.lastName,
       phone: client.person.phone ?? null,
     }));
+  }
+
+  private async ensureDocumentIdAvailable(
+    documentId: string | null,
+    manager: EntityManager,
+    excludePersonId?: number,
+  ): Promise<void> {
+    if (!documentId) {
+      return;
+    }
+
+    const query = manager
+      .getRepository(Person)
+      .createQueryBuilder('p')
+      .where('p.document_id = :documentId', { documentId })
+      .andWhere('p.deleted_at IS NULL');
+
+    if (excludePersonId) {
+      query.andWhere('p.id != :excludePersonId', { excludePersonId });
+    }
+
+    const existingPerson = await query.getOne();
+
+    if (existingPerson) {
+      throw new ConflictException('La cédula ya está registrada');
+    }
   }
 }

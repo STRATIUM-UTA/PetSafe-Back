@@ -84,13 +84,13 @@ export class ClientsController {
   }
 
   // Para la tabla de propietarios en el frontend
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/summary/list') findSummaryList(@Query() query: ListClientSummaryQueryDto): Promise<PaginatedClientSummaryResponse> {
     return this.clientsService.findSummaryList(query);
   }
 
   // Para el selector de tutores en el frontend en la seccion de mascotas
-  @Roles(RoleEnum.ADMIN)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Get('admin/tutors/basic')
   findBasicTutors(@Query() query: ListBasicTutorsQueryDto): Promise<BasicTutorResponse[]> {
     return this.clientsService.findBasicTutors(query);

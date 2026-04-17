@@ -73,6 +73,16 @@ export class VaccinationEventResponseDto {
   notes!: string | null;
 }
 
+export class VaccinationDraftResponseDto {
+  id!: number;
+  planDoseId!: number | null;
+  vaccineId!: number;
+  vaccineName!: string | null;
+  applicationDate!: string;
+  suggestedNextDate!: string | null;
+  notes!: string | null;
+}
+
 export class DewormingEventResponseDto {
   id!: number;
   productId!: number;
@@ -93,6 +103,17 @@ export class TreatmentItemResponseDto {
   status!: string;
 }
 
+export class TreatmentDraftItemResponseDto {
+  id!: number;
+  medication!: string;
+  dose!: string;
+  frequency!: string;
+  durationDays!: number;
+  administrationRoute!: string;
+  notes!: string | null;
+  status!: string;
+}
+
 export class TreatmentResponseDto {
   id!: number;
   status!: TreatmentStatusEnum;
@@ -100,6 +121,14 @@ export class TreatmentResponseDto {
   endDate!: string | null;
   generalInstructions!: string | null;
   items!: TreatmentItemResponseDto[];
+}
+
+export class TreatmentDraftResponseDto {
+  id!: number;
+  startDate!: string;
+  endDate!: string | null;
+  generalInstructions!: string | null;
+  items!: TreatmentDraftItemResponseDto[];
 }
 
 export class SurgeryResponseDto {
@@ -121,19 +150,40 @@ export class ProcedureResponseDto {
   notes!: string | null;
 }
 
+export class ProcedureDraftResponseDto {
+  id!: number;
+  catalogId!: number | null;
+  procedureType!: string | null;
+  performedDate!: string;
+  description!: string | null;
+  result!: string | null;
+  notes!: string | null;
+}
+
+export class EncounterPatientResponseDto {
+  id!: number;
+  name!: string;
+  species!: string;
+  breed!: string;
+}
+
 // ── Main response ──────────────────────────────────────────────────────────
 
 export class EncounterResponseDto {
   id!: number;
   patientId!: number;
   vetId!: number;
+  veterinarianId!: number;
   appointmentId!: number | null;
   queueEntryId!: number | null;
   startTime!: string;
   endTime!: string | null;
   status!: EncounterStatusEnum;
+  canReactivate!: boolean;
+  reactivationGraceEndsAt!: string | null;
   generalNotes!: string | null;
   createdByUserId!: number | null;
+  patient!: EncounterPatientResponseDto;
 
   consultationReason!: ConsultationReasonResponseDto | null;
   anamnesis!: AnamnesisResponseDto | null;
@@ -143,10 +193,18 @@ export class EncounterResponseDto {
   plan!: PlanResponseDto | null;
 
   vaccinationEvents!: VaccinationEventResponseDto[];
+  vaccinationDrafts!: VaccinationDraftResponseDto[];
   dewormingEvents!: DewormingEventResponseDto[];
   treatments!: TreatmentResponseDto[];
+  treatmentDrafts!: TreatmentDraftResponseDto[];
   surgeries!: SurgeryResponseDto[];
   procedures!: ProcedureResponseDto[];
+  procedureDrafts!: ProcedureDraftResponseDto[];
+  vaccinesCount!: number;
+  dewormingCount!: number;
+  treatmentsCount!: number;
+  surgeriesCount!: number;
+  proceduresCount!: number;
 
   createdAt!: string;
   updatedAt!: string;

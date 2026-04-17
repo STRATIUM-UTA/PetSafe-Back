@@ -2,12 +2,16 @@ import {
   IsNotEmpty,
   IsString,
   IsOptional,
-  IsEnum,
   IsNumber,
   IsBoolean,
   IsDateString,
   IsInt,
 } from 'class-validator';
+import {
+  IsNotOlderThanYears,
+  IsNotBeforeDate,
+  IsNotFutureDate,
+} from '../../validators/date-range.validator.js';
 
 export class CreatePatientDto {
   @IsNotEmpty({ message: 'El nombre de la mascota es obligatorio.' })
@@ -32,6 +36,13 @@ export class CreatePatientDto {
 
   @IsOptional()
   @IsDateString({}, { message: 'La fecha de nacimiento debe ser una fecha válida (YYYY-MM-DD).' })
+  @IsNotFutureDate({ message: 'La fecha de nacimiento no puede ser futura.' })
+  @IsNotBeforeDate('1900-01-01', {
+    message: 'La fecha de nacimiento no puede ser demasiado antigua.',
+  })
+  @IsNotOlderThanYears(40, {
+    message: 'La fecha de nacimiento de la mascota no puede indicar más de 40 años.',
+  })
   birthDate?: string;
 
   @IsOptional()
@@ -61,4 +72,8 @@ export class CreatePatientDto {
   @IsOptional()
   @IsInt({ message: 'El cliente asignado no es válido.' })
   clientId?: number;
+
+  @IsOptional()
+  @IsInt({ message: 'El esquema vacunal proporcionado no es válido.' })
+  vaccinationSchemeId?: number;
 }

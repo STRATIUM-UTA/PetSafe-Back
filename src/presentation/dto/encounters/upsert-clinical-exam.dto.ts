@@ -4,9 +4,19 @@ import {
   IsInt,
   IsEnum,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MAX,
+  ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MIN,
+} from '../../../domain/constants/encounter-clinical-exam.constants.js';
 import { MucosaStatusEnum, HydrationStatusEnum } from '../../../domain/enums/index.js';
+import {
+  normalizeHydrationStatusEnum,
+  normalizeMucosaStatusEnum,
+} from './encounter-clinical-enum-normalizer.util.js';
 
 export class UpsertClinicalExamDto {
   @IsOptional()
@@ -16,6 +26,12 @@ export class UpsertClinicalExamDto {
 
   @IsOptional()
   @IsNumber({}, { message: 'La temperatura debe ser un número válido (ej. 38.5).' })
+  @Min(ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MIN, {
+    message: `La temperatura debe estar entre ${ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MIN} y ${ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MAX} °C.`,
+  })
+  @Max(ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MAX, {
+    message: `La temperatura debe estar entre ${ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MIN} y ${ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MAX} °C.`,
+  })
   temperatureC?: number;
 
   @IsOptional()
@@ -34,6 +50,7 @@ export class UpsertClinicalExamDto {
   respiratoryRate?: number;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeMucosaStatusEnum(value))
   @IsEnum(MucosaStatusEnum, { message: 'El estado de mucosas no es válido. Valores permitidos: ' + Object.values(MucosaStatusEnum).join(', ') })
   mucousMembranes?: MucosaStatusEnum;
 
@@ -42,6 +59,7 @@ export class UpsertClinicalExamDto {
   lymphNodes?: string;
 
   @IsOptional()
+  @Transform(({ value }) => normalizeHydrationStatusEnum(value))
   @IsEnum(HydrationStatusEnum, { message: 'El estado de hidratación no es válido. Valores permitidos: ' + Object.values(HydrationStatusEnum).join(', ') })
   hydration?: HydrationStatusEnum;
 

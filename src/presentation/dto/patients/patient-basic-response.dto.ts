@@ -1,4 +1,8 @@
-import { PatientConditionResponseDto } from './patient-response.dto.js';
+import {
+  PatientConditionResponseDto,
+  PatientTutorResponseDto,
+} from './patient-response.dto.js';
+import { PatientImageResponseDto } from './patient-image.dto.js';
 
 export type PatientBasicByClientResponse = {
   id: number;
@@ -16,6 +20,7 @@ export type PatientBasicByClientResponse = {
     id: number;
     name: string;
   } | null;
+  image: PatientImageResponseDto | null;
 };
 
 export type PaginatedPatientsBasicForAdminResponse = {
@@ -48,6 +53,7 @@ export type PatientAdminBasicResponse = {
   ageYears: number | null;
   sex: string;
   currentWeight: number | null;
+  image: PatientImageResponseDto | null;
 };
 
 export type PatientAdminBasicDetailResponse = {
@@ -72,6 +78,8 @@ export type PatientAdminBasicDetailResponse = {
   sterilized: boolean;
   generalAllergies: string | null;
   generalHistory: string | null;
+  image: PatientImageResponseDto | null;
+  tutors: PatientTutorResponseDto[];
   clinicalObservations: PatientConditionResponseDto[];
   recentActivity: null;
 };

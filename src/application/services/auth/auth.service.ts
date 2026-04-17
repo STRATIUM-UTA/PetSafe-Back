@@ -23,6 +23,8 @@ import { LogoutDto } from '../../../presentation/dto/auth/logout.dto.js';
 import { UpdatePasswordDto } from '../../../presentation/dto/auth/update-password.dto.js';
 import { RequestPasswordResetDto } from '../../../presentation/dto/auth/request-password-reset.dto.js';
 import { ConfirmPasswordResetDto } from '../../../presentation/dto/auth/confirm-password-reset.dto.js';
+import { RequestEmailChangeDto } from '../../../presentation/dto/auth/request-email-change.dto.js';
+import { ConfirmEmailChangeDto } from '../../../presentation/dto/auth/confirm-email-change.dto.js';
 import { AuthResponseDto } from '../../../presentation/dto/auth/auth-response.dto.js';
 import { UserMapper } from '../../mappers/user.mapper.js';
 
@@ -34,6 +36,8 @@ import { TemporaryAccessService } from '../users/temporary-access.service.js';
 
 @Injectable()
 export class AuthService {
+  private static readonly EMAIL_CHANGE_CHANNEL = 'email_change';
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -288,6 +292,133 @@ export class AuthService {
     return genericResponse;
   }
 
+  async requestEmailChange(userId: number, dto: RequestEmailChangeDto) {
+    const normalizedEmail = dto.newEmail.trim().toLowerCase();
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['person'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (user.email.toLowerCase() === normalizedEmail) {
+      throw new BadRequestException('El nuevo correo debe ser diferente al actual');
+    }
+
+    await this.ensureEmailAvailable(normalizedEmail, user.id);
+
+    const expiresInMinutes = this.getPasswordResetExpiryMinutes();
+    const maxAttempts = this.getPasswordResetMaxAttempts();
+    const pinLength = this.getPasswordResetPinLength();
+    const pin = this.generateNumericPin(pinLength);
+    const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+
+    const emailChangeToken = this.passwordResetTokenRepository.create({
+      userId: user.id,
+      codeHash: this.hashValue(pin),
+      channel: AuthService.EMAIL_CHANGE_CHANNEL,
+      destination: normalizedEmail,
+      expiresAt,
+      maxAttempts,
+    });
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager
+        .createQueryBuilder()
+        .update(UserPasswordResetToken)
+        .set({ invalidatedAt: new Date() })
+        .where('user_id = :userId', { userId: user.id })
+        .andWhere('channel = :channel', { channel: AuthService.EMAIL_CHANGE_CHANNEL })
+        .andWhere('used_at IS NULL')
+        .andWhere('invalidated_at IS NULL')
+        .execute();
+
+      await manager.save(UserPasswordResetToken, emailChangeToken);
+    });
+
+    try {
+      await this.notificationDispatcher.send(
+        this.notificationContentFactory.buildEmailChangePinMessage({
+          email: normalizedEmail,
+          fullName: `${user.person.firstName} ${user.person.lastName}`.trim(),
+          pin,
+          expiresInMinutes,
+        }),
+      );
+    } catch (error) {
+      await this.passwordResetTokenRepository.update(emailChangeToken.id, {
+        invalidatedAt: new Date(),
+      });
+      throw error;
+    }
+
+    return {
+      message: 'Enviamos un codigo de confirmacion al nuevo correo.',
+    };
+  }
+
+  async confirmEmailChange(userId: number, dto: ConfirmEmailChangeDto) {
+    const normalizedEmail = dto.newEmail.trim().toLowerCase();
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (user.email.toLowerCase() === normalizedEmail) {
+      throw new BadRequestException('El nuevo correo debe ser diferente al actual');
+    }
+
+    const token = await this.passwordResetTokenRepository.findOne({
+      where: { userId: user.id, channel: AuthService.EMAIL_CHANGE_CHANNEL },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!token || !this.isPasswordResetTokenUsable(token) || token.destination.toLowerCase() !== normalizedEmail) {
+      throw new UnauthorizedException('El codigo es invalido o ha expirado');
+    }
+
+    if (token.codeHash !== this.hashValue(dto.code.trim())) {
+      token.attempts += 1;
+      if (token.attempts >= token.maxAttempts) {
+        token.invalidatedAt = new Date();
+      }
+      await this.passwordResetTokenRepository.save(token);
+      throw new UnauthorizedException('El codigo es invalido o ha expirado');
+    }
+
+    await this.ensureEmailAvailable(normalizedEmail, user.id);
+
+    await this.dataSource.transaction(async (manager) => {
+      token.usedAt = new Date();
+      await manager.save(UserPasswordResetToken, token);
+
+      user.email = normalizedEmail;
+      await manager.save(User, user);
+
+      await manager
+        .createQueryBuilder()
+        .update(UserRefreshToken)
+        .set({
+          revoked: true,
+          revokedAt: new Date(),
+        })
+        .where('user_id = :userId', { userId: user.id })
+        .andWhere('revoked = false')
+        .execute();
+    });
+
+    return {
+      message: 'El correo se actualizo correctamente. Debes iniciar sesion nuevamente.',
+      email: normalizedEmail,
+      requiresReauth: true,
+    };
+  }
+
   async confirmPasswordReset(dto: ConfirmPasswordResetDto) {
     const user = await this.userRepository.findOne({
       where: { email: dto.email },
@@ -369,6 +500,22 @@ export class AuthService {
 
   private getPasswordResetPinLength(): number {
     return parseInt(process.env.PASSWORD_RESET_PIN_LENGTH ?? '6', 10);
+  }
+
+  private async ensureEmailAvailable(email: string, excludeUserId?: number): Promise<void> {
+    const query = this.userRepository
+      .createQueryBuilder('u')
+      .where('LOWER(u.email) = LOWER(:email)', { email })
+      .andWhere('u.deleted_at IS NULL');
+
+    if (excludeUserId !== undefined) {
+      query.andWhere('u.id != :excludeUserId', { excludeUserId });
+    }
+
+    const existingUser = await query.getOne();
+    if (existingUser) {
+      throw new BadRequestException('El correo electronico ya esta registrado');
+    }
   }
 
   private isPasswordResetTokenUsable(token: UserPasswordResetToken): boolean {

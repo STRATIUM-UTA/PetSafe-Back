@@ -8,8 +8,12 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { QueryFailedError, EntityNotFoundError, CannotCreateEntityIdMapError } from 'typeorm';
+import {
+  ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MAX,
+  ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MIN,
+} from '../../domain/constants/encounter-clinical-exam.constants.js';
 
-// ── Response shape ───────────────────────────────────
+// ── Response shape ───────────────────────────────────-
 interface ErrorResponse {
   statusCode: number;
   message: string | string[];
@@ -18,8 +22,14 @@ interface ErrorResponse {
   path: string;
 }
 
-// ── PostgreSQL error‐code → friendly response ───────
+// ── PostgreSQL error‐code → friendly response ───────-
 interface PgErrorMapping {
+  status: number;
+  error: string;
+  message: string;
+}
+
+interface PgConstraintMapping {
   status: number;
   error: string;
   message: string;
@@ -83,6 +93,45 @@ const PG_ERROR_MAP: Record<string, PgErrorMapping> = {
   },
 };
 
+const PG_CONSTRAINT_MAP: Record<string, PgConstraintMapping> = {
+  uq_vaccination_scheme_versions_one_active: {
+    status: HttpStatus.CONFLICT,
+    error: 'Conflict',
+    message:
+      'Ya existe una versión vigente para este esquema vacunal. Debes reemplazar o desactivar la versión vigente antes de activar otra.',
+  },
+  ck_exam_weight: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'El peso debe ser mayor a 0.',
+  },
+  ck_exam_temperature: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: `La temperatura debe estar entre ${ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MIN} y ${ENCOUNTER_CLINICAL_EXAM_TEMPERATURE_MAX} °C.`,
+  },
+  ck_exam_pulse: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'El pulso no puede ser negativo.',
+  },
+  ck_exam_hr: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'La frecuencia cardiaca no puede ser negativa.',
+  },
+  ck_exam_rr: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'La frecuencia respiratoria no puede ser negativa.',
+  },
+  ck_exam_crt: {
+    status: HttpStatus.BAD_REQUEST,
+    error: 'Bad Request',
+    message: 'El TRC no puede ser negativo.',
+  },
+};
+
 // ── Handlers ─────────────────────────────────────────
 
 function handleHttpException(exception: HttpException): Pick<ErrorResponse, 'statusCode' | 'message' | 'error'> {
@@ -112,14 +161,25 @@ function handleQueryFailed(
   };
 
   logger.error(
-    `DB Error [${pgError.code}] ${pgError.constraint ?? ''}: ${pgError.message}`,
+    `DB Error [${pgError.code}] ${pgError.constraint ?? ''}: ${pgError.message}. Detail: ${pgError.detail ?? ''}`,
     exception.stack,
   );
 
   const mapping = pgError.code ? PG_ERROR_MAP[pgError.code] : undefined;
 
+  if (pgError.constraint) {
+    const constraintMapping = PG_CONSTRAINT_MAP[pgError.constraint];
+    if (constraintMapping) {
+      return {
+        statusCode: constraintMapping.status,
+        message: constraintMapping.message,
+        error: constraintMapping.error,
+      };
+    }
+  }
+
   if (mapping) {
-    return { statusCode: mapping.status, message: mapping.message, error: mapping.error };
+    return { statusCode: mapping.status, message: `${mapping.message} (${pgError.message})`, error: mapping.error };
   }
 
   return {

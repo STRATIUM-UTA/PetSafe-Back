@@ -1,9 +1,6 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseAuditEntity } from '../base-audit.entity.js';
-import {
-  AppointmentReasonEnum,
-  AppointmentStatusEnum,
-} from '../../enums/index.js';
+import { AppointmentReasonEnum, AppointmentStatusEnum } from '../../enums/index.js';
 import { Patient } from '../patients/patient.entity.js';
 import { Employee } from '../persons/employee.entity.js';
 import { User } from '../auth/user.entity.js';
@@ -17,38 +14,43 @@ export class Appointment extends BaseAuditEntity {
   @JoinColumn({ name: 'patient_id' })
   patient!: Patient;
 
-  @Column({ name: 'veterinarian_id', type: 'int' })
-  veterinarianId!: number;
+  // Columna en BD: vet_id  (la migración usa vet_id, NO veterinarian_id)
+  @Column({ name: 'vet_id', type: 'int' })
+  vetId!: number;
 
   @ManyToOne(() => Employee, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'veterinarian_id' })
+  @JoinColumn({ name: 'vet_id' })
   veterinarian!: Employee;
 
   @Column({ name: 'scheduled_date', type: 'date' })
-  scheduledDate!: Date;
+  scheduledDate!: string;
 
   @Column({ name: 'scheduled_time', type: 'time without time zone' })
   scheduledTime!: string;
 
+  @Column({ name: 'end_time', type: 'time without time zone' })
+  endTime!: string;
+
   @Column({
-    name: 'appointment_reason',
+    name: 'reason',
     type: 'enum',
     enum: AppointmentReasonEnum,
     enumName: 'appointment_reason_enum',
   })
-  appointmentReason!: AppointmentReasonEnum;
+  reason!: AppointmentReasonEnum;
 
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 
+  // Columna en BD: status  (la migración usa status, NO appointment_status)
   @Column({
-    name: 'appointment_status',
+    name: 'status',
     type: 'enum',
     enum: AppointmentStatusEnum,
     enumName: 'appointment_status_enum',
     default: AppointmentStatusEnum.PROGRAMADA,
   })
-  appointmentStatus!: AppointmentStatusEnum;
+  status!: AppointmentStatusEnum;
 
   @Column({ name: 'created_by_user_id', type: 'int', nullable: true })
   createdByUserId!: number | null;

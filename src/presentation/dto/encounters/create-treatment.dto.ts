@@ -11,6 +11,10 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TreatmentItemStatusEnum } from '../../../domain/enums/index.js';
+import {
+  IsNotBeforeDate,
+  IsSameOrAfterProperty,
+} from '../../validators/date-range.validator.js';
 
 export class CreateTreatmentItemDto {
   @IsNotEmpty({ message: 'El nombre del medicamento es obligatorio.' })
@@ -46,10 +50,19 @@ export class CreateTreatmentItemDto {
 export class CreateTreatmentDto {
   @IsNotEmpty({ message: 'La fecha de inicio del tratamiento es obligatoria.' })
   @IsDateString({}, { message: 'La fecha de inicio debe estar en formato válido (ej. 2026-03-29).' })
+  @IsNotBeforeDate('2000-01-01', {
+    message: 'La fecha de inicio no puede ser demasiado antigua.',
+  })
   startDate!: string;
 
   @IsOptional()
   @IsDateString({}, { message: 'La fecha de fin debe estar en formato válido (ej. 2026-04-05).' })
+  @IsNotBeforeDate('2000-01-01', {
+    message: 'La fecha de fin no puede ser demasiado antigua.',
+  })
+  @IsSameOrAfterProperty('startDate', {
+    message: 'La fecha de fin no puede ser anterior a la fecha de inicio.',
+  })
   endDate?: string;
 
   @IsOptional()
