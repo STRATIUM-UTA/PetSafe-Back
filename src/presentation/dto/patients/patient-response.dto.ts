@@ -31,6 +31,7 @@ export class PatientResponseDto {
   image!: PatientImageResponseDto | null;
   tutors!: PatientTutorResponseDto[];
   conditions!: PatientConditionResponseDto[];
+  surgeries!: PatientSurgeryResponseDto[];
 }
 
 export class PatientConditionResponseDto {
@@ -51,4 +52,17 @@ export class PatientTutorResponseDto {
   phone!: string | null;
   relationship!: string | null;
   isPrimary!: boolean;
+}
+
+export class PatientSurgeryResponseDto {
+  id!: number;
+  encounterId!: number | null;
+  catalogId!: number | null;
+  surgeryType!: string;
+  scheduledDate!: string | null;
+  performedDate!: string | null;
+  surgeryStatus!: string;
+  isExternal!: boolean;
+  description!: string | null;
+  postoperativeInstructions!: string | null;
 }

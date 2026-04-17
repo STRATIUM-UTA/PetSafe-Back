@@ -150,12 +150,14 @@ export class EncounterActionsService {
     }
 
     const surgery = this.surgeryRepo.create({
+      patientId: encounter.patientId,
       encounterId,
       catalogId,
       surgeryType,
       scheduledDate: dto.scheduledDate ? new Date(dto.scheduledDate) : null,
       performedDate: dto.performedDate ? new Date(dto.performedDate) : null,
       surgeryStatus: dto.surgeryStatus ?? SurgeryStatusEnum.PROGRAMADA,
+      isExternal: false,
       description: dto.description ?? null,
       postoperativeInstructions: dto.postoperativeInstructions ?? null,
     });

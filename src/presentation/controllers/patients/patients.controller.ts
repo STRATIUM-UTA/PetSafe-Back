@@ -19,6 +19,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { PatientsService } from '../../../application/services/patients/patients.service.js';
 import { CreatePatientDto } from '../../dto/patients/create-patient.dto.js';
 import { UpdatePatientDto } from '../../dto/patients/update-patient.dto.js';
+import { UpsertPatientSurgeryDto } from '../../dto/patients/upsert-patient-surgery.dto.js';
 import { CreateConditionDto } from '../../dto/patients/create-condition.dto.js';
 import { AddPatientTutorDto } from '../../dto/patients/add-patient-tutor.dto.js';
 import { InitializePatientVaccinationPlanDto } from '../../dto/patients/initialize-patient-vaccination-plan.dto.js';
@@ -29,7 +30,7 @@ import { Roles } from '../../../infra/security/decorators/roles.decorator.js';
 import { RoleEnum } from '../../../domain/enums/index.js';
 import { ListPatientTutorQueryDto } from '../../dto/patients/list-patient-tutor-query.dto.js';
 import { ListPatientTutorResponseDto } from '../../dto/patients/list-patient-tutor-response.dto.js';
-import { PatientResponseDto } from '../../dto/patients/patient-response.dto.js';
+import { PatientResponseDto, PatientSurgeryResponseDto } from '../../dto/patients/patient-response.dto.js';
 import { PaginatedPatientsBasicForAdminResponse, PatientAdminBasicDetailResponse } from '../../dto/patients/patient-basic-response.dto.js';
 import { PatientClinicalHistoryResponse } from '../../dto/patients/patient-clinical-history-response.dto.js';
 import { PatientVaccinationPlanResponseDto } from '../../dto/vaccinations/vaccination-response.dto.js';
@@ -250,6 +251,48 @@ export class PatientsController {
       req.user.roles ?? [],
       imageFile,
       this.buildPatientImageBaseUrl(req),
+    );
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Post('admin/:id/surgeries')
+  createAdminSurgery(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertPatientSurgeryDto,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ): Promise<PatientSurgeryResponseDto> {
+    return this.patientsService.createAdminSurgery(id, dto, req.user.userId, req.user.roles ?? []);
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Patch('admin/:id/surgeries/:surgeryId')
+  updateAdminSurgery(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('surgeryId', ParseIntPipe) surgeryId: number,
+    @Body() dto: UpsertPatientSurgeryDto,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ): Promise<PatientSurgeryResponseDto> {
+    return this.patientsService.updateAdminSurgery(
+      id,
+      surgeryId,
+      dto,
+      req.user.userId,
+      req.user.roles ?? [],
+    );
+  }
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Delete('admin/:id/surgeries/:surgeryId')
+  removeAdminSurgery(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('surgeryId', ParseIntPipe) surgeryId: number,
+    @Request() req: { user: { userId: number; roles: string[] } },
+  ): Promise<{ message: string }> {
+    return this.patientsService.removeAdminSurgery(
+      id,
+      surgeryId,
+      req.user.userId,
+      req.user.roles ?? [],
     );
   }
 

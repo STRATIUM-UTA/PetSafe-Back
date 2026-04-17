@@ -2,12 +2,14 @@ import { Patient } from '../../domain/entities/patients/patient.entity.js';
 import {
   PatientResponseDto,
   PatientConditionResponseDto,
+  PatientSurgeryResponseDto,
   PatientTutorResponseDto,
 } from '../../presentation/dto/patients/patient-response.dto.js';
 import { PatientCondition } from '../../domain/entities/patients/patient-condition.entity.js';
 import { MediaFile } from '../../domain/entities/media/media-file.entity.js';
 import { PatientImageResponseDto } from '../../presentation/dto/patients/patient-image.dto.js';
 import { PatientTutor } from '../../domain/entities/patients/patient-tutor.entity.js';
+import { Surgery } from '../../domain/entities/encounters/surgery.entity.js';
 
 export class PatientMapper {
   static toImageDto(image: MediaFile | null | undefined): PatientImageResponseDto | null {
@@ -56,7 +58,37 @@ export class PatientMapper {
     };
   }
 
+  static toSurgeryDto(surgery: Surgery): PatientSurgeryResponseDto {
+    return {
+      id: surgery.id,
+      encounterId: surgery.encounterId ?? null,
+      catalogId: surgery.catalogId ?? null,
+      surgeryType: surgery.surgeryType,
+      scheduledDate: surgery.scheduledDate ? surgery.scheduledDate.toISOString() : null,
+      performedDate: surgery.performedDate ? surgery.performedDate.toISOString() : null,
+      surgeryStatus: surgery.surgeryStatus,
+      isExternal: surgery.isExternal,
+      description: surgery.description ?? null,
+      postoperativeInstructions: surgery.postoperativeInstructions ?? null,
+    };
+  }
+
   static toResponseDto(patient: Patient, image?: MediaFile | null): PatientResponseDto {
+    const surgeries = (patient.surgeries || [])
+      .filter((surgery) => !surgery.deletedAt)
+      .sort((left, right) => {
+        const leftTime =
+          left.performedDate?.getTime()
+          ?? left.scheduledDate?.getTime()
+          ?? left.createdAt.getTime();
+        const rightTime =
+          right.performedDate?.getTime()
+          ?? right.scheduledDate?.getTime()
+          ?? right.createdAt.getTime();
+
+        return rightTime - leftTime;
+      });
+
     return {
       id: patient.id,
       code: patient.code ?? '',
@@ -90,6 +122,7 @@ export class PatientMapper {
         .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
         .map((tutor) => this.toTutorDto(tutor)),
       conditions: (patient.conditions || []).map((c) => this.toConditionDto(c)),
+      surgeries: surgeries.map((surgery) => this.toSurgeryDto(surgery)),
     };
   }
 }

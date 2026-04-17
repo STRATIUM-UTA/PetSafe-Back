@@ -11,8 +11,12 @@ import { PatientCondition } from '../../../domain/entities/patients/patient-cond
 import { Client } from '../../../domain/entities/persons/client.entity.js';
 import { Species } from '../../../domain/entities/catalogs/species.entity.js';
 import { Breed } from '../../../domain/entities/catalogs/breed.entity.js';
+import { SurgeryCatalog } from '../../../domain/entities/catalogs/surgery-catalog.entity.js';
 import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
 import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
+import { Surgery } from '../../../domain/entities/encounters/surgery.entity.js';
+import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
+import { Procedure } from '../../../domain/entities/encounters/procedure.entity.js';
 
 @Module({
   imports: [
@@ -24,6 +28,10 @@ import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
       Client,
       Species,
       Breed,
+      Encounter,
+      Procedure,
+      Surgery,
+      SurgeryCatalog,
       UserRole,
       MediaFile,
     ]),

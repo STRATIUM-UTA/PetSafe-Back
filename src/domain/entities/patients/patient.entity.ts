@@ -6,6 +6,7 @@ import { Breed } from '../catalogs/breed.entity.js';
 import { Color } from '../catalogs/color.entity.js';
 import type { PatientTutor } from './patient-tutor.entity.js';
 import type { PatientCondition } from './patient-condition.entity.js';
+import type { Surgery } from '../encounters/surgery.entity.js';
 
 @Entity({ name: 'patients' })
 export class Patient extends BaseAuditEntity {
@@ -80,4 +81,7 @@ export class Patient extends BaseAuditEntity {
 
   @OneToMany('PatientCondition', 'patient')
   conditions!: PatientCondition[];
+
+  @OneToMany('Surgery', 'patient')
+  surgeries!: Surgery[];
 }

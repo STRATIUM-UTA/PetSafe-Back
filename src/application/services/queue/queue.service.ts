@@ -462,6 +462,28 @@ export class QueueService {
     return response;
   }
 
+  async findOne(id: number): Promise<QueueEntryRecordDto> {
+    return this.findOneDto(id);
+  }
+
+  async findByEncounter(encounterId: number): Promise<QueueEntryRecordDto> {
+    const encounter = await this.encounterRepo.findOne({
+      where: { id: encounterId },
+    });
+
+    if (!encounter || encounter.deletedAt) {
+      throw new NotFoundException('Consulta clínica no encontrada.');
+    }
+
+    if (encounter.queueEntryId === null) {
+      throw new NotFoundException(
+        'La consulta clínica no tiene una entrada operativa vinculada.',
+      );
+    }
+
+    return this.findOneDto(encounter.queueEntryId);
+  }
+
   // ── POST /queue ──
   async create(dto: CreateQueueEntryDto, userId: number): Promise<QueueEntryRecordDto> {
     // 1) Validar paciente
