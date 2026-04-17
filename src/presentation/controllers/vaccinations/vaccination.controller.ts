@@ -21,6 +21,8 @@ import { CreateVaccinationSchemeDto } from '../../dto/vaccinations/create-vaccin
 import { CreateVaccinationSchemeVersionDto } from '../../dto/vaccinations/create-vaccination-scheme-version.dto.js';
 import { UpdateVaccinationSchemeVersionStatusDto } from '../../dto/vaccinations/update-vaccination-scheme-version-status.dto.js';
 import { UpdatePatientVaccinationPlanDoseDto } from '../../dto/vaccinations/update-patient-vaccination-plan-dose.dto.js';
+import { ListVaccinationsQueryDto } from '../../dto/vaccinations/list-vaccinations-query.dto.js';
+import { PaginatedVaccinationsBasicResponse } from '../../dto/vaccinations/vaccination-basic-response.dto.js';
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
 import { Roles } from '../../../infra/security/decorators/roles.decorator.js';
@@ -30,6 +32,12 @@ import { RoleEnum } from '../../../domain/enums/index.js';
 @Controller('vaccinations')
 export class VaccinationController {
   constructor(private readonly vaccinationService: VaccinationService) {}
+
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get('basic')
+  findAllBasic(@Query() query: ListVaccinationsQueryDto): Promise<PaginatedVaccinationsBasicResponse> {
+    return this.vaccinationService.findAllBasic(query);
+  }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
   @Get('products')

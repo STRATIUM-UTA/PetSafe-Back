@@ -370,8 +370,11 @@ export class QueueService {
     const page = Math.max(query.page ?? 1, 1);
     const limit = Math.min(Math.max(query.limit ?? 15, 1), 100);
 
-    // Query para el summary (todo el día, sin filtros de status/search)
-    const allQb = this.baseQb().andWhere('"q"."date" = :date', { date: targetDate });
+    // Query para el summary (todo el día + entradas activas de días anteriores)
+    const allQb = this.baseQb().andWhere(
+      '("q"."date" = :date OR "q"."status" IN (:...activeStatuses))',
+      { date: targetDate, activeStatuses: [QueueStatusEnum.EN_ATENCION, QueueStatusEnum.EN_ESPERA] },
+    );
     if (query.veterinarianId) {
       allQb.andWhere('"q"."vet_id" = :veterinarianId', {
         veterinarianId: query.veterinarianId,
@@ -394,7 +397,10 @@ export class QueueService {
     const summary = this.buildSummary(allDtos);
 
     // Query filtrada para la lista paginada
-    const filteredQb = this.baseQb().andWhere('"q"."date" = :date', { date: targetDate });
+    const filteredQb = this.baseQb().andWhere(
+      '("q"."date" = :date OR "q"."status" IN (:...activeStatuses))',
+      { date: targetDate, activeStatuses: [QueueStatusEnum.EN_ATENCION, QueueStatusEnum.EN_ESPERA] },
+    );
 
     if (query.veterinarianId) {
       filteredQb.andWhere('"q"."vet_id" = :veterinarianId', {

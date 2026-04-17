@@ -43,7 +43,7 @@ export class EncounterActionsService {
     private readonly dataSource: DataSource,
     private readonly sharedService: EncounterSharedService,
     private readonly vaccinationPlanService: VaccinationPlanService,
-  ) {}
+  ) { }
 
   /**
    * Registra una vacuna aplicada en consulta y la replica al carnet permanente.
@@ -194,8 +194,8 @@ export class EncounterActionsService {
 
     const procedure = this.procedureRepo.create({
       encounterId,
-      catalogId,
-      procedureType,
+      catalogId: dto.catalogId ?? null,
+      procedureType: dto.procedureType,
       performedDate: new Date(dto.performedDate),
       description: dto.description ?? null,
       result: dto.result ?? null,
