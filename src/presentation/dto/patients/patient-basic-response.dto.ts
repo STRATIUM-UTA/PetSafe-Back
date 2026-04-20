@@ -4,6 +4,7 @@ import {
   PatientTutorResponseDto,
 } from './patient-response.dto.js';
 import { PatientImageResponseDto } from './patient-image.dto.js';
+import { ClinicalCaseSummaryDto } from '../clinical-cases/clinical-case-response.dto.js';
 
 export type PatientBasicByClientResponse = {
   id: number;
@@ -84,6 +85,7 @@ export type PatientAdminBasicDetailResponse = {
   clinicalObservations: PatientConditionResponseDto[];
   surgeries: PatientSurgeryResponseDto[];
   procedures: PatientProcedureHistoryResponse[];
+  clinicalCases: ClinicalCaseSummaryDto[];
   recentActivity: PatientRecentActivityResponse;
 };
 

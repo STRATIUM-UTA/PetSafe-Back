@@ -1,4 +1,7 @@
 import { EncounterStatusEnum, TreatmentStatusEnum, SurgeryStatusEnum } from '../../../domain/enums/index.js';
+import {
+  ClinicalCaseSummaryDto,
+} from '../clinical-cases/clinical-case-response.dto.js';
 
 // ── Sub-response types ──────────────────────────────────────────────────────
 
@@ -61,6 +64,10 @@ export class PlanResponseDto {
   clinicalPlan!: string | null;
   requiresFollowUp!: boolean;
   suggestedFollowUpDate!: string | null;
+  caseLinkMode!: string;
+  clinicalCaseId!: number | null;
+  problemSummary!: string | null;
+  caseOutcome!: string;
   planNotes!: string | null;
 }
 
@@ -120,6 +127,7 @@ export class TreatmentResponseDto {
   startDate!: string;
   endDate!: string | null;
   generalInstructions!: string | null;
+  replacesTreatmentId!: number | null;
   items!: TreatmentItemResponseDto[];
 }
 
@@ -128,7 +136,27 @@ export class TreatmentDraftResponseDto {
   startDate!: string;
   endDate!: string | null;
   generalInstructions!: string | null;
+  replacesTreatmentId!: number | null;
   items!: TreatmentDraftItemResponseDto[];
+}
+
+export class TreatmentReviewDraftResponseDto {
+  id!: number;
+  sourceTreatmentId!: number;
+  sourceTreatmentSummary!: string;
+  action!: string;
+  notes!: string | null;
+}
+
+export class TreatmentEvolutionEventResponseDto {
+  id!: number;
+  treatmentId!: number;
+  treatmentSummary!: string;
+  eventType!: string;
+  notes!: string | null;
+  replacementTreatmentId!: number | null;
+  replacementTreatmentSummary!: string | null;
+  createdAt!: string;
 }
 
 export class SurgeryResponseDto {
@@ -191,12 +219,15 @@ export class EncounterResponseDto {
   environmentalData!: EnvironmentalDataResponseDto | null;
   clinicalImpression!: ClinicalImpressionResponseDto | null;
   plan!: PlanResponseDto | null;
+  clinicalCaseSummary!: ClinicalCaseSummaryDto | null;
 
   vaccinationEvents!: VaccinationEventResponseDto[];
   vaccinationDrafts!: VaccinationDraftResponseDto[];
   dewormingEvents!: DewormingEventResponseDto[];
   treatments!: TreatmentResponseDto[];
   treatmentDrafts!: TreatmentDraftResponseDto[];
+  treatmentReviewDrafts!: TreatmentReviewDraftResponseDto[];
+  treatmentEvolutionEvents!: TreatmentEvolutionEventResponseDto[];
   surgeries!: SurgeryResponseDto[];
   procedures!: ProcedureResponseDto[];
   procedureDrafts!: ProcedureDraftResponseDto[];

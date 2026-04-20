@@ -227,6 +227,15 @@ export class PatientsController {
     return this.patientsService.findAdminBasic(id, req.user.roles);
   }
 
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get(':id/clinical-cases')
+  findClinicalCases(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: { user: { roles: string[] } },
+  ) {
+    return this.patientsService.findClinicalCases(id, req.user.roles ?? []);
+  }
+
   // Actualizar campos basicos de un paciente
   @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
   @Patch('admin/:id/basic')

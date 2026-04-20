@@ -15,6 +15,8 @@ import { EncounterVaccinationDraft } from '../../domain/entities/encounters/enco
 import { EncounterTreatmentDraft } from '../../domain/entities/encounters/encounter-treatment-draft.entity.js';
 import { EncounterTreatmentDraftItem } from '../../domain/entities/encounters/encounter-treatment-draft-item.entity.js';
 import { EncounterProcedureDraft } from '../../domain/entities/encounters/encounter-procedure-draft.entity.js';
+import { EncounterTreatmentReviewDraft } from '../../domain/entities/encounters/encounter-treatment-review-draft.entity.js';
+import { TreatmentEvolutionEvent } from '../../domain/entities/encounters/treatment-evolution-event.entity.js';
 import { ENCOUNTER_REACTIVATION_GRACE_MINUTES } from '../../domain/constants/encounter.constants.js';
 import { EncounterStatusEnum } from '../../domain/enums/index.js';
 import {
@@ -34,6 +36,8 @@ import {
   TreatmentItemResponseDto,
   TreatmentDraftResponseDto,
   TreatmentDraftItemResponseDto,
+  TreatmentReviewDraftResponseDto,
+  TreatmentEvolutionEventResponseDto,
   SurgeryResponseDto,
   ProcedureResponseDto,
   ProcedureDraftResponseDto,
@@ -140,6 +144,10 @@ export class EncounterMapper {
       clinicalPlan: e.clinicalPlan ?? null,
       requiresFollowUp: e.requiresFollowUp,
       suggestedFollowUpDate: e.suggestedFollowUpDate ? toDate(e.suggestedFollowUpDate) : null,
+      caseLinkMode: e.caseLinkMode,
+      clinicalCaseId: e.clinicalCaseId ?? null,
+      problemSummary: e.problemSummary ?? null,
+      caseOutcome: e.caseOutcome,
       planNotes: e.planNotes ?? null,
     };
   }
@@ -211,6 +219,7 @@ export class EncounterMapper {
       startDate: toDate(e.startDate)!,
       endDate: e.endDate ? toDate(e.endDate) : null,
       generalInstructions: e.generalInstructions ?? null,
+      replacesTreatmentId: e.replacesTreatmentId ?? null,
       items: (e.items ?? []).map((i) => this.toTreatmentItemDto(i)),
     };
   }
@@ -221,7 +230,55 @@ export class EncounterMapper {
       startDate: toDate(e.startDate)!,
       endDate: e.endDate ? toDate(e.endDate) : null,
       generalInstructions: e.generalInstructions ?? null,
+      replacesTreatmentId: e.replacesTreatmentId ?? null,
       items: (e.items ?? []).map((item) => this.toTreatmentDraftItemDto(item)),
+    };
+  }
+
+  private static treatmentSummary(treatment: Treatment | null | undefined): string {
+    if (!treatment) {
+      return 'Tratamiento';
+    }
+
+    const medicationNames = (treatment.items ?? [])
+      .map((item) => item.medication?.trim())
+      .filter((value): value is string => Boolean(value));
+
+    if (medicationNames.length === 1) {
+      return medicationNames[0];
+    }
+
+    if (medicationNames.length > 1) {
+      return `${medicationNames[0]} + ${medicationNames.length - 1} más`;
+    }
+
+    return treatment.generalInstructions?.trim() || `Tratamiento #${treatment.id}`;
+  }
+
+  static toTreatmentReviewDraftDto(
+    e: EncounterTreatmentReviewDraft,
+  ): TreatmentReviewDraftResponseDto {
+    return {
+      id: e.id,
+      sourceTreatmentId: e.sourceTreatmentId,
+      sourceTreatmentSummary: this.treatmentSummary(e.sourceTreatment),
+      action: e.action,
+      notes: e.notes ?? null,
+    };
+  }
+
+  static toTreatmentEvolutionEventDto(
+    e: TreatmentEvolutionEvent,
+  ): TreatmentEvolutionEventResponseDto {
+    return {
+      id: e.id,
+      treatmentId: e.treatmentId,
+      treatmentSummary: this.treatmentSummary(e.treatment),
+      eventType: e.eventType,
+      notes: e.notes ?? null,
+      replacementTreatmentId: e.replacementTreatmentId ?? null,
+      replacementTreatmentSummary: this.treatmentSummary(e.replacementTreatment),
+      createdAt: toDate(e.createdAt)!,
     };
   }
 
@@ -291,6 +348,7 @@ export class EncounterMapper {
         ? this.toClinicalImpressionDto(enc.clinicalImpression)
         : null,
       plan: enc.plan ? this.toPlanDto(enc.plan) : null,
+      clinicalCaseSummary: null,
 
       vaccinationEvents: (enc.vaccinationEvents ?? []).map((v) => this.toVaccinationEventDto(v)),
       vaccinationDrafts: (enc.vaccinationDrafts ?? []).map((draft) =>
@@ -299,6 +357,12 @@ export class EncounterMapper {
       dewormingEvents: (enc.dewormingEvents ?? []).map((d) => this.toDewormingEventDto(d)),
       treatments: (enc.treatments ?? []).map((t) => this.toTreatmentDto(t)),
       treatmentDrafts: (enc.treatmentDrafts ?? []).map((draft) => this.toTreatmentDraftDto(draft)),
+      treatmentReviewDrafts: (enc.treatmentReviewDrafts ?? []).map((draft) =>
+        this.toTreatmentReviewDraftDto(draft),
+      ),
+      treatmentEvolutionEvents: (enc.treatmentEvolutionEvents ?? []).map((event) =>
+        this.toTreatmentEvolutionEventDto(event),
+      ),
       surgeries: (enc.surgeries ?? []).map((s) => this.toSurgeryDto(s)),
       procedures: (enc.procedures ?? []).map((p) => this.toProcedureDto(p)),
       procedureDrafts: (enc.procedureDrafts ?? []).map((draft) =>

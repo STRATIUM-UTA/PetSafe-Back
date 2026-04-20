@@ -27,6 +27,9 @@ import type { Procedure } from './procedure.entity.js';
 import type { EncounterVaccinationDraft } from './encounter-vaccination-draft.entity.js';
 import type { EncounterTreatmentDraft } from './encounter-treatment-draft.entity.js';
 import type { EncounterProcedureDraft } from './encounter-procedure-draft.entity.js';
+import type { ClinicalCase } from './clinical-case.entity.js';
+import type { EncounterTreatmentReviewDraft } from './encounter-treatment-review-draft.entity.js';
+import type { TreatmentEvolutionEvent } from './treatment-evolution-event.entity.js';
 
 @Entity({ name: 'encounters' })
 export class Encounter extends BaseAuditEntity {
@@ -78,6 +81,13 @@ export class Encounter extends BaseAuditEntity {
 
   @Column({ name: 'general_notes', type: 'text', nullable: true })
   generalNotes!: string | null;
+
+  @Column({ name: 'clinical_case_id', type: 'int', nullable: true })
+  clinicalCaseId!: number | null;
+
+  @ManyToOne('ClinicalCase', 'encounters', { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'clinical_case_id' })
+  clinicalCase!: ClinicalCase | null;
 
   @Column({ name: 'created_by_user_id', type: 'int', nullable: true })
   createdByUserId!: number | null;
@@ -131,6 +141,12 @@ export class Encounter extends BaseAuditEntity {
   @OneToMany('EncounterTreatmentDraft', 'encounter', { cascade: true })
   treatmentDrafts!: EncounterTreatmentDraft[];
 
+  @OneToMany('EncounterTreatmentReviewDraft', 'encounter', { cascade: true })
+  treatmentReviewDrafts!: EncounterTreatmentReviewDraft[];
+
   @OneToMany('EncounterProcedureDraft', 'encounter', { cascade: true })
   procedureDrafts!: EncounterProcedureDraft[];
+
+  @OneToMany('TreatmentEvolutionEvent', 'encounter', { cascade: true })
+  treatmentEvolutionEvents!: TreatmentEvolutionEvent[];
 }

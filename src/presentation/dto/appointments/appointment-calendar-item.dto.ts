@@ -8,7 +8,7 @@ export class AppointmentCalendarItemDto {
   patientName!: string | null;
   ownerName!: string | null;
   scheduledDate!: string;   // YYYY-MM-DD
-  startsAt!: string;        // HH:MM
+  startsAt!: string | null; // HH:MM
   endsAt!: string | null;   // HH:MM  (persistido en appointments.end_time)
   reason!: string | null;
   notes!: string | null;

@@ -23,17 +23,17 @@ export class CreateAppointmentDto {
   })
   scheduledDate!: string;
 
-  @IsNotEmpty({ message: 'La hora de la cita es obligatoria.' })
+  @IsOptional()
   @Matches(/^\d{2}:\d{2}$/, {
     message: 'scheduledTime debe tener formato HH:MM.',
   })
-  scheduledTime!: string;
+  scheduledTime?: string | null;
 
-  @IsNotEmpty({ message: 'La hora fin de la cita es obligatoria.' })
+  @IsOptional()
   @Matches(/^\d{2}:\d{2}$/, {
     message: 'endTime debe tener formato HH:MM.',
   })
-  endTime!: string;
+  endTime?: string | null;
 
   @IsNotEmpty({ message: 'El motivo de la cita es obligatorio.' })
   @IsEnum(AppointmentReasonEnum, { message: 'reason debe ser un motivo de cita valido.' })

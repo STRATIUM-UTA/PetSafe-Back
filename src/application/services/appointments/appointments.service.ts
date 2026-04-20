@@ -13,6 +13,7 @@ import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.en
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { Employee } from '../../../domain/entities/persons/employee.entity.js';
 import { User } from '../../../domain/entities/auth/user.entity.js';
+import { AppointmentReasonEnum } from '../../../domain/enums/index.js';
 import { CreateAppointmentDto } from '../../../presentation/dto/appointments/create-appointment.dto.js';
 import { ListAppointmentsQueryDto } from '../../../presentation/dto/appointments/list-appointments-query.dto.js';
 import { AppointmentCalendarItemDto } from '../../../presentation/dto/appointments/appointment-calendar-item.dto.js';
@@ -36,7 +37,11 @@ function formatDate(raw: string | Date): string {
   return String(raw).substring(0, 10);
 }
 
-function isTimeRangeValid(startTime: string, endTime: string): boolean {
+function isTimeRangeValid(startTime: string | null | undefined, endTime: string | null | undefined): boolean {
+  if (!startTime || !endTime) {
+    return false;
+  }
+
   return endTime > startTime;
 }
 
@@ -127,7 +132,7 @@ export class AppointmentsService {
       ? `${tutorPerson.firstName} ${tutorPerson.lastName}`.trim()
       : null;
     dto.scheduledDate = formatDate(appt.scheduledDate);
-    dto.startsAt = startsAt ?? '';
+    dto.startsAt = startsAt ?? null;
     dto.endsAt = endsAt;
     dto.reason = appt.reason ?? null;
     dto.notes = appt.notes ?? null;
@@ -155,6 +160,10 @@ export class AppointmentsService {
     vetId: number,
     dto: CreateAppointmentDto,
   ): Promise<void> {
+    if (!dto.scheduledTime || !dto.endTime) {
+      return;
+    }
+
     const overlappingAppointment = await this.appointmentRepo
       .createQueryBuilder('a')
       .select('a.id')
@@ -228,8 +237,23 @@ export class AppointmentsService {
       throw new NotFoundException('Paciente no encontrado.');
     }
 
+    const hasScheduledTime = Boolean(dto.scheduledTime?.trim());
+    const hasEndTime = Boolean(dto.endTime?.trim());
+
+    if (hasScheduledTime !== hasEndTime) {
+      throw new BadRequestException(
+        'Debes indicar ambas horas de la cita o dejar ambas vacías.',
+      );
+    }
+
+    if (dto.reason !== AppointmentReasonEnum.CONTROL && (!hasScheduledTime || !hasEndTime)) {
+      throw new BadRequestException(
+        'Las citas con horario definido deben incluir hora de inicio y de fin.',
+      );
+    }
+
     // 3) Validar rango horario
-    if (!isTimeRangeValid(dto.scheduledTime, dto.endTime)) {
+    if (hasScheduledTime && hasEndTime && !isTimeRangeValid(dto.scheduledTime, dto.endTime)) {
       throw new BadRequestException('La hora fin debe ser mayor que la hora inicio.');
     }
 
@@ -240,8 +264,8 @@ export class AppointmentsService {
       patientId: dto.patientId,
       vetId,
       scheduledDate: dto.scheduledDate,
-      scheduledTime: dto.scheduledTime,
-      endTime: dto.endTime,
+      scheduledTime: hasScheduledTime ? dto.scheduledTime!.trim() : null,
+      endTime: hasEndTime ? dto.endTime!.trim() : null,
       reason: dto.reason,
       notes: dto.notes?.trim() || null,
       createdByUserId: userId,

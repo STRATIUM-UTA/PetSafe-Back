@@ -70,6 +70,12 @@ export class CreateTreatmentDto {
   generalInstructions?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'El tratamiento reemplazado debe ser un identificador válido.' })
+  @Min(1, { message: 'El tratamiento reemplazado debe ser mayor a 0.' })
+  replacesTreatmentId?: number | null;
+
+  @IsOptional()
   @IsArray({ message: 'Los ítems del tratamiento deben ser una lista.' })
   @ValidateNested({ each: true })
   @Type(() => CreateTreatmentItemDto)

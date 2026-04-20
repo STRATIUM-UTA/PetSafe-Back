@@ -54,6 +54,7 @@ import { ListPatientTutorQueryDto } from 'src/presentation/dto/patients/list-pat
 import { ListPatientTutorResponseDto } from 'src/presentation/dto/patients/list-patient-tutor-response.dto.js';
 import { PATIENT_UPLOADS_DIR } from '../../../infra/config/uploads.config.js';
 import { VaccinationPlanService } from '../vaccinations/vaccination-plan.service.js';
+import { ClinicalCasesService } from '../clinical-cases/clinical-cases.service.js';
 
 const PAGINATE_CONFIG: PaginateConfig<Patient> = {
   sortableColumns: ['id', 'name', 'code', 'createdAt'],
@@ -89,6 +90,7 @@ export class PatientsService {
     private readonly mediaFileRepo: Repository<MediaFile>,
     private readonly dataSource: DataSource,
     private readonly vaccinationPlanService: VaccinationPlanService,
+    private readonly clinicalCasesService: ClinicalCasesService,
   ) { }
 
   private async resolveClientId(userId: number, manager?: EntityManager): Promise<number> {
@@ -1202,6 +1204,7 @@ export class PatientsService {
     const patient = await this.findOneInternal(patientId, 0, undefined, roles);
     const recentActivity = await this.buildRecentActivity(patientId);
     const procedures = await this.buildProcedureHistory(patientId);
+    const clinicalCases = await this.clinicalCasesService.listByPatient(patientId);
     const birthDate = patient.birthDate ?? null;
     const birthDateValue = birthDate ? new Date(birthDate as any) : null;
 
@@ -1253,8 +1256,14 @@ export class PatientsService {
       clinicalObservations: patient.conditions ?? [],
       surgeries: patient.surgeries ?? [],
       procedures,
+      clinicalCases,
       recentActivity,
     };
+  }
+
+  async findClinicalCases(patientId: number, roles: string[]) {
+    await this.ensurePatientAccessibleForStaff(patientId, roles);
+    return this.clinicalCasesService.listByPatient(patientId);
   }
 
   async updateAdminBasic(
