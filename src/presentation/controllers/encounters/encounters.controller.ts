@@ -27,6 +27,7 @@ import { CreateTreatmentDto } from '../../dto/encounters/create-treatment.dto.js
 import { CreateSurgeryDto } from '../../dto/encounters/create-surgery.dto.js';
 import { CreateProcedureDto } from '../../dto/encounters/create-procedure.dto.js';
 import { UpsertVaccinationDraftDto } from '../../dto/encounters/upsert-vaccination-draft.dto.js';
+import { UpsertTreatmentReviewDraftDto } from '../../dto/encounters/upsert-treatment-review-draft.dto.js';
 
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
@@ -261,6 +262,24 @@ export class EncountersController {
     @Param('draftId', ParseIntPipe) draftId: number,
   ) {
     return this.encountersService.deleteTreatmentDraft(id, draftId);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Post(':id/treatment-review-drafts')
+  upsertTreatmentReviewDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertTreatmentReviewDraftDto,
+  ) {
+    return this.encountersService.upsertTreatmentReviewDraft(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Patch(':id/treatment-review-drafts/:draftId/delete')
+  deleteTreatmentReviewDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('draftId', ParseIntPipe) draftId: number,
+  ) {
+    return this.encountersService.deleteTreatmentReviewDraft(id, draftId);
   }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)

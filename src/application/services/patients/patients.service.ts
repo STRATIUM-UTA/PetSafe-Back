@@ -31,6 +31,12 @@ import {
   PatientAdminBasicResponse,
   PatientBasicByClientResponse,
   PaginatedPatientsBasicForAdminResponse,
+  PatientProcedureHistoryResponse,
+  PatientRecentActivityResponse,
+  PatientRecentConsultationActivityResponse,
+  PatientRecentProcedureActivityResponse,
+  PatientRecentSurgeryActivityResponse,
+  PatientSurgeryResponseDto,
 } from '../../../presentation/dto/patients/patient-basic-response.dto.js';
 import { PatientVaccinationPlanResponseDto } from '../../../presentation/dto/vaccinations/vaccination-response.dto.js';
 import { PatientMapper } from '../../mappers/patient.mapper.js';
@@ -44,6 +50,7 @@ import { ListPatientTutorQueryDto } from 'src/presentation/dto/patients/list-pat
 import { ListPatientTutorResponseDto } from 'src/presentation/dto/patients/list-patient-tutor-response.dto.js';
 import { PATIENT_UPLOADS_DIR } from '../../../infra/config/uploads.config.js';
 import { VaccinationPlanService } from '../vaccinations/vaccination-plan.service.js';
+import { ClinicalCasesService } from '../clinical-cases/clinical-cases.service.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
 import { PatientVaccinationPlan } from '../../../domain/entities/vaccinations/patient-vaccination-plan.entity.js';
 import { EncounterMapper } from '../../mappers/encounter.mapper.js';
@@ -77,6 +84,7 @@ export class PatientsService {
     private readonly mediaFileRepo: Repository<MediaFile>,
     private readonly dataSource: DataSource,
     private readonly vaccinationPlanService: VaccinationPlanService,
+    private readonly clinicalCasesService: ClinicalCasesService,
   ) { }
 
   private async resolveClientId(userId: number, manager?: EntityManager): Promise<number> {
@@ -811,6 +819,10 @@ export class PatientsService {
 
   async findAdminBasic(patientId: number, roles: string[]): Promise<PatientAdminBasicDetailResponse> {
     const patient = await this.findOneInternal(patientId, 0, undefined, roles);
+    const recentActivity = await this.buildRecentActivity(patientId);
+    const procedures = await this.buildProcedureHistory(patientId);
+    const surgeries = await this.buildSurgeryHistory(patientId);
+    const clinicalCases = await this.clinicalCasesService.listByPatient(patientId);
     const birthDate = patient.birthDate ?? null;
     const birthDateValue = birthDate ? new Date(birthDate as any) : null;
 
@@ -861,8 +873,197 @@ export class PatientsService {
       image: patient.image ?? null,
       tutors: patient.tutors ?? [],
       clinicalObservations: patient.conditions ?? [],
+      surgeries,
+      procedures,
+      clinicalCases,
+      recentActivity,
+    };
+  }
+
+  async findClinicalCases(patientId: number, roles: string[]) {
+    await this.ensurePatientAccessibleForStaff(patientId, roles);
+    return this.clinicalCasesService.listByPatient(patientId);
+  }
+
+  private async buildRecentActivity(patientId: number): Promise<PatientRecentActivityResponse> {
+    const windowEnd = new Date();
+    const windowStart = new Date(windowEnd);
+    windowStart.setMonth(windowStart.getMonth() - 1);
+
+    const encounterRepo = this.dataSource.getRepository(Encounter);
+    const consultationNumbers = await this.buildPatientConsultationNumberMap(patientId);
+    const encounters = await encounterRepo.find({
+      where: { patientId, deletedAt: IsNull() },
+      relations: [
+        'consultationReason',
+        'procedures',
+        'surgeries',
+        'vet',
+        'vet.person',
+      ],
+      order: { startTime: 'DESC', id: 'DESC' },
+    });
+
+    const recentEncounters = encounters.filter((encounter) => {
+      const start = encounter.startTime instanceof Date
+        ? encounter.startTime
+        : new Date(encounter.startTime);
+      return !Number.isNaN(start.getTime()) && start >= windowStart;
+    });
+
+    const consultations: PatientRecentConsultationActivityResponse[] = recentEncounters.map((encounter) => ({
+      id: encounter.id,
+      patientConsultationNumber: consultationNumbers.get(encounter.id) ?? 0,
+      startTime: encounter.startTime instanceof Date
+        ? encounter.startTime.toISOString()
+        : String(encounter.startTime),
+      status: encounter.status,
+      clinicianName: this.buildEncounterClinicianName(encounter),
+      consultationReason: encounter.consultationReason?.consultationReason ?? null,
+    }));
+
+    const procedures: PatientRecentProcedureActivityResponse[] = recentEncounters
+      .flatMap((encounter) =>
+        (encounter.procedures ?? [])
+          .filter((procedure) => !procedure.deletedAt)
+          .map((procedure) => ({
+            id: procedure.id,
+            encounterId: encounter.id,
+            patientConsultationNumber: consultationNumbers.get(encounter.id) ?? 0,
+            procedureType: procedure.procedureType,
+            performedDate: procedure.performedDate instanceof Date
+              ? procedure.performedDate.toISOString()
+              : String(procedure.performedDate),
+            clinicianName: this.buildEncounterClinicianName(encounter),
+          })),
+      )
+      .sort((left, right) => right.performedDate.localeCompare(left.performedDate));
+
+    const surgeries: PatientRecentSurgeryActivityResponse[] = recentEncounters
+      .flatMap((encounter) =>
+        (encounter.surgeries ?? [])
+          .filter((surgery) => !surgery.deletedAt)
+          .map((surgery) => ({
+            id: surgery.id,
+            encounterId: encounter.id,
+            surgeryType: surgery.surgeryType,
+            activityDate: surgery.performedDate
+              ? (surgery.performedDate instanceof Date
+                  ? surgery.performedDate.toISOString()
+                  : String(surgery.performedDate))
+              : surgery.scheduledDate
+                ? (surgery.scheduledDate instanceof Date
+                    ? surgery.scheduledDate.toISOString()
+                    : String(surgery.scheduledDate))
+                : (encounter.startTime instanceof Date
+                    ? encounter.startTime.toISOString()
+                    : String(encounter.startTime)),
+            surgeryStatus: surgery.surgeryStatus,
+            clinicianName: this.buildEncounterClinicianName(encounter),
+            isExternal: false,
+          })),
+      )
+      .sort((left, right) => right.activityDate.localeCompare(left.activityDate));
+
+    return {
+      windowStart: windowStart.toISOString(),
+      windowEnd: windowEnd.toISOString(),
+      consultations,
+      procedures,
+      surgeries,
       recentActivity: null,
     };
+  }
+
+  private async buildProcedureHistory(patientId: number): Promise<PatientProcedureHistoryResponse[]> {
+    const encounterRepo = this.dataSource.getRepository(Encounter);
+    const consultationNumbers = await this.buildPatientConsultationNumberMap(patientId);
+    const encounters = await encounterRepo.find({
+      where: { patientId, deletedAt: IsNull() },
+      relations: ['procedures', 'vet', 'vet.person'],
+      order: { startTime: 'DESC', id: 'DESC' },
+    });
+
+    return encounters
+      .flatMap((encounter) =>
+        (encounter.procedures ?? [])
+          .filter((procedure) => !procedure.deletedAt)
+          .map((procedure) => ({
+            id: procedure.id,
+            encounterId: encounter.id,
+            patientConsultationNumber: consultationNumbers.get(encounter.id) ?? 0,
+            procedureType: procedure.procedureType,
+            performedDate: procedure.performedDate instanceof Date
+              ? procedure.performedDate.toISOString()
+              : String(procedure.performedDate),
+            clinicianName: this.buildEncounterClinicianName(encounter),
+            description: procedure.description ?? null,
+            result: procedure.result ?? null,
+            notes: procedure.notes ?? null,
+          })),
+      )
+      .sort((left, right) => right.performedDate.localeCompare(left.performedDate));
+  }
+
+  private async buildSurgeryHistory(patientId: number): Promise<PatientSurgeryResponseDto[]> {
+    const encounterRepo = this.dataSource.getRepository(Encounter);
+    const encounters = await encounterRepo.find({
+      where: { patientId, deletedAt: IsNull() },
+      relations: ['surgeries'],
+      order: { startTime: 'DESC', id: 'DESC' },
+    });
+
+    return encounters
+      .flatMap((encounter) =>
+        (encounter.surgeries ?? [])
+          .filter((surgery) => !surgery.deletedAt)
+          .map((surgery) => ({
+            id: surgery.id,
+            encounterId: encounter.id,
+            catalogId: surgery.catalogId ?? null,
+            surgeryType: surgery.surgeryType,
+            scheduledDate: surgery.scheduledDate
+              ? (surgery.scheduledDate instanceof Date
+                  ? surgery.scheduledDate.toISOString()
+                  : String(surgery.scheduledDate))
+              : null,
+            performedDate: surgery.performedDate
+              ? (surgery.performedDate instanceof Date
+                  ? surgery.performedDate.toISOString()
+                  : String(surgery.performedDate))
+              : null,
+            surgeryStatus: surgery.surgeryStatus,
+            isExternal: false,
+            description: surgery.description ?? null,
+            postoperativeInstructions: surgery.postoperativeInstructions ?? null,
+          })),
+      )
+      .sort((left, right) =>
+        (right.performedDate ?? right.scheduledDate ?? '').localeCompare(
+          left.performedDate ?? left.scheduledDate ?? '',
+        ),
+      );
+  }
+
+  private async buildPatientConsultationNumberMap(patientId: number): Promise<Map<number, number>> {
+    const encounterRepo = this.dataSource.getRepository(Encounter);
+    const encounters = await encounterRepo.find({
+      where: { patientId, deletedAt: IsNull() },
+      select: {
+        id: true,
+        startTime: true,
+      },
+      order: { startTime: 'ASC', id: 'ASC' },
+    });
+
+    return new Map(encounters.map((encounter, index) => [encounter.id, index + 1]));
+  }
+
+  private buildEncounterClinicianName(encounter: Encounter): string | null {
+    const firstName = encounter.vet?.person?.firstName?.trim() ?? '';
+    const lastName = encounter.vet?.person?.lastName?.trim() ?? '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || null;
   }
 
   async updateAdminBasic(

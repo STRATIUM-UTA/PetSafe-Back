@@ -3,6 +3,7 @@ import { BaseAuditEntity } from '../base-audit.entity.js';
 import { TreatmentStatusEnum } from '../../enums/index.js';
 import type { Encounter } from './encounter.entity.js';
 import type { TreatmentItem } from './treatment-item.entity.js';
+import type { ClinicalCase } from './clinical-case.entity.js';
 
 @Entity({ name: 'treatments' })
 export class Treatment extends BaseAuditEntity {
@@ -29,6 +30,27 @@ export class Treatment extends BaseAuditEntity {
 
   @Column({ name: 'general_instructions', type: 'text', nullable: true })
   generalInstructions!: string | null;
+
+  @Column({ name: 'clinical_case_id', type: 'int', nullable: true })
+  clinicalCaseId!: number | null;
+
+  @ManyToOne('ClinicalCase', 'treatments', { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'clinical_case_id' })
+  clinicalCase!: ClinicalCase | null;
+
+  @Column({ name: 'closed_by_encounter_id', type: 'int', nullable: true })
+  closedByEncounterId!: number | null;
+
+  @ManyToOne('Encounter', { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'closed_by_encounter_id' })
+  closedByEncounter!: Encounter | null;
+
+  @Column({ name: 'replaces_treatment_id', type: 'int', nullable: true })
+  replacesTreatmentId!: number | null;
+
+  @ManyToOne('Treatment', { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'replaces_treatment_id' })
+  replacesTreatment!: Treatment | null;
 
   @OneToMany('TreatmentItem', 'treatment', { cascade: true })
   items!: TreatmentItem[];

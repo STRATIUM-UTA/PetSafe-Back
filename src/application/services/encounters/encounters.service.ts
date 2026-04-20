@@ -14,6 +14,7 @@ import { CreateTreatmentDto } from '../../../presentation/dto/encounters/create-
 import { CreateSurgeryDto } from '../../../presentation/dto/encounters/create-surgery.dto.js';
 import { CreateProcedureDto } from '../../../presentation/dto/encounters/create-procedure.dto.js';
 import { UpsertVaccinationDraftDto } from '../../../presentation/dto/encounters/upsert-vaccination-draft.dto.js';
+import { UpsertTreatmentReviewDraftDto } from '../../../presentation/dto/encounters/upsert-treatment-review-draft.dto.js';
 import {
   EncounterListItemDto,
   EncounterResponseDto,
@@ -253,6 +254,22 @@ export class EncountersService {
     draftId: number,
   ): Promise<EncounterResponseDto> {
     await this.draftService.deleteTreatmentDraft(encounterId, draftId);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async upsertTreatmentReviewDraft(
+    encounterId: number,
+    dto: UpsertTreatmentReviewDraftDto,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.upsertTreatmentReviewDraft(encounterId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async deleteTreatmentReviewDraft(
+    encounterId: number,
+    draftId: number,
+  ): Promise<EncounterResponseDto> {
+    await this.draftService.deleteTreatmentReviewDraft(encounterId, draftId);
     return this.coreService.findOne(encounterId);
   }
 

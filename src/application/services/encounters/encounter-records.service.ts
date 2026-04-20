@@ -15,6 +15,10 @@ import { UpsertClinicalExamDto } from '../../../presentation/dto/encounters/upse
 import { UpsertEnvironmentalDataDto } from '../../../presentation/dto/encounters/upsert-environmental-data.dto.js';
 import { UpsertClinicalImpressionDto } from '../../../presentation/dto/encounters/upsert-clinical-impression.dto.js';
 import { UpsertPlanDto } from '../../../presentation/dto/encounters/upsert-plan.dto.js';
+import {
+  ClinicalCaseOutcomeEnum,
+  ClinicalCasePlanLinkModeEnum,
+} from '../../../domain/enums/index.js';
 import { EncounterSharedService } from './encounter-shared.service.js';
 
 @Injectable()
@@ -163,9 +167,43 @@ export class EncounterRecordsService {
     this.sharedService.ensureActive(encounter);
 
     const requiresFollowUp = dto.requiresFollowUp ?? false;
+    const caseLinkMode = dto.caseLinkMode ?? ClinicalCasePlanLinkModeEnum.NONE;
+    const caseOutcome = dto.caseOutcome ?? ClinicalCaseOutcomeEnum.CONTINUA;
+
     if (requiresFollowUp && !dto.suggestedFollowUpDate) {
       throw new BadRequestException(
         'La fecha de seguimiento es obligatoria cuando se requiere seguimiento.',
+      );
+    }
+
+    if (requiresFollowUp && caseLinkMode === ClinicalCasePlanLinkModeEnum.NONE && !encounter.clinicalCaseId) {
+      throw new BadRequestException(
+        'Debes elegir si el seguimiento abre un caso nuevo o se vincula a un caso existente.',
+      );
+    }
+
+    if (caseLinkMode === ClinicalCasePlanLinkModeEnum.EXISTING && !dto.clinicalCaseId) {
+      throw new BadRequestException('Debes seleccionar un caso clínico existente.');
+    }
+
+    if (caseLinkMode === ClinicalCasePlanLinkModeEnum.NEW && !dto.problemSummary?.trim()) {
+      throw new BadRequestException(
+        'Debes describir el problema clínico para abrir un caso nuevo.',
+      );
+    }
+
+    if (
+      caseOutcome !== ClinicalCaseOutcomeEnum.CONTINUA
+      && !encounter.clinicalCaseId
+    ) {
+      throw new BadRequestException(
+        'Solo puedes cerrar o cancelar un caso cuando la consulta ya está vinculada a uno.',
+      );
+    }
+
+    if (caseOutcome !== ClinicalCaseOutcomeEnum.CONTINUA && requiresFollowUp) {
+      throw new BadRequestException(
+        'No puedes cerrar o cancelar el caso y al mismo tiempo dejar otro control pendiente.',
       );
     }
 
@@ -176,6 +214,10 @@ export class EncounterRecordsService {
       suggestedFollowUpDate: dto.suggestedFollowUpDate
         ? new Date(dto.suggestedFollowUpDate)
         : null,
+      caseLinkMode,
+      clinicalCaseId: dto.clinicalCaseId ?? encounter.plan?.clinicalCaseId ?? null,
+      problemSummary: dto.problemSummary?.trim() || null,
+      caseOutcome,
       planNotes: dto.planNotes ?? null,
     });
   }

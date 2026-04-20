@@ -509,6 +509,11 @@ export class QueueService {
           'Solo se puede registrar llegada en cola para citas del día actual.',
         );
       }
+      if (!linkedAppointment.scheduledTime || !linkedAppointment.endTime) {
+        throw new BadRequestException(
+          'La cita de control aún no tiene hora confirmada y no puede registrarse en cola.',
+        );
+      }
       if (
         dto.veterinarianId &&
         dto.veterinarianId !== linkedAppointment.vetId

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { VaccinationModule } from '../vaccinations/vaccination.module.js';
+import { ClinicalCasesModule } from '../clinical-cases/clinical-cases.module.js';
 
 import { EncountersService } from '../../services/encounters/encounters.service.js';
 import { EncounterCoreService } from '../../services/encounters/encounter-core.service.js';
@@ -27,7 +28,11 @@ import { Procedure } from '../../../domain/entities/encounters/procedure.entity.
 import { EncounterVaccinationDraft } from '../../../domain/entities/encounters/encounter-vaccination-draft.entity.js';
 import { EncounterTreatmentDraft } from '../../../domain/entities/encounters/encounter-treatment-draft.entity.js';
 import { EncounterTreatmentDraftItem } from '../../../domain/entities/encounters/encounter-treatment-draft-item.entity.js';
+import { EncounterTreatmentReviewDraft } from '../../../domain/entities/encounters/encounter-treatment-review-draft.entity.js';
 import { EncounterProcedureDraft } from '../../../domain/entities/encounters/encounter-procedure-draft.entity.js';
+import { ClinicalCase } from '../../../domain/entities/encounters/clinical-case.entity.js';
+import { ClinicalCaseFollowUp } from '../../../domain/entities/encounters/clinical-case-follow-up.entity.js';
+import { TreatmentEvolutionEvent } from '../../../domain/entities/encounters/treatment-evolution-event.entity.js';
 import { Vaccine } from '../../../domain/entities/catalogs/vaccine.entity.js';
 import { Antiparasitic } from '../../../domain/entities/catalogs/antiparasitic.entity.js';
 import { ProcedureCatalog } from '../../../domain/entities/catalogs/procedure-catalog.entity.js';
@@ -44,6 +49,7 @@ import { User } from '../../../domain/entities/auth/user.entity.js';
 @Module({
   imports: [
     VaccinationModule,
+    ClinicalCasesModule,
     TypeOrmModule.forFeature([
       Encounter,
       EncounterConsultationReason,
@@ -61,7 +67,11 @@ import { User } from '../../../domain/entities/auth/user.entity.js';
       EncounterVaccinationDraft,
       EncounterTreatmentDraft,
       EncounterTreatmentDraftItem,
+      EncounterTreatmentReviewDraft,
       EncounterProcedureDraft,
+      ClinicalCase,
+      ClinicalCaseFollowUp,
+      TreatmentEvolutionEvent,
       Vaccine,
       Antiparasitic,
       ProcedureCatalog,

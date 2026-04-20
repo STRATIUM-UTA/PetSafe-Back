@@ -17,6 +17,7 @@ import { DashboardModule } from './application/modules/dashboard/dashboard.modul
 import { AdoptionsModule } from './application/modules/adoptions/adoptions.module.js';
 import { MetadataModule } from './application/modules/metadata/metadata.module.js';
 import { VaccinationModule } from './application/modules/vaccinations/vaccination.module.js';
+import { ClinicalCasesModule } from './application/modules/clinical-cases/clinical-cases.module.js';
 
 import { UsersModule } from './application/modules/users/users.module.js';
 import { ProcedureSurgeryCatalogModule } from './application/modules/catalogs/procedure-surgery-catalog.module.js';
@@ -45,6 +46,7 @@ import { PublicPatientsModule } from './application/modules/public/public-patien
     AdoptionsModule,
     MetadataModule,
     VaccinationModule,
+    ClinicalCasesModule,
     ProcedureSurgeryCatalogModule,
     TreatmentsModule,
     ProceduresModule,

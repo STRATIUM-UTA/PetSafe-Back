@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PatientsService } from '../../services/patients/patients.service.js';
 import { PatientsController } from '../../../presentation/controllers/patients/patients.controller.js';
 import { VaccinationModule } from '../vaccinations/vaccination.module.js';
+import { ClinicalCasesModule } from '../clinical-cases/clinical-cases.module.js';
 
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PatientTutor } from '../../../domain/entities/patients/patient-tutor.entity.js';
@@ -17,6 +18,7 @@ import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
 @Module({
   imports: [
     VaccinationModule,
+    ClinicalCasesModule,
     TypeOrmModule.forFeature([
       Patient,
       PatientTutor,

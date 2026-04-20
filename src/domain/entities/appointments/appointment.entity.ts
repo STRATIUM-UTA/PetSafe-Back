@@ -25,11 +25,11 @@ export class Appointment extends BaseAuditEntity {
   @Column({ name: 'scheduled_date', type: 'date' })
   scheduledDate!: string;
 
-  @Column({ name: 'scheduled_time', type: 'time without time zone' })
-  scheduledTime!: string;
+  @Column({ name: 'scheduled_time', type: 'time without time zone', nullable: true })
+  scheduledTime!: string | null;
 
-  @Column({ name: 'end_time', type: 'time without time zone' })
-  endTime!: string;
+  @Column({ name: 'end_time', type: 'time without time zone', nullable: true })
+  endTime!: string | null;
 
   @Column({
     name: 'reason',
