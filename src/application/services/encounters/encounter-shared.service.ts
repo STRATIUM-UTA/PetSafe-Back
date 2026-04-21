@@ -32,7 +32,7 @@ export class EncounterSharedService {
   ) { }
 
   /**
-   * Carga una atenciÃ³n con todas sus relaciones clÃ­nicas principales.
+   * Carga una atención con todas sus relaciones clínicas principales.
    */
   async findEncounterOrFail(id: number): Promise<Encounter> {
     const encounter = await this.encounterRepo.findOne({
@@ -78,19 +78,19 @@ export class EncounterSharedService {
     });
 
     if (!encounter || encounter.deletedAt) {
-      throw new NotFoundException('AtenciÃ³n no encontrada.');
+      throw new NotFoundException('Atención no encontrada.');
     }
 
     return encounter;
   }
 
   /**
-   * Asegura que la atenciÃ³n siga abierta para aceptar cambios clÃ­nicos.
+   * Asegura que la atención siga abierta para aceptar cambios clínicos.
    */
   ensureActive(encounter: Encounter): void {
     if (!this.isEditableStatus(encounter.status)) {
       throw new ConflictException(
-        `La atenciÃ³n ya estÃ¡ en estado "${encounter.status}". No se puede modificar.`,
+        `La atención ya está en estado "${encounter.status}". No se puede modificar.`,
       );
     }
   }
@@ -135,7 +135,7 @@ export class EncounterSharedService {
   }
 
   /**
-   * Verifica que el paciente exista y no estÃ© eliminado.
+   * Verifica que el paciente exista y no esté eliminado.
    */
   async findPatientOrFail(patientId: number): Promise<Patient> {
     const patient = await this.patientRepo.findOne({
@@ -183,7 +183,7 @@ export class EncounterSharedService {
 
     if (vet.personId !== user.personId) {
       throw new ConflictException(
-        'No puedes crear una atenciÃ³n asignÃ¡ndola a otro veterinario.',
+        'No puedes crear una atención asignándola a otro veterinario.',
       );
     }
   }

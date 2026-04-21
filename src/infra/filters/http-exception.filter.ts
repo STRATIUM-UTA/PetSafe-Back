@@ -35,6 +35,29 @@ interface PgConstraintMapping {
   message: string;
 }
 
+function normalizePotentialMojibake(value: string): string {
+  if (!/[ÃÂ]/.test(value)) {
+    return value;
+  }
+
+  try {
+    const normalized = Buffer.from(value, 'latin1').toString('utf8');
+    const originalScore = (value.match(/[ÃÂ�]/g) ?? []).length;
+    const normalizedScore = (normalized.match(/[ÃÂ�]/g) ?? []).length;
+    return normalizedScore < originalScore ? normalized : value;
+  } catch {
+    return value;
+  }
+}
+
+function normalizeResponseText(value: string | string[]): string | string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizePotentialMojibake(item));
+  }
+
+  return normalizePotentialMojibake(value);
+}
+
 const PG_ERROR_MAP: Record<string, PgErrorMapping> = {
   '23505': {
     status: HttpStatus.CONFLICT,
@@ -139,14 +162,20 @@ function handleHttpException(exception: HttpException): Pick<ErrorResponse, 'sta
   const exceptionResponse = exception.getResponse();
 
   if (typeof exceptionResponse === 'string') {
-    return { statusCode: status, message: exceptionResponse, error: exception.name };
+    return {
+      statusCode: status,
+      message: normalizeResponseText(exceptionResponse),
+      error: normalizePotentialMojibake(exception.name),
+    };
   }
 
   const res = exceptionResponse as Record<string, unknown>;
   return {
     statusCode: status,
-    message: (res.message as string | string[]) ?? exception.message,
-    error: (res.error as string) ?? exception.name,
+    message: normalizeResponseText(
+      ((res.message as string | string[]) ?? exception.message) as string | string[],
+    ),
+    error: normalizePotentialMojibake((res.error as string) ?? exception.name),
   };
 }
 
@@ -172,28 +201,32 @@ function handleQueryFailed(
     if (constraintMapping) {
       return {
         statusCode: constraintMapping.status,
-        message: constraintMapping.message,
-        error: constraintMapping.error,
+        message: normalizeResponseText(constraintMapping.message),
+        error: normalizePotentialMojibake(constraintMapping.error),
       };
     }
   }
 
   if (mapping) {
-    return { statusCode: mapping.status, message: `${mapping.message} (${pgError.message})`, error: mapping.error };
+    return {
+      statusCode: mapping.status,
+      message: normalizeResponseText(`${mapping.message} (${pgError.message})`),
+      error: normalizePotentialMojibake(mapping.error),
+    };
   }
 
   return {
     statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-    message: 'Error interno de base de datos',
-    error: 'Internal Server Error',
+    message: normalizeResponseText('Error interno de base de datos'),
+    error: normalizePotentialMojibake('Internal Server Error'),
   };
 }
 
 function handleEntityNotFound(): Pick<ErrorResponse, 'statusCode' | 'message' | 'error'> {
   return {
     statusCode: HttpStatus.NOT_FOUND,
-    message: 'El recurso solicitado no fue encontrado',
-    error: 'Not Found',
+    message: normalizeResponseText('El recurso solicitado no fue encontrado'),
+    error: normalizePotentialMojibake('Not Found'),
   };
 }
 
@@ -208,8 +241,8 @@ function handleUnknown(
 
   return {
     statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-    message: 'Error interno del servidor',
-    error: 'Internal Server Error',
+    message: normalizeResponseText('Error interno del servidor'),
+    error: normalizePotentialMojibake('Internal Server Error'),
   };
 }
 
@@ -253,8 +286,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (exception instanceof CannotCreateEntityIdMapError) {
       return {
         statusCode: HttpStatus.BAD_REQUEST,
-        message: 'Identificador de entidad inválido',
-        error: 'Bad Request',
+        message: normalizeResponseText('Identificador de entidad inválido'),
+        error: normalizePotentialMojibake('Bad Request'),
       };
     }
 
