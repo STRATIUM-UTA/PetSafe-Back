@@ -27,18 +27,8 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
     await queryRunner.query(`
       DO $$
       BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'clinical_case_plan_link_mode_enum') THEN
-          CREATE TYPE clinical_case_plan_link_mode_enum AS ENUM ('NONE', 'EXISTING', 'NEW');
-        END IF;
-      END
-      $$;
-    `);
-
-    await queryRunner.query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'clinical_case_outcome_enum') THEN
-          CREATE TYPE clinical_case_outcome_enum AS ENUM ('CONTINUA', 'RESUELTO', 'CANCELADO');
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'encounter_follow_up_action_enum') THEN
+          CREATE TYPE encounter_follow_up_action_enum AS ENUM ('NONE', 'KEEP_OPEN', 'SCHEDULE_CONTROL', 'RESOLVE', 'CANCEL');
         END IF;
       END
       $$;
@@ -56,27 +46,23 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
 
     await queryRunner.query(`
       ALTER TABLE appointments
+      ALTER COLUMN scheduled_time SET NOT NULL
+    `);
+
+    await queryRunner.query(`
+      ALTER TABLE appointments
+      ALTER COLUMN end_time SET NOT NULL
+    `);
+
+    await queryRunner.query(`
+      ALTER TABLE appointments
       DROP CONSTRAINT IF EXISTS ck_appointments_time_range
     `);
 
     await queryRunner.query(`
       ALTER TABLE appointments
-      ALTER COLUMN scheduled_time DROP NOT NULL
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE appointments
-      ALTER COLUMN end_time DROP NOT NULL
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE appointments
       ADD CONSTRAINT ck_appointments_time_range
-      CHECK (
-        (scheduled_time IS NULL AND end_time IS NULL)
-        OR
-        (scheduled_time IS NOT NULL AND end_time IS NOT NULL AND end_time > scheduled_time)
-      )
+      CHECK (end_time > scheduled_time)
     `);
 
     await queryRunner.query(`
@@ -109,9 +95,8 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
     `);
 
     await queryRunner.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS uq_clinical_cases_open_problem_live
+      CREATE INDEX IF NOT EXISTS idx_clinical_cases_problem_summary_normalized
       ON clinical_cases(patient_id, problem_summary_normalized)
-      WHERE deleted_at IS NULL AND status = 'ABIERTO'
     `);
 
     await queryRunner.query(`
@@ -162,9 +147,7 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
       DO $$
       BEGIN
         IF NOT EXISTS (
-          SELECT 1
-          FROM pg_constraint
-          WHERE conname = 'fk_encounters_clinical_case'
+          SELECT 1 FROM pg_constraint WHERE conname = 'fk_encounters_clinical_case'
         ) THEN
           ALTER TABLE encounters
           ADD CONSTRAINT fk_encounters_clinical_case
@@ -180,39 +163,15 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
     `);
 
     await queryRunner.query(`
-      ALTER TABLE encounter_plans
-      ADD COLUMN IF NOT EXISTS case_link_mode clinical_case_plan_link_mode_enum NOT NULL DEFAULT 'NONE'
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE encounter_plans
-      ADD COLUMN IF NOT EXISTS clinical_case_id INT NULL
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE encounter_plans
-      ADD COLUMN IF NOT EXISTS problem_summary VARCHAR(240) NULL
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE encounter_plans
-      ADD COLUMN IF NOT EXISTS case_outcome clinical_case_outcome_enum NOT NULL DEFAULT 'CONTINUA'
-    `);
-
-    await queryRunner.query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1
-          FROM pg_constraint
-          WHERE conname = 'fk_encounter_plans_clinical_case'
-        ) THEN
-          ALTER TABLE encounter_plans
-          ADD CONSTRAINT fk_encounter_plans_clinical_case
-          FOREIGN KEY (clinical_case_id) REFERENCES clinical_cases(id) ON DELETE SET NULL;
-        END IF;
-      END
-      $$;
+      CREATE TABLE IF NOT EXISTS encounter_follow_up_configs (
+        encounter_id INT PRIMARY KEY REFERENCES encounters(id) ON DELETE CASCADE,
+        action encounter_follow_up_action_enum NOT NULL DEFAULT 'NONE',
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+        deleted_at TIMESTAMP WITHOUT TIME ZONE NULL,
+        deleted_by_user_id INT NULL
+      )
     `);
 
     await queryRunner.query(`
@@ -234,9 +193,7 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
       DO $$
       BEGIN
         IF NOT EXISTS (
-          SELECT 1
-          FROM pg_constraint
-          WHERE conname = 'fk_treatments_clinical_case'
+          SELECT 1 FROM pg_constraint WHERE conname = 'fk_treatments_clinical_case'
         ) THEN
           ALTER TABLE treatments
           ADD CONSTRAINT fk_treatments_clinical_case
@@ -250,9 +207,7 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
       DO $$
       BEGIN
         IF NOT EXISTS (
-          SELECT 1
-          FROM pg_constraint
-          WHERE conname = 'fk_treatments_closed_by_encounter'
+          SELECT 1 FROM pg_constraint WHERE conname = 'fk_treatments_closed_by_encounter'
         ) THEN
           ALTER TABLE treatments
           ADD CONSTRAINT fk_treatments_closed_by_encounter
@@ -266,9 +221,7 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
       DO $$
       BEGIN
         IF NOT EXISTS (
-          SELECT 1
-          FROM pg_constraint
-          WHERE conname = 'fk_treatments_replaces_treatment'
+          SELECT 1 FROM pg_constraint WHERE conname = 'fk_treatments_replaces_treatment'
         ) THEN
           ALTER TABLE treatments
           ADD CONSTRAINT fk_treatments_replaces_treatment
@@ -302,9 +255,7 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
       DO $$
       BEGIN
         IF NOT EXISTS (
-          SELECT 1
-          FROM pg_constraint
-          WHERE conname = 'fk_encounter_treatment_drafts_replaces_treatment'
+          SELECT 1 FROM pg_constraint WHERE conname = 'fk_encounter_treatment_drafts_replaces_treatment'
         ) THEN
           ALTER TABLE encounter_treatment_drafts
           ADD CONSTRAINT fk_encounter_treatment_drafts_replaces_treatment
@@ -423,42 +374,10 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
       DROP COLUMN IF EXISTS clinical_case_id
     `);
 
-    await queryRunner.query(`
-      ALTER TABLE encounter_plans
-      DROP CONSTRAINT IF EXISTS fk_encounter_plans_clinical_case
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE encounter_plans
-      DROP COLUMN IF EXISTS case_outcome
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE encounter_plans
-      DROP COLUMN IF EXISTS problem_summary
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE encounter_plans
-      DROP COLUMN IF EXISTS clinical_case_id
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE encounter_plans
-      DROP COLUMN IF EXISTS case_link_mode
-    `);
-
+    await queryRunner.query(`DROP TABLE IF EXISTS encounter_follow_up_configs`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_encounters_clinical_case_id`);
-
-    await queryRunner.query(`
-      ALTER TABLE encounters
-      DROP CONSTRAINT IF EXISTS fk_encounters_clinical_case
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE encounters
-      DROP COLUMN IF EXISTS clinical_case_id
-    `);
+    await queryRunner.query(`ALTER TABLE encounters DROP CONSTRAINT IF EXISTS fk_encounters_clinical_case`);
+    await queryRunner.query(`ALTER TABLE encounters DROP COLUMN IF EXISTS clinical_case_id`);
 
     await queryRunner.query(`DROP INDEX IF EXISTS uq_clinical_case_follow_ups_target_encounter_live`);
     await queryRunner.query(`DROP INDEX IF EXISTS uq_clinical_case_follow_ups_generated_appointment_live`);
@@ -466,35 +385,13 @@ export class ClinicalCasesAndFollowUps1742518800102 implements MigrationInterfac
     await queryRunner.query(`DROP INDEX IF EXISTS idx_clinical_case_follow_ups_case`);
     await queryRunner.query(`DROP TABLE IF EXISTS clinical_case_follow_ups`);
 
-    await queryRunner.query(`DROP INDEX IF EXISTS uq_clinical_cases_open_problem_live`);
+    await queryRunner.query(`DROP INDEX IF EXISTS idx_clinical_cases_problem_summary_normalized`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_clinical_cases_status`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_clinical_cases_patient_id`);
     await queryRunner.query(`DROP TABLE IF EXISTS clinical_cases`);
 
-    await queryRunner.query(`
-      ALTER TABLE appointments
-      DROP CONSTRAINT IF EXISTS ck_appointments_time_range
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE appointments
-      ALTER COLUMN scheduled_time SET NOT NULL
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE appointments
-      ALTER COLUMN end_time SET NOT NULL
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE appointments
-      ADD CONSTRAINT ck_appointments_time_range
-      CHECK (end_time > scheduled_time)
-    `);
-
+    await queryRunner.query(`DROP TYPE IF EXISTS encounter_follow_up_action_enum`);
     await queryRunner.query(`DROP TYPE IF EXISTS treatment_evolution_event_type_enum`);
-    await queryRunner.query(`DROP TYPE IF EXISTS clinical_case_outcome_enum`);
-    await queryRunner.query(`DROP TYPE IF EXISTS clinical_case_plan_link_mode_enum`);
     await queryRunner.query(`DROP TYPE IF EXISTS clinical_case_follow_up_status_enum`);
     await queryRunner.query(`DROP TYPE IF EXISTS clinical_case_status_enum`);
   }

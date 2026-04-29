@@ -73,10 +73,24 @@ export enum ClinicalCasePlanLinkModeEnum {
   NEW = 'NEW',
 }
 
+export enum EncounterClinicalCaseLinkModeEnum {
+  EXISTING = 'EXISTING',
+  NEW = 'NEW',
+  UNLINK = 'UNLINK',
+}
+
 export enum ClinicalCaseOutcomeEnum {
   CONTINUA = 'CONTINUA',
   RESUELTO = 'RESUELTO',
   CANCELADO = 'CANCELADO',
+}
+
+export enum EncounterFollowUpActionEnum {
+  NONE = 'NONE',
+  KEEP_OPEN = 'KEEP_OPEN',
+  SCHEDULE_CONTROL = 'SCHEDULE_CONTROL',
+  RESOLVE = 'RESOLVE',
+  CANCEL = 'CANCEL',
 }
 
 export enum TreatmentStatusEnum {

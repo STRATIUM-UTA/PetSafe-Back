@@ -107,6 +107,7 @@ export type PatientAdminBasicDetailResponse = {
 export type PatientRecentConsultationActivityResponse = {
   id: number;
   patientConsultationNumber: number;
+  clinicalCaseId: number | null;
   startTime: string;
   status: string;
   clinicianName: string | null;

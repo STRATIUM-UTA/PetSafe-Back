@@ -19,6 +19,7 @@ import type { EncounterClinicalExam } from './encounter-clinical-exam.entity.js'
 import type { EncounterEnvironmentalData } from './encounter-environmental-data.entity.js';
 import type { EncounterClinicalImpression } from './encounter-clinical-impression.entity.js';
 import type { EncounterPlan } from './encounter-plan.entity.js';
+import type { EncounterFollowUpConfig } from './encounter-follow-up-config.entity.js';
 import type { Treatment } from './treatment.entity.js';
 import type { VaccinationEvent } from './vaccination-event.entity.js';
 import type { DewormingEvent } from './deworming-event.entity.js';
@@ -118,6 +119,9 @@ export class Encounter extends BaseAuditEntity {
 
   @OneToOne('EncounterPlan', 'encounter', { cascade: true })
   plan!: EncounterPlan | null;
+
+  @OneToOne('EncounterFollowUpConfig', 'encounter', { cascade: true })
+  followUpConfig!: EncounterFollowUpConfig | null;
 
   // ── Detail sub-entities (1:N) ──
   @OneToMany('Treatment', 'encounter', { cascade: true })

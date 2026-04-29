@@ -25,6 +25,8 @@ import { UpsertClinicalExamDto } from '../../dto/encounters/upsert-clinical-exam
 import { UpsertEnvironmentalDataDto } from '../../dto/encounters/upsert-environmental-data.dto.js';
 import { UpsertClinicalImpressionDto } from '../../dto/encounters/upsert-clinical-impression.dto.js';
 import { UpsertPlanDto } from '../../dto/encounters/upsert-plan.dto.js';
+import { UpsertClinicalCaseLinkDto } from '../../dto/encounters/upsert-clinical-case-link.dto.js';
+import { UpsertFollowUpConfigDto } from '../../dto/encounters/upsert-follow-up-config.dto.js';
 import { CreateVaccinationEventDto } from '../../dto/encounters/create-vaccination-event.dto.js';
 import { CreateDewormingEventDto } from '../../dto/encounters/create-deworming-event.dto.js';
 import { CreateTreatmentDto } from '../../dto/encounters/create-treatment.dto.js';
@@ -167,6 +169,24 @@ export class EncountersController {
     @Body() dto: UpsertPlanDto,
   ) {
     return this.encountersService.upsertPlan(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Put(':id/clinical-case')
+  upsertClinicalCaseLink(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertClinicalCaseLinkDto,
+  ) {
+    return this.encountersService.upsertClinicalCaseLink(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Put(':id/follow-up-config')
+  upsertFollowUpConfig(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertFollowUpConfigDto,
+  ) {
+    return this.encountersService.upsertFollowUpConfig(id, dto);
   }
 
   // ── Eventos 1:N ────────────────────────────────────────────────────────────

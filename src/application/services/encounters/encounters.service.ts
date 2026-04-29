@@ -13,6 +13,8 @@ import { UpsertClinicalExamDto } from '../../../presentation/dto/encounters/upse
 import { UpsertEnvironmentalDataDto } from '../../../presentation/dto/encounters/upsert-environmental-data.dto.js';
 import { UpsertClinicalImpressionDto } from '../../../presentation/dto/encounters/upsert-clinical-impression.dto.js';
 import { UpsertPlanDto } from '../../../presentation/dto/encounters/upsert-plan.dto.js';
+import { UpsertClinicalCaseLinkDto } from '../../../presentation/dto/encounters/upsert-clinical-case-link.dto.js';
+import { UpsertFollowUpConfigDto } from '../../../presentation/dto/encounters/upsert-follow-up-config.dto.js';
 import { CreateVaccinationEventDto } from '../../../presentation/dto/encounters/create-vaccination-event.dto.js';
 import { CreateDewormingEventDto } from '../../../presentation/dto/encounters/create-deworming-event.dto.js';
 import { CreateTreatmentDto } from '../../../presentation/dto/encounters/create-treatment.dto.js';
@@ -30,6 +32,7 @@ import { EncounterRecordsService } from './encounter-records.service.js';
 import { EncounterActionsService } from './encounter-actions.service.js';
 import { EncounterTreatmentService } from './encounter-treatment.service.js';
 import { EncounterActionDraftService } from './encounter-action-draft.service.js';
+import { ClinicalCasesService } from '../clinical-cases/clinical-cases.service.js';
 import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
 import {
   MediaOwnerTypeEnum,
@@ -46,6 +49,7 @@ export class EncountersService {
     private readonly actionsService: EncounterActionsService,
     private readonly treatmentService: EncounterTreatmentService,
     private readonly draftService: EncounterActionDraftService,
+    private readonly clinicalCasesService: ClinicalCasesService,
     @InjectRepository(MediaFile)
     private readonly mediaFileRepo: Repository<MediaFile>,
   ) {}
@@ -164,6 +168,22 @@ export class EncountersService {
    */
   async upsertPlan(encounterId: number, dto: UpsertPlanDto): Promise<EncounterResponseDto> {
     await this.recordsService.upsertPlan(encounterId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async upsertClinicalCaseLink(
+    encounterId: number,
+    dto: UpsertClinicalCaseLinkDto,
+  ): Promise<EncounterResponseDto> {
+    await this.clinicalCasesService.upsertEncounterClinicalCaseLink(encounterId, dto);
+    return this.coreService.findOne(encounterId);
+  }
+
+  async upsertFollowUpConfig(
+    encounterId: number,
+    dto: UpsertFollowUpConfigDto,
+  ): Promise<EncounterResponseDto> {
+    await this.recordsService.upsertFollowUpConfig(encounterId, dto);
     return this.coreService.findOne(encounterId);
   }
 

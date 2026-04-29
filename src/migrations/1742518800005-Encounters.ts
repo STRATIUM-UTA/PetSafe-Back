@@ -143,18 +143,12 @@ export class Encounters1742518800005 implements MigrationInterface {
       CREATE TABLE IF NOT EXISTS encounter_plans (
         encounter_id int PRIMARY KEY,
         clinical_plan text,
-        requires_follow_up boolean NOT NULL DEFAULT false,
-        suggested_follow_up_date date,
         plan_notes text,
         is_active boolean NOT NULL DEFAULT true,
         created_at timestamp without time zone NOT NULL DEFAULT now(),
         updated_at timestamp without time zone NOT NULL DEFAULT now(),
         deleted_at timestamp without time zone,
         deleted_by_user_id int,
-        CONSTRAINT ck_plan_follow_up CHECK (
-          (requires_follow_up = false) OR
-          (requires_follow_up = true AND suggested_follow_up_date IS NOT NULL)
-        ),
         CONSTRAINT fk_plan_encounter FOREIGN KEY (encounter_id) REFERENCES encounters(id) ON DELETE CASCADE
       )
     `);

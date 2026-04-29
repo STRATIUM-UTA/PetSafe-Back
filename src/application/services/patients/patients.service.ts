@@ -946,6 +946,7 @@ export class PatientsService {
     const consultations: PatientRecentConsultationActivityResponse[] = recentEncounters.map((encounter) => ({
       id: encounter.id,
       patientConsultationNumber: consultationNumbers.get(encounter.id) ?? 0,
+      clinicalCaseId: encounter.clinicalCaseId ?? null,
       startTime: encounter.startTime instanceof Date
         ? encounter.startTime.toISOString()
         : String(encounter.startTime),

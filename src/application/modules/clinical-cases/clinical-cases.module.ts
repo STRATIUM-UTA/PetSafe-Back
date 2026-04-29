@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClinicalCase } from '../../../domain/entities/encounters/clinical-case.entity.js';
 import { ClinicalCaseFollowUp } from '../../../domain/entities/encounters/clinical-case-follow-up.entity.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
-import { EncounterPlan } from '../../../domain/entities/encounters/encounter-plan.entity.js';
 import { EncounterTreatmentReviewDraft } from '../../../domain/entities/encounters/encounter-treatment-review-draft.entity.js';
 import { Treatment } from '../../../domain/entities/encounters/treatment.entity.js';
 import { TreatmentItem } from '../../../domain/entities/encounters/treatment-item.entity.js';
@@ -25,7 +24,6 @@ import { UserRole } from '../../../domain/entities/auth/user-role.entity.js';
       ClinicalCase,
       ClinicalCaseFollowUp,
       Encounter,
-      EncounterPlan,
       EncounterTreatmentReviewDraft,
       Treatment,
       TreatmentItem,

@@ -19,6 +19,7 @@ import { EncounterClinicalExam } from '../../../domain/entities/encounters/encou
 import { EncounterEnvironmentalData } from '../../../domain/entities/encounters/encounter-environmental-data.entity.js';
 import { EncounterClinicalImpression } from '../../../domain/entities/encounters/encounter-clinical-impression.entity.js';
 import { EncounterPlan } from '../../../domain/entities/encounters/encounter-plan.entity.js';
+import { EncounterFollowUpConfig } from '../../../domain/entities/encounters/encounter-follow-up-config.entity.js';
 import { VaccinationEvent } from '../../../domain/entities/encounters/vaccination-event.entity.js';
 import { DewormingEvent } from '../../../domain/entities/encounters/deworming-event.entity.js';
 import { Treatment } from '../../../domain/entities/encounters/treatment.entity.js';
@@ -59,6 +60,7 @@ import { MediaFile } from '../../../domain/entities/media/media-file.entity.js';
       EncounterEnvironmentalData,
       EncounterClinicalImpression,
       EncounterPlan,
+      EncounterFollowUpConfig,
       VaccinationEvent,
       DewormingEvent,
       Treatment,

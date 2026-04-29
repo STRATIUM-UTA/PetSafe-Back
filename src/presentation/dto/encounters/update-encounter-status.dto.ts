@@ -3,11 +3,14 @@ import {
   IsOptional,
   IsString,
   IsDateString,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import {
   IsNotBeforeDate,
   IsNotFutureDate,
 } from '../../validators/date-range.validator.js';
+import { ScheduleControlAppointmentDto } from './schedule-control-appointment.dto.js';
 
 export class CloseEncounterDto {
   @IsNotEmpty({ message: 'Debes indicar la hora en que terminó la atención.' })
@@ -21,4 +24,9 @@ export class CloseEncounterDto {
   @IsOptional()
   @IsString({ message: 'Las notas generales deben ser texto.' })
   generalNotes?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ScheduleControlAppointmentDto)
+  controlAppointment?: ScheduleControlAppointmentDto;
 }

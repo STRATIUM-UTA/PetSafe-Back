@@ -1,30 +1,33 @@
 import {
-  Entity,
   Column,
-  OneToOne,
-  JoinColumn,
-  PrimaryColumn,
   CreateDateColumn,
-  UpdateDateColumn,
   DeleteDateColumn,
-  ManyToOne,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import type { Encounter } from './encounter.entity.js';
 
-@Entity({ name: 'encounter_plans' })
-export class EncounterPlan {
+import type { Encounter } from './encounter.entity.js';
+import { EncounterFollowUpActionEnum } from '../../enums/index.js';
+
+@Entity({ name: 'encounter_follow_up_configs' })
+export class EncounterFollowUpConfig {
   @PrimaryColumn({ name: 'encounter_id', type: 'int' })
   encounterId!: number;
 
-  @OneToOne('Encounter', 'plan', { onDelete: 'CASCADE' })
+  @OneToOne('Encounter', 'followUpConfig', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'encounter_id' })
   encounter!: Encounter;
 
-  @Column({ name: 'clinical_plan', type: 'text', nullable: true })
-  clinicalPlan!: string | null;
-
-  @Column({ name: 'plan_notes', type: 'text', nullable: true })
-  planNotes!: string | null;
+  @Column({
+    type: 'enum',
+    enum: EncounterFollowUpActionEnum,
+    enumName: 'encounter_follow_up_action_enum',
+    default: EncounterFollowUpActionEnum.NONE,
+  })
+  action!: EncounterFollowUpActionEnum;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;

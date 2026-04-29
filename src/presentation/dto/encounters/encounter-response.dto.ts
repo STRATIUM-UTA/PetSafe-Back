@@ -1,4 +1,9 @@
-import { EncounterStatusEnum, TreatmentStatusEnum, SurgeryStatusEnum } from '../../../domain/enums/index.js';
+import {
+  EncounterFollowUpActionEnum,
+  EncounterStatusEnum,
+  SurgeryStatusEnum,
+  TreatmentStatusEnum,
+} from '../../../domain/enums/index.js';
 import {
   ClinicalCaseSummaryDto,
 } from '../clinical-cases/clinical-case-response.dto.js';
@@ -62,13 +67,11 @@ export class ClinicalImpressionResponseDto {
 
 export class PlanResponseDto {
   clinicalPlan!: string | null;
-  requiresFollowUp!: boolean;
-  suggestedFollowUpDate!: string | null;
-  caseLinkMode!: string;
-  clinicalCaseId!: number | null;
-  problemSummary!: string | null;
-  caseOutcome!: string;
   planNotes!: string | null;
+}
+
+export class FollowUpConfigResponseDto {
+  action!: EncounterFollowUpActionEnum;
 }
 
 export class VaccinationEventResponseDto {
@@ -229,6 +232,7 @@ export class EncounterResponseDto {
   environmentalData!: EnvironmentalDataResponseDto | null;
   clinicalImpression!: ClinicalImpressionResponseDto | null;
   plan!: PlanResponseDto | null;
+  followUpConfig!: FollowUpConfigResponseDto | null;
   clinicalCaseSummary!: ClinicalCaseSummaryDto | null;
 
   vaccinationEvents!: VaccinationEventResponseDto[];

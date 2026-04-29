@@ -5,6 +5,7 @@ import { EncounterConsultationReason } from '../../domain/entities/encounters/en
 import { EncounterEnvironmentalData } from '../../domain/entities/encounters/encounter-environmental-data.entity.js';
 import { EncounterClinicalImpression } from '../../domain/entities/encounters/encounter-clinical-impression.entity.js';
 import { EncounterPlan } from '../../domain/entities/encounters/encounter-plan.entity.js';
+import { EncounterFollowUpConfig } from '../../domain/entities/encounters/encounter-follow-up-config.entity.js';
 import { VaccinationEvent } from '../../domain/entities/encounters/vaccination-event.entity.js';
 import { DewormingEvent } from '../../domain/entities/encounters/deworming-event.entity.js';
 import { Treatment } from '../../domain/entities/encounters/treatment.entity.js';
@@ -29,6 +30,7 @@ import {
   EnvironmentalDataResponseDto,
   ClinicalImpressionResponseDto,
   PlanResponseDto,
+  FollowUpConfigResponseDto,
   VaccinationEventResponseDto,
   VaccinationDraftResponseDto,
   DewormingEventResponseDto,
@@ -142,13 +144,13 @@ export class EncounterMapper {
   static toPlanDto(e: EncounterPlan): PlanResponseDto {
     return {
       clinicalPlan: e.clinicalPlan ?? null,
-      requiresFollowUp: e.requiresFollowUp,
-      suggestedFollowUpDate: e.suggestedFollowUpDate ? toDate(e.suggestedFollowUpDate) : null,
-      caseLinkMode: e.caseLinkMode,
-      clinicalCaseId: e.clinicalCaseId ?? null,
-      problemSummary: e.problemSummary ?? null,
-      caseOutcome: e.caseOutcome,
       planNotes: e.planNotes ?? null,
+    };
+  }
+
+  static toFollowUpConfigDto(e: EncounterFollowUpConfig): FollowUpConfigResponseDto {
+    return {
+      action: e.action,
     };
   }
 
@@ -348,6 +350,7 @@ export class EncounterMapper {
         ? this.toClinicalImpressionDto(enc.clinicalImpression)
         : null,
       plan: enc.plan ? this.toPlanDto(enc.plan) : null,
+      followUpConfig: enc.followUpConfig ? this.toFollowUpConfigDto(enc.followUpConfig) : null,
       clinicalCaseSummary: null,
 
       vaccinationEvents: (enc.vaccinationEvents ?? []).map((v) => this.toVaccinationEventDto(v)),

@@ -12,7 +12,6 @@ import { QueueEntry } from '../../../domain/entities/appointments/queue-entry.en
 import { ClinicalCase } from '../../../domain/entities/encounters/clinical-case.entity.js';
 import { ClinicalCaseFollowUp } from '../../../domain/entities/encounters/clinical-case-follow-up.entity.js';
 import { Encounter } from '../../../domain/entities/encounters/encounter.entity.js';
-import { EncounterPlan } from '../../../domain/entities/encounters/encounter-plan.entity.js';
 import { EncounterTreatmentReviewDraft } from '../../../domain/entities/encounters/encounter-treatment-review-draft.entity.js';
 import { Treatment } from '../../../domain/entities/encounters/treatment.entity.js';
 import { TreatmentEvolutionEvent } from '../../../domain/entities/encounters/treatment-evolution-event.entity.js';
@@ -21,11 +20,11 @@ import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import {
   AppointmentReasonEnum,
   AppointmentStatusEnum,
-  ClinicalCaseFollowUpStatusEnum,
-  ClinicalCaseOutcomeEnum,
   ClinicalCasePlanLinkModeEnum,
+  ClinicalCaseFollowUpStatusEnum,
   ClinicalCaseStatusEnum,
-  EncounterStatusEnum,
+  EncounterClinicalCaseLinkModeEnum,
+  EncounterFollowUpActionEnum,
   TreatmentEvolutionEventTypeEnum,
   TreatmentItemStatusEnum,
   TreatmentStatusEnum,
@@ -39,6 +38,8 @@ import {
   ClinicalCaseNextFollowUpDto,
   ClinicalCaseSummaryDto,
 } from '../../../presentation/dto/clinical-cases/clinical-case-response.dto.js';
+import { ScheduleControlAppointmentDto } from '../../../presentation/dto/encounters/schedule-control-appointment.dto.js';
+import { UpsertClinicalCaseLinkDto } from '../../../presentation/dto/encounters/upsert-clinical-case-link.dto.js';
 import { EncounterSharedService } from '../encounters/encounter-shared.service.js';
 
 const toIso = (value: Date | string | null | undefined): string | null => {
@@ -67,8 +68,6 @@ export class ClinicalCasesService {
     private readonly followUpRepo: Repository<ClinicalCaseFollowUp>,
     @InjectRepository(Encounter)
     private readonly encounterRepo: Repository<Encounter>,
-    @InjectRepository(EncounterPlan)
-    private readonly encounterPlanRepo: Repository<EncounterPlan>,
     @InjectRepository(EncounterTreatmentReviewDraft)
     private readonly treatmentReviewDraftRepo: Repository<EncounterTreatmentReviewDraft>,
     @InjectRepository(Treatment)
@@ -113,24 +112,34 @@ export class ClinicalCasesService {
     caseId: number,
     status: ClinicalCaseStatusEnum,
   ): Promise<ClinicalCaseDetailDto> {
-    const clinicalCase = await this.findClinicalCaseOrFail(caseId);
+    await this.dataAwareTransaction(async (manager) => {
+      const clinicalCase = await this.findClinicalCaseOrFail(caseId, manager);
 
-    if (status === clinicalCase.status) {
-      return this.toClinicalCaseDetailDto(clinicalCase);
-    }
+      if (status === clinicalCase.status) {
+        return;
+      }
 
-    const patch: Partial<ClinicalCase> = {
-      status,
-      closedAt: status === ClinicalCaseStatusEnum.CERRADO ? new Date() : null,
-      canceledAt: status === ClinicalCaseStatusEnum.CANCELADO ? new Date() : null,
-    };
+      if (
+        status === ClinicalCaseStatusEnum.CERRADO
+        || status === ClinicalCaseStatusEnum.CANCELADO
+      ) {
+        await this.cancelPendingFollowUpsForCase(clinicalCase.id, manager);
+      }
 
-    if (status === ClinicalCaseStatusEnum.ABIERTO) {
-      patch.closedAt = null;
-      patch.canceledAt = null;
-    }
+      const patch: Partial<ClinicalCase> = {
+        status,
+        closedAt: status === ClinicalCaseStatusEnum.CERRADO ? new Date() : null,
+        canceledAt: status === ClinicalCaseStatusEnum.CANCELADO ? new Date() : null,
+      };
 
-    await this.clinicalCaseRepo.update(caseId, patch);
+      if (status === ClinicalCaseStatusEnum.ABIERTO) {
+        patch.closedAt = null;
+        patch.canceledAt = null;
+      }
+
+      await this.getRepo(ClinicalCase, this.clinicalCaseRepo, manager).update(caseId, patch);
+    });
+
     return this.findOne(caseId);
   }
 
@@ -146,6 +155,125 @@ export class ClinicalCasesService {
 
     const clinicalCase = await this.findClinicalCaseOrFail(encounter.clinicalCaseId);
     return this.toClinicalCaseSummaryDto(clinicalCase);
+  }
+
+  async upsertEncounterClinicalCaseLink(
+    encounterId: number,
+    dto: UpsertClinicalCaseLinkDto,
+  ): Promise<void> {
+    const encounter = await this.sharedService.findEncounterOrFail(encounterId);
+
+    if (encounter.status === 'ANULADA') {
+      throw new BadRequestException(
+        'No se puede vincular una atención anulada a un caso clínico.',
+      );
+    }
+
+    await this.dataAwareTransaction(async (manager) => {
+      if (dto.mode === EncounterClinicalCaseLinkModeEnum.UNLINK) {
+        if (!this.sharedService.isEditableStatus(encounter.status)) {
+          throw new ConflictException(
+            'Solo puedes desvincular un caso clínico mientras la atención siga editable.',
+          );
+        }
+
+        if (!encounter.clinicalCaseId) {
+          return;
+        }
+
+        await this.detachEncounterFromClinicalCase(encounter, manager);
+        return;
+      }
+
+      if (encounter.clinicalCaseId) {
+        if (
+          dto.mode === EncounterClinicalCaseLinkModeEnum.EXISTING
+          && dto.clinicalCaseId === encounter.clinicalCaseId
+        ) {
+          return;
+        }
+
+        throw new ConflictException(
+          'La atención ya está vinculada a un caso clínico. Desvincúlala primero si quieres cambiarla.',
+        );
+      }
+
+      if (dto.mode === EncounterClinicalCaseLinkModeEnum.EXISTING) {
+        if (!dto.clinicalCaseId) {
+          throw new BadRequestException('Debes elegir el caso clínico existente a vincular.');
+        }
+
+        const existingCase = await this.ensureOpenCaseForPatient(
+          encounter.patientId,
+          dto.clinicalCaseId,
+          manager,
+        );
+        await this.persistEncounterClinicalCaseLink(encounter.id, existingCase.id, manager);
+        return;
+      }
+
+      if (!dto.problemSummary?.trim()) {
+        throw new BadRequestException(
+          'Debes resumir el problema clínico para abrir un caso nuevo.',
+        );
+      }
+
+      const createdCase = await this.createClinicalCaseFromEncounter(
+        encounter,
+        dto.problemSummary,
+        manager,
+      );
+      await this.persistEncounterClinicalCaseLink(encounter.id, createdCase.id, manager);
+    });
+  }
+
+  async scheduleFollowUpForCase(
+    clinicalCaseId: number,
+    payload: ScheduleControlAppointmentDto,
+    userId: number | null,
+  ): Promise<ClinicalCaseDetailDto> {
+    await this.dataAwareTransaction(async (manager) => {
+      const clinicalCase = await this.findClinicalCaseOrFail(clinicalCaseId, manager);
+
+      if (clinicalCase.status !== ClinicalCaseStatusEnum.ABIERTO) {
+        throw new BadRequestException(
+          'Solo puedes programar controles para un caso clínico abierto.',
+        );
+      }
+
+      await this.ensureCaseHasNoPendingFollowUp(clinicalCase.id, manager);
+
+      const latestEncounter = this.latestEncounterForCase(clinicalCase);
+      if (!latestEncounter) {
+        throw new BadRequestException(
+          'No existe una consulta base desde la cual programar el control clínico.',
+        );
+      }
+
+      const appointment = await this.createControlAppointment(
+        clinicalCase.patientId,
+        latestEncounter.vetId,
+        latestEncounter.id,
+        clinicalCase.problemSummary,
+        latestEncounter.plan?.planNotes ?? null,
+        payload,
+        userId,
+        manager,
+      );
+
+      await this.getRepo(ClinicalCaseFollowUp, this.followUpRepo, manager).save(
+        this.followUpRepo.create({
+          clinicalCaseId: clinicalCase.id,
+          sourceEncounterId: latestEncounter.id,
+          generatedAppointmentId: appointment.id,
+          targetEncounterId: null,
+          suggestedDate: new Date(payload.scheduledDate),
+          status: ClinicalCaseFollowUpStatusEnum.PROGRAMADO,
+        }),
+      );
+    });
+
+    return this.findOne(clinicalCaseId);
   }
 
   async attachCaseFromFollowUpAppointment(
@@ -187,77 +315,25 @@ export class ClinicalCasesService {
     encounter: Encounter,
     manager: EntityManager,
   ): Promise<ClinicalCase | null> {
-    const plan = encounter.plan;
-    if (!plan) {
-      return encounter.clinicalCaseId
-        ? this.findClinicalCaseOrFail(encounter.clinicalCaseId, manager)
-        : null;
-    }
+    const action = encounter.followUpConfig?.action ?? EncounterFollowUpActionEnum.NONE;
 
-    if (
-      plan.caseOutcome !== ClinicalCaseOutcomeEnum.CONTINUA
-      && plan.requiresFollowUp
-    ) {
+    if (action !== EncounterFollowUpActionEnum.NONE && !encounter.clinicalCaseId) {
       throw new BadRequestException(
-        'No puedes cerrar o cancelar el caso y al mismo tiempo generar un nuevo control.',
+        'Debes vincular la consulta a un caso clínico antes de configurar su seguimiento.',
       );
     }
 
-    if (encounter.clinicalCaseId) {
-      if (
-        plan.clinicalCaseId
-        && plan.caseLinkMode === ClinicalCasePlanLinkModeEnum.EXISTING
-        && plan.clinicalCaseId !== encounter.clinicalCaseId
-      ) {
-        throw new BadRequestException(
-          'La consulta ya está vinculada a un caso clínico distinto y no puede cambiarse desde esta atención.',
-        );
-      }
-
-      return this.findClinicalCaseOrFail(encounter.clinicalCaseId, manager);
-    }
-
-    if (!plan.requiresFollowUp) {
+    if (!encounter.clinicalCaseId) {
       return null;
     }
 
-    const linkMode = plan.caseLinkMode ?? ClinicalCasePlanLinkModeEnum.NONE;
-    if (linkMode === ClinicalCasePlanLinkModeEnum.NONE) {
-      throw new BadRequestException(
-        'Debes elegir si el seguimiento abre un caso nuevo o se vincula a un caso existente.',
-      );
-    }
-
-    if (linkMode === ClinicalCasePlanLinkModeEnum.EXISTING) {
-      if (!plan.clinicalCaseId) {
-        throw new BadRequestException('Debes elegir el caso clínico existente a vincular.');
-      }
-
-      const existingCase = await this.ensureOpenCaseForPatient(
-        encounter.patientId,
-        plan.clinicalCaseId,
-        manager,
-      );
-      await this.persistEncounterClinicalCaseLink(encounter.id, existingCase.id, manager);
-      encounter.clinicalCaseId = existingCase.id;
-      return existingCase;
-    }
-
-    if (!plan.problemSummary?.trim()) {
-      throw new BadRequestException(
-        'Debes resumir el problema clínico para abrir un caso nuevo.',
-      );
-    }
-
-    const createdCase = await this.createClinicalCaseFromEncounter(encounter, plan.problemSummary, manager);
-    await this.persistEncounterClinicalCaseLink(encounter.id, createdCase.id, manager);
-    encounter.clinicalCaseId = createdCase.id;
-    return createdCase;
+    return this.findClinicalCaseOrFail(encounter.clinicalCaseId, manager);
   }
 
   async finalizeEncounterClinicalCase(
     encounter: Encounter,
     closureTime: Date,
+    controlAppointment: ScheduleControlAppointmentDto | undefined,
     manager: EntityManager,
   ): Promise<void> {
     const clinicalCase = encounter.clinicalCaseId
@@ -272,10 +348,16 @@ export class ClinicalCasesService {
     }
 
     await this.completeCurrentFollowUpIfNeeded(encounter.id, manager);
+    const action = encounter.followUpConfig?.action ?? EncounterFollowUpActionEnum.NONE;
 
-    const outcome = encounter.plan?.caseOutcome ?? ClinicalCaseOutcomeEnum.CONTINUA;
+    if (action === EncounterFollowUpActionEnum.RESOLVE) {
+      if (controlAppointment) {
+        throw new BadRequestException(
+          'No puedes programar un turno de control cuando el caso se marca como resuelto.',
+        );
+      }
 
-    if (outcome === ClinicalCaseOutcomeEnum.RESUELTO) {
+      await this.cancelPendingFollowUpsForCase(clinicalCase.id, manager);
       await this.updateClinicalCaseStatus(
         clinicalCase.id,
         ClinicalCaseStatusEnum.CERRADO,
@@ -285,7 +367,14 @@ export class ClinicalCasesService {
       return;
     }
 
-    if (outcome === ClinicalCaseOutcomeEnum.CANCELADO) {
+    if (action === EncounterFollowUpActionEnum.CANCEL) {
+      if (controlAppointment) {
+        throw new BadRequestException(
+          'No puedes programar un turno de control cuando el caso se cancela.',
+        );
+      }
+
+      await this.cancelPendingFollowUpsForCase(clinicalCase.id, manager);
       await this.updateClinicalCaseStatus(
         clinicalCase.id,
         ClinicalCaseStatusEnum.CANCELADO,
@@ -302,17 +391,23 @@ export class ClinicalCasesService {
       manager,
     );
 
-    if (!encounter.plan?.requiresFollowUp) {
+    if (action === EncounterFollowUpActionEnum.SCHEDULE_CONTROL) {
+      if (!controlAppointment) {
+        throw new BadRequestException(
+          'Debes programar un turno de control para finalizar la consulta con seguimiento.',
+        );
+      }
+
+      await this.ensureCaseHasNoPendingFollowUp(clinicalCase.id, manager);
+      await this.createPendingControlFollowUp(encounter, clinicalCase.id, controlAppointment, manager);
       return;
     }
 
-    if (!encounter.plan.suggestedFollowUpDate) {
+    if (controlAppointment) {
       throw new BadRequestException(
-        'La fecha sugerida de seguimiento es obligatoria para generar el control.',
+        'No se puede adjuntar un turno de control cuando el seguimiento no está configurado para programarlo.',
       );
     }
-
-    await this.createPendingControlFollowUp(encounter, clinicalCase.id, manager);
   }
 
   async reactivateEncounterClinicalCaseEffects(
@@ -330,20 +425,18 @@ export class ClinicalCasesService {
   private async createPendingControlFollowUp(
     encounter: Encounter,
     clinicalCaseId: number,
+    payload: ScheduleControlAppointmentDto,
     manager: EntityManager,
   ): Promise<void> {
-    const appointment = await this.getRepo(Appointment, this.appointmentRepo, manager).save(
-      this.appointmentRepo.create({
-        patientId: encounter.patientId,
-        vetId: encounter.vetId,
-        scheduledDate: this.toDateKey(encounter.plan?.suggestedFollowUpDate),
-        scheduledTime: null,
-        endTime: null,
-        reason: AppointmentReasonEnum.CONTROL,
-        notes: this.buildControlAppointmentNotes(encounter),
-        status: AppointmentStatusEnum.PROGRAMADA,
-        createdByUserId: encounter.createdByUserId,
-      }),
+    const appointment = await this.createControlAppointment(
+      encounter.patientId,
+      encounter.vetId,
+      encounter.id,
+      this.resolveClinicalCaseProblemSummary(encounter, null),
+      encounter.plan?.planNotes ?? null,
+      payload,
+      encounter.createdByUserId,
+      manager,
     );
 
     await this.getRepo(ClinicalCaseFollowUp, this.followUpRepo, manager).save(
@@ -352,23 +445,29 @@ export class ClinicalCasesService {
         sourceEncounterId: encounter.id,
         generatedAppointmentId: appointment.id,
         targetEncounterId: null,
-        suggestedDate: new Date(this.toDateKey(encounter.plan?.suggestedFollowUpDate)),
+        suggestedDate: new Date(payload.scheduledDate),
         status: ClinicalCaseFollowUpStatusEnum.PROGRAMADO,
       }),
     );
   }
 
-  private buildControlAppointmentNotes(encounter: Encounter): string | null {
+  private buildControlAppointmentNotes(
+    problemSummary: string | null,
+    planNotes: string | null,
+    appointmentNotes: string | null,
+  ): string | null {
     const notes: string[] = [];
-    const problemSummary = encounter.plan?.problemSummary?.trim();
-    const planNotes = encounter.plan?.planNotes?.trim();
 
-    if (problemSummary) {
-      notes.push(`Caso clínico: ${problemSummary}`);
+    if (problemSummary?.trim()) {
+      notes.push(`Caso clínico: ${problemSummary.trim()}`);
     }
 
-    if (planNotes) {
-      notes.push(`Seguimiento: ${planNotes}`);
+    if (planNotes?.trim()) {
+      notes.push(`Seguimiento: ${planNotes.trim()}`);
+    }
+
+    if (appointmentNotes?.trim()) {
+      notes.push(appointmentNotes.trim());
     }
 
     return notes.length > 0 ? notes.join('\n') : null;
@@ -675,6 +774,36 @@ export class ClinicalCasesService {
     }
   }
 
+  private async cancelPendingFollowUpsForCase(
+    clinicalCaseId: number,
+    manager: EntityManager,
+  ): Promise<void> {
+    const followUps = await this.getRepo(ClinicalCaseFollowUp, this.followUpRepo, manager).find({
+      where: { clinicalCaseId },
+    });
+
+    for (const followUp of followUps) {
+      if (
+        followUp.deletedAt
+        || followUp.status === ClinicalCaseFollowUpStatusEnum.CANCELADO
+        || followUp.status === ClinicalCaseFollowUpStatusEnum.COMPLETADO
+      ) {
+        continue;
+      }
+
+      await this.getRepo(ClinicalCaseFollowUp, this.followUpRepo, manager).update(followUp.id, {
+        status: ClinicalCaseFollowUpStatusEnum.CANCELADO,
+      });
+
+      if (followUp.generatedAppointmentId) {
+        await this.getRepo(Appointment, this.appointmentRepo, manager).update(
+          followUp.generatedAppointmentId,
+          { status: AppointmentStatusEnum.CANCELADA },
+        );
+      }
+    }
+  }
+
   private async restoreTreatmentReviewDraftsFromEvents(
     encounter: Encounter,
     userId: number,
@@ -786,11 +915,6 @@ export class ClinicalCasesService {
         clinicalCaseId: null,
       });
 
-      await this.getRepo(EncounterPlan, this.encounterPlanRepo, manager).update(
-        { encounterId: encounter.id },
-        { clinicalCaseId: null },
-      );
-
       return;
     }
 
@@ -842,19 +966,6 @@ export class ClinicalCasesService {
     manager: EntityManager,
   ): Promise<ClinicalCase> {
     const normalizedSummary = this.normalizeProblemSummary(problemSummary);
-    const duplicateCase = await this.getRepo(ClinicalCase, this.clinicalCaseRepo, manager).findOne({
-      where: {
-        patientId: encounter.patientId,
-        problemSummaryNormalized: normalizedSummary,
-        status: ClinicalCaseStatusEnum.ABIERTO,
-      },
-    });
-
-    if (duplicateCase && !duplicateCase.deletedAt) {
-      throw new ConflictException(
-        'Ya existe un caso clínico abierto con el mismo problema activo para esta mascota. Debes vincularlo en lugar de crear otro.',
-      );
-    }
 
     return this.getRepo(ClinicalCase, this.clinicalCaseRepo, manager).save(
       this.clinicalCaseRepo.create({
@@ -878,11 +989,54 @@ export class ClinicalCasesService {
     await this.getRepo(Encounter, this.encounterRepo, manager).update(encounterId, {
       clinicalCaseId,
     });
+  }
 
-    await this.getRepo(EncounterPlan, this.encounterPlanRepo, manager).update(
-      { encounterId },
-      { clinicalCaseId },
-    );
+  private async detachEncounterFromClinicalCase(
+    encounter: Encounter,
+    manager: EntityManager,
+  ): Promise<void> {
+    if (!encounter.clinicalCaseId) {
+      return;
+    }
+
+    const clinicalCase = await this.findClinicalCaseOrFail(encounter.clinicalCaseId, manager);
+    const otherEncounters = await this.getRepo(Encounter, this.encounterRepo, manager).count({
+      where: { clinicalCaseId: clinicalCase.id },
+    });
+    const followUpsCount = await this.getRepo(
+      ClinicalCaseFollowUp,
+      this.followUpRepo,
+      manager,
+    ).count({
+      where: { clinicalCaseId: clinicalCase.id },
+    });
+    const activeTreatmentsCount = await this.getRepo(Treatment, this.treatmentRepo, manager).count({
+      where: { clinicalCaseId: clinicalCase.id },
+    });
+    const evolutionEventsCount = await this.getRepo(
+      TreatmentEvolutionEvent,
+      this.treatmentEvolutionEventRepo,
+      manager,
+    ).count({
+      where: { clinicalCaseId: clinicalCase.id },
+    });
+
+    if (
+      clinicalCase.originEncounterId === encounter.id
+      && otherEncounters <= 1
+      && followUpsCount === 0
+      && activeTreatmentsCount === 0
+      && evolutionEventsCount === 0
+    ) {
+      await this.getRepo(ClinicalCase, this.clinicalCaseRepo, manager).update(clinicalCase.id, {
+        isActive: false,
+        deletedAt: new Date(),
+      });
+    }
+
+    await this.getRepo(Encounter, this.encounterRepo, manager).update(encounter.id, {
+      clinicalCaseId: null,
+    });
   }
 
   private async ensureOpenCaseForPatient(
@@ -1158,6 +1312,111 @@ export class ClinicalCasesService {
     }
 
     return treatment.generalInstructions?.trim() || `Tratamiento #${treatment.id}`;
+  }
+
+  private async dataAwareTransaction<T>(
+    operation: (manager: EntityManager) => Promise<T>,
+  ): Promise<T> {
+    return this.clinicalCaseRepo.manager.transaction(operation);
+  }
+
+  private latestEncounterForCase(clinicalCase: ClinicalCase): Encounter | null {
+    return [...(clinicalCase.encounters ?? [])]
+      .filter((encounter) => !encounter.deletedAt)
+      .sort((left, right) => {
+        const rightTime = normalizeDateValue(right.startTime)?.getTime() ?? 0;
+        const leftTime = normalizeDateValue(left.startTime)?.getTime() ?? 0;
+        return rightTime - leftTime || right.id - left.id;
+      })[0] ?? null;
+  }
+
+  private resolveClinicalCaseProblemSummary(
+    encounter: Encounter,
+    clinicalCase: ClinicalCase | null,
+  ): string | null {
+    return clinicalCase?.problemSummary?.trim()
+      || encounter.clinicalCase?.problemSummary?.trim()
+      || null;
+  }
+
+  private isTimeRangeValid(startTime: string, endTime: string): boolean {
+    return Boolean(startTime.trim()) && Boolean(endTime.trim()) && endTime > startTime;
+  }
+
+  private async ensureCaseHasNoPendingFollowUp(
+    clinicalCaseId: number,
+    manager: EntityManager,
+  ): Promise<void> {
+    const pending = await this.getRepo(ClinicalCaseFollowUp, this.followUpRepo, manager).findOne({
+      where: { clinicalCaseId },
+      order: { id: 'DESC' },
+    });
+
+    if (
+      pending
+      && !pending.deletedAt
+      && pending.status !== ClinicalCaseFollowUpStatusEnum.CANCELADO
+      && !pending.targetEncounterId
+    ) {
+      throw new ConflictException(
+        'Este caso clínico ya tiene un control pendiente. Debes resolverlo antes de programar otro.',
+      );
+    }
+  }
+
+  private async createControlAppointment(
+    patientId: number,
+    vetId: number,
+    sourceEncounterId: number,
+    problemSummary: string | null,
+    planNotes: string | null,
+    payload: ScheduleControlAppointmentDto,
+    userId: number | null,
+    manager: EntityManager,
+  ): Promise<Appointment> {
+    if (!this.isTimeRangeValid(payload.scheduledTime, payload.endTime)) {
+      throw new BadRequestException(
+        'La hora de fin del control debe ser mayor a la hora de inicio.',
+      );
+    }
+
+    const appointmentRepo = this.getRepo(Appointment, this.appointmentRepo, manager);
+    const overlappingAppointment = await appointmentRepo
+      .createQueryBuilder('a')
+      .select('a.id')
+      .where('"a"."vet_id" = :vetId', { vetId })
+      .andWhere('"a"."scheduled_date" = :scheduledDate', { scheduledDate: payload.scheduledDate })
+      .andWhere('"a"."deleted_at" IS NULL')
+      .andWhere(`"a"."status" IN (:...activeStatuses)`, {
+        activeStatuses: [
+          AppointmentStatusEnum.PROGRAMADA,
+          AppointmentStatusEnum.CONFIRMADA,
+          AppointmentStatusEnum.EN_PROCESO,
+        ],
+      })
+      .andWhere('"a"."scheduled_time" < :endTime', { endTime: payload.endTime })
+      .andWhere('"a"."end_time" > :scheduledTime', { scheduledTime: payload.scheduledTime })
+      .getOne();
+
+    if (overlappingAppointment) {
+      throw new ConflictException(
+        'El veterinario ya tiene un turno que se cruza con el horario seleccionado para el control.',
+      );
+    }
+
+    return appointmentRepo.save(
+      this.appointmentRepo.create({
+        patientId,
+        vetId,
+        scheduledDate: payload.scheduledDate,
+        scheduledTime: payload.scheduledTime,
+        endTime: payload.endTime,
+        reason: AppointmentReasonEnum.CONTROL,
+        notes: this.buildControlAppointmentNotes(problemSummary, planNotes, payload.notes ?? null),
+        status: AppointmentStatusEnum.PROGRAMADA,
+        createdByUserId: userId,
+      }),
+    );
   }
 
   private normalizeProblemSummary(value: string): string {

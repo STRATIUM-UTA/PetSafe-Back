@@ -226,7 +226,12 @@ export class EncounterCoreService {
       }
 
       await this.draftService.materializeDrafts(encounter, manager);
-      await this.clinicalCasesService.finalizeEncounterClinicalCase(encounter, endTime, manager);
+      await this.clinicalCasesService.finalizeEncounterClinicalCase(
+        encounter,
+        endTime,
+        dto.controlAppointment,
+        manager,
+      );
 
       await manager.update(Encounter, id, {
         status: EncounterStatusEnum.FINALIZADA,

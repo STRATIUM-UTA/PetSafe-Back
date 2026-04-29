@@ -47,7 +47,7 @@ export class EncounterSharedService {
         'environmentalData',
         'clinicalImpression',
         'plan',
-        'plan.clinicalCase',
+        'followUpConfig',
         'clinicalCase',
         'vaccinationEvents',
         'vaccinationEvents.vaccine',
