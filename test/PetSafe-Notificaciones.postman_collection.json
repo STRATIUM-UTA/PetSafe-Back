@@ -1,0 +1,406 @@
+{
+  "info": {
+    "_postman_id": "c4a1b2d3-e5f6-4789-abcd-notif-petsafe",
+    "name": "PetSafe - Notificaciones (Integración)",
+    "description": "Pruebas de integración del módulo de notificaciones. Flujo: crear solicitud de cita → rechazar → crear otra → aceptar → verificar notificaciones generadas al cliente.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Login Admin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login admin exitoso', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('La respuesta contiene accessToken', function () {",
+              "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+              "});",
+              "",
+              "pm.collectionVariables.set('adminToken', body.accessToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        },
+        "description": "Autentica al admin para gestionar solicitudes de cita."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Login Cliente App",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login cliente exitoso', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('La respuesta contiene accessToken', function () {",
+              "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+              "});",
+              "",
+              "pm.collectionVariables.set('clientToken', body.accessToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{clientPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        },
+        "description": "Autentica al cliente demo para crear solicitudes de cita."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Crear solicitud de cita (para rechazar)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Solicitud creada exitosamente', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('La solicitud tiene id y estado PENDIENTE', function () {",
+              "  pm.expect(body.id).to.be.a('number');",
+              "  pm.expect(body.status).to.eql('PENDIENTE');",
+              "});",
+              "",
+              "pm.collectionVariables.set('solicitudId', body.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Chequeo general de salud para revision anual de la mascota.\",\n  \"preferredDate\": \"2026-05-15\",\n  \"preferredTime\": \"09:00\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/appointment-requests",
+          "host": ["{{baseUrl}}"],
+          "path": ["appointment-requests"]
+        },
+        "description": "El cliente crea la primera solicitud. Se guarda el ID en solicitudId para rechazarla a continuación."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Ver mis solicitudes (solicitud recién creada)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Listado de solicitudes exitoso', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('La respuesta es un arreglo', function () {",
+              "  pm.expect(body).to.be.an('array');",
+              "});",
+              "",
+              "const solicitudId = Number(pm.collectionVariables.get('solicitudId'));",
+              "pm.test('La solicitud creada aparece en el listado con estado PENDIENTE', function () {",
+              "  const found = body.find(function (s) { return s.id === solicitudId; });",
+              "  pm.expect(found, 'Solicitud no encontrada en el listado').to.not.be.undefined;",
+              "  pm.expect(found.status).to.eql('PENDIENTE');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/appointment-requests/my",
+          "host": ["{{baseUrl}}"],
+          "path": ["appointment-requests", "my"]
+        },
+        "description": "El cliente consulta sus solicitudes y verifica que la recién creada aparece con estado PENDIENTE."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Rechazar solicitud (Admin)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Solicitud rechazada exitosamente', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('El estado de la solicitud es RECHAZADA', function () {",
+              "  pm.expect(body.status).to.eql('RECHAZADA');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        },
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"RECHAZADA\",\n  \"staffNotes\": \"No hay disponibilidad para la fecha solicitada. Por favor intente con otra fecha.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/appointment-requests/{{solicitudId}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["appointment-requests", "{{solicitudId}}", "status"]
+        },
+        "description": "El admin rechaza la solicitud. El sistema debe generar una notificación automática al cliente."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Ver notificaciones cliente - rechazo",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Notificaciones obtenidas exitosamente', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('La respuesta es un arreglo', function () {",
+              "  pm.expect(body).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Existe al menos una notificación para el cliente', function () {",
+              "  pm.expect(body.length).to.be.greaterThan(0);",
+              "});",
+              "",
+              "if (body.length > 0) {",
+              "  const notif = body.find(function (n) { return n.referenceType === 'appointment-request'; }) || body[0];",
+              "  pm.collectionVariables.set('notificationId', notif.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/notifications/my",
+          "host": ["{{baseUrl}}"],
+          "path": ["notifications", "my"]
+        },
+        "description": "El cliente verifica que recibió una notificación tras el rechazo de su solicitud. Guarda el ID en notificationId."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Crear segunda solicitud de cita (para aceptar)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Segunda solicitud creada exitosamente', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('La segunda solicitud tiene id y estado PENDIENTE', function () {",
+              "  pm.expect(body.id).to.be.a('number');",
+              "  pm.expect(body.status).to.eql('PENDIENTE');",
+              "});",
+              "",
+              "pm.collectionVariables.set('solicitudId2', body.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reason\": \"Vacunacion anual y desparasitacion preventiva para la mascota Max.\",\n  \"preferredDate\": \"2026-05-20\",\n  \"preferredTime\": \"10:30\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/appointment-requests",
+          "host": ["{{baseUrl}}"],
+          "path": ["appointment-requests"]
+        },
+        "description": "El cliente crea una segunda solicitud. Se guarda el ID en solicitudId2 para confirmarla."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Aceptar solicitud (Admin)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Solicitud confirmada exitosamente', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('El estado de la solicitud es CONFIRMADA', function () {",
+              "  pm.expect(body.status).to.eql('CONFIRMADA');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+        },
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"CONFIRMADA\",\n  \"staffNotes\": \"Cita confirmada. Por favor llegar 10 minutos antes.\",\n  \"scheduledDate\": \"2026-05-20\",\n  \"scheduledTime\": \"10:30\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/appointment-requests/{{solicitudId2}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["appointment-requests", "{{solicitudId2}}", "status"]
+        },
+        "description": "El admin confirma la segunda solicitud. El sistema debe generar una notificación automática al cliente."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Ver notificaciones cliente - aceptación",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Notificaciones obtenidas exitosamente', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('La respuesta es un arreglo', function () {",
+              "  pm.expect(body).to.be.an('array');",
+              "});",
+              "",
+              "pm.test('Existen notificaciones de gestion de solicitudes', function () {",
+              "  pm.expect(body.length).to.be.greaterThan(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/notifications/my",
+          "host": ["{{baseUrl}}"],
+          "path": ["notifications", "my"]
+        },
+        "description": "El cliente verifica que recibió la notificación de confirmación de su segunda solicitud."
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": { "type": "text/javascript", "exec": [""] }
+    },
+    {
+      "listen": "test",
+      "script": { "type": "text/javascript", "exec": [""] }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api", "type": "string" },
+    { "key": "adminEmail", "value": "admin@safepet.com", "type": "string" },
+    { "key": "adminPassword", "value": "Admin123!", "type": "string" },
+    { "key": "clientEmail", "value": "bjeferssonvinicio2005@gmail.com", "type": "string" },
+    { "key": "clientPassword", "value": "Cliente123!", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "clientToken", "value": "", "type": "string" },
+    { "key": "solicitudId", "value": "", "type": "string" },
+    { "key": "solicitudId2", "value": "", "type": "string" },
+    { "key": "notificationId", "value": "", "type": "string" }
+  ]
+}

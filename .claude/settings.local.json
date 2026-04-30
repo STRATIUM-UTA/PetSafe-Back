@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv \"Captura de pantalla 2026-04-30 151810.png\" \"01_login_admin.png\")",
+      "Bash(mv \"Captura de pantalla 2026-04-30 151345.png\" \"02_login_cliente_app.png\")",
+      "Bash(mv \"Captura de pantalla 2026-04-30 151441.png\" \"03_crear_solicitud_para_rechazar.png\")",
+      "Bash(mv \"Captura de pantalla 2026-04-30 151457.png\" \"04_ver_mis_solicitudes.png\")",
+      "Bash(mv \"Captura de pantalla 2026-04-30 151532.png\" \"05_rechazar_solicitud.png\")"
+    ]
+  }
+}

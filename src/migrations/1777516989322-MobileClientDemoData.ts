@@ -954,6 +954,79 @@ export class MobileClientDemoData1777516989322 implements MigrationInterface {
                       AND pvd.deleted_at IS NULL
                   );
 
+                                -- Demo user notifications for presentation (consulta aceptada)
+                                INSERT INTO user_notifications (
+                                        user_id,
+                                        title,
+                                        body,
+                                        reference_type,
+                                        reference_id,
+                                        is_active
+                                )
+                                SELECT
+                                        v_client_user_id,
+                                        'Consulta aceptada',
+                                        'DEMO_MOBILE_NOTIFICATION: Consulta aceptada Max. Comentario: Paciente en buen estado, controlar peso en proxima consulta. - Dr. Demo Vet',
+                                        'encounter',
+                                        v_enc_1_id,
+                                        true
+                                WHERE v_client_user_id IS NOT NULL
+                                    AND v_enc_1_id IS NOT NULL
+                                    AND NOT EXISTS (
+                                        SELECT 1 FROM user_notifications un
+                                        WHERE un.reference_type = 'encounter'
+                                            AND un.reference_id = v_enc_1_id
+                                            AND un.deleted_at IS NULL
+                                    );
+
+                                INSERT INTO user_notifications (
+                                        user_id,
+                                        title,
+                                        body,
+                                        reference_type,
+                                        reference_id,
+                                        is_active
+                                )
+                                SELECT
+                                        v_client_user_id,
+                                        'Consulta aceptada',
+                                        'DEMO_MOBILE_NOTIFICATION: Consulta aceptada Luna. Comentario: Aplicar shampoo suave y revisar dieta. - Dr. Demo Vet',
+                                        'encounter',
+                                        v_enc_2_id,
+                                        true
+                                WHERE v_client_user_id IS NOT NULL
+                                    AND v_enc_2_id IS NOT NULL
+                                    AND NOT EXISTS (
+                                        SELECT 1 FROM user_notifications un
+                                        WHERE un.reference_type = 'encounter'
+                                            AND un.reference_id = v_enc_2_id
+                                            AND un.deleted_at IS NULL
+                                    );
+
+                                INSERT INTO user_notifications (
+                                        user_id,
+                                        title,
+                                        body,
+                                        reference_type,
+                                        reference_id,
+                                        is_active
+                                )
+                                SELECT
+                                        v_client_user_id,
+                                        'Consulta aceptada',
+                                        'DEMO_MOBILE_NOTIFICATION: Consulta aceptada Toby. Comentario: Dieta blanda por 48 horas y revalorar. - Dr. Demo Vet',
+                                        'encounter',
+                                        v_enc_3_id,
+                                        true
+                                WHERE v_client_user_id IS NOT NULL
+                                    AND v_enc_3_id IS NOT NULL
+                                    AND NOT EXISTS (
+                                        SELECT 1 FROM user_notifications un
+                                        WHERE un.reference_type = 'encounter'
+                                            AND un.reference_id = v_enc_3_id
+                                            AND un.deleted_at IS NULL
+                                    );
+
                 INSERT INTO patient_vaccination_plan_doses (
                     plan_id,
                     scheme_dose_id,
@@ -1045,6 +1118,11 @@ export class MobileClientDemoData1777516989322 implements MigrationInterface {
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`
+            DELETE FROM user_notifications
+            WHERE body LIKE 'DEMO_MOBILE_NOTIFICATION:%'
+        `);
+
         await queryRunner.query(`
             DELETE FROM vaccination_events
             WHERE notes IN (
