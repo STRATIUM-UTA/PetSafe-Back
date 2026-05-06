@@ -45,6 +45,7 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+firebase-service-account.json
 
 # Runtime data
 pids

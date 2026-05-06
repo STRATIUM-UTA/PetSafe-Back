@@ -1,0 +1,664 @@
+{
+  "info": {
+    "_postman_id": "b7a8f3c2-1d4e-4b6a-9c0d-system-config-petsafe",
+    "name": "PetSafe - Configuracion del Sistema",
+    "description": "Coleccion Postman para validar configuracion de cuenta de usuario: consultar perfil, actualizar datos personales, cambiar contrasena y solicitar/confirmar cambio de correo. Los casos que modifican credenciales usan variables para evitar afectar cuentas seed por accidente.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "userEmail",
+      "value": "admin@safepet.com",
+      "description": "Correo del usuario autenticado para probar configuracion. Puede ser admin, MVZ, recepcionista o cliente app."
+    },
+    {
+      "key": "userPassword",
+      "value": "Admin123!",
+      "description": "Contrasena actual del usuario de prueba."
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "firstName",
+      "value": "Admin"
+    },
+    {
+      "key": "lastName",
+      "value": "Sistema"
+    },
+    {
+      "key": "phone",
+      "value": "0999999999"
+    },
+    {
+      "key": "address",
+      "value": "Av. Principal 123"
+    },
+    {
+      "key": "gender",
+      "value": "OTRO",
+      "description": "Valores permitidos: F, M u OTRO."
+    },
+    {
+      "key": "birthDate",
+      "value": "1990-01-01"
+    },
+    {
+      "key": "newPassword",
+      "value": "Admin12345!",
+      "description": "Usar solo en una cuenta de prueba. Despues de ejecutar cambio de contrasena, actualizar userPassword si se desea seguir probando."
+    },
+    {
+      "key": "newEmail",
+      "value": "usuario.configuracion.petsafe@example.com",
+      "description": "Nuevo correo para flujo de cambio de correo. Debe no existir en la base."
+    },
+    {
+      "key": "emailChangeCode",
+      "value": "000000",
+      "description": "Reemplazar manualmente con el codigo recibido por correo/log antes de confirmar el cambio."
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Login usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Respuesta contiene tokens', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.refreshToken).to.be.a('string').and.not.empty;",
+                  "  });",
+                  "  pm.collectionVariables.set('accessToken', body.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Autentica el usuario que ejecutara la configuracion de cuenta."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Perfil",
+      "item": [
+        {
+          "name": "Consultar perfil actual",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Perfil contiene datos basicos', function () {",
+                  "  pm.expect(body).to.have.property('id');",
+                  "  pm.expect(body).to.have.property('email');",
+                  "  pm.expect(body).to.have.property('firstName');",
+                  "  pm.expect(body).to.have.property('lastName');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Devuelve el perfil del usuario autenticado."
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar datos personales",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Perfil actualizado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Respuesta confirma actualizacion', function () {",
+                  "  pm.expect(body.message).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"{{firstName}}\",\n  \"lastName\": \"{{lastName}}\",\n  \"phone\": \"{{phone}}\",\n  \"address\": \"{{address}}\",\n  \"gender\": \"{{gender}}\",\n  \"birthDate\": \"{{birthDate}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Actualiza datos personales permitidos del usuario autenticado. No cambia el correo; para eso usar el flujo de cambio de correo."
+          },
+          "response": []
+        },
+        {
+          "name": "Validacion - telefono invalido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Rechaza telefono invalido', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Debe fallar porque el telefono requiere exactamente 10 digitos."
+          },
+          "response": []
+        },
+        {
+          "name": "Validacion - sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Requiere autenticacion', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Verifica que el endpoint de perfil este protegido por JWT."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Seguridad",
+      "item": [
+        {
+          "name": "Cambiar contrasena",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Contrasena actualizada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message).to.be.a('string').and.not.empty;",
+                  "  pm.collectionVariables.set('userPassword', pm.collectionVariables.get('newPassword'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{userPassword}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Cambia la contrasena del usuario autenticado. Ejecutar solo con cuenta de prueba porque modifica credenciales."
+          },
+          "response": []
+        },
+        {
+          "name": "Validacion - contrasena actual incorrecta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Rechaza contrasena actual incorrecta', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"PasswordIncorrecto123!\",\n  \"newPassword\": \"OtraPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Debe fallar si la contrasena actual no coincide."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Correo",
+      "item": [
+        {
+          "name": "Solicitar cambio de correo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solicitud aceptada', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Respuesta contiene mensaje', function () {",
+                  "  pm.expect(body.message).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newEmail\": \"{{newEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/email-change/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "email-change",
+                "request"
+              ]
+            },
+            "description": "Genera y envia un codigo de confirmacion al nuevo correo."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirmar cambio de correo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Correo actualizado', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.email).to.eql(pm.collectionVariables.get('newEmail').trim().toLowerCase());",
+                  "  pm.expect(body.requiresReauth).to.eql(true);",
+                  "  pm.collectionVariables.set('userEmail', body.email);",
+                  "  pm.collectionVariables.set('accessToken', '');",
+                  "  pm.collectionVariables.set('refreshToken', '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newEmail\": \"{{newEmail}}\",\n  \"code\": \"{{emailChangeCode}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/email-change/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "email-change",
+                "confirm"
+              ]
+            },
+            "description": "Confirmar despues de reemplazar emailChangeCode con el codigo real. Al completarse revoca refresh tokens y requiere iniciar sesion nuevamente."
+          },
+          "response": []
+        },
+        {
+          "name": "Validacion - correo invalido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Rechaza correo invalido', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newEmail\": \"correo-invalido\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/email-change/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "email-change",
+                "request"
+              ]
+            },
+            "description": "Debe fallar por formato de correo invalido."
+          },
+          "response": []
+        },
+        {
+          "name": "Validacion - codigo invalido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Rechaza codigo invalido o expirado', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newEmail\": \"{{newEmail}}\",\n  \"code\": \"111111\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/email-change/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "email-change",
+                "confirm"
+              ]
+            },
+            "description": "Debe fallar si el codigo no coincide o ya expiro."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

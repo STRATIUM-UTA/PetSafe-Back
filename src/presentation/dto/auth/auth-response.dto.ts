@@ -4,6 +4,7 @@ export class UserResponseDto {
   roles!: string[];
   firstName!: string;
   lastName!: string;
+  phone!: string | null;
   isVet!: boolean;
   requiresPasswordChange!: boolean;
 }

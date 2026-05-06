@@ -54,11 +54,57 @@ export enum EncounterStatusEnum {
   ANULADA = 'ANULADA',
 }
 
+export enum ClinicalCaseStatusEnum {
+  ABIERTO = 'ABIERTO',
+  CERRADO = 'CERRADO',
+  CANCELADO = 'CANCELADO',
+}
+
+export enum ClinicalCaseFollowUpStatusEnum {
+  PROGRAMADO = 'PROGRAMADO',
+  EN_ATENCION = 'EN_ATENCION',
+  COMPLETADO = 'COMPLETADO',
+  CANCELADO = 'CANCELADO',
+}
+
+export enum ClinicalCasePlanLinkModeEnum {
+  NONE = 'NONE',
+  EXISTING = 'EXISTING',
+  NEW = 'NEW',
+}
+
+export enum EncounterClinicalCaseLinkModeEnum {
+  EXISTING = 'EXISTING',
+  NEW = 'NEW',
+  UNLINK = 'UNLINK',
+}
+
+export enum ClinicalCaseOutcomeEnum {
+  CONTINUA = 'CONTINUA',
+  RESUELTO = 'RESUELTO',
+  CANCELADO = 'CANCELADO',
+}
+
+export enum EncounterFollowUpActionEnum {
+  NONE = 'NONE',
+  KEEP_OPEN = 'KEEP_OPEN',
+  SCHEDULE_CONTROL = 'SCHEDULE_CONTROL',
+  RESOLVE = 'RESOLVE',
+  CANCEL = 'CANCEL',
+}
+
 export enum TreatmentStatusEnum {
   ACTIVO = 'ACTIVO',
   FINALIZADO = 'FINALIZADO',
   SUSPENDIDO = 'SUSPENDIDO',
   CANCELADO = 'CANCELADO',
+}
+
+export enum TreatmentEvolutionEventTypeEnum {
+  CONTINUA = 'CONTINUA',
+  SUSPENDE = 'SUSPENDE',
+  FINALIZA = 'FINALIZA',
+  REEMPLAZA = 'REEMPLAZA',
 }
 
 export enum TreatmentItemStatusEnum {
@@ -171,4 +217,11 @@ export enum AdoptionStatusEnum {
   EN_PROCESO = 'EN_PROCESO',
   ADOPTADO = 'ADOPTADO',
   CANCELADO = 'CANCELADO',
+}
+
+export enum AppointmentRequestStatusEnum {
+  PENDIENTE = 'PENDIENTE',
+  CONFIRMADA = 'CONFIRMADA',
+  RECHAZADA = 'RECHAZADA',
+  CANCELADA = 'CANCELADA',
 }

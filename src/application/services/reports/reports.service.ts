@@ -457,7 +457,7 @@ export class ReportsService {
         plan: enc.plan
           ? {
               clinicalPlan: enc.plan.clinicalPlan ?? '',
-              followUpDate: enc.plan.suggestedFollowUpDate ? String(enc.plan.suggestedFollowUpDate) : null,
+              followUpDate: null,
               planNotes: enc.plan.planNotes ?? '',
             }
           : null,

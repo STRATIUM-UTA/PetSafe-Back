@@ -1,0 +1,331 @@
+{
+  "info": {
+    "_postman_id": "9d7efb0e-1d95-4b19-bf24-qr-petsafe",
+    "name": "PetSafe - QR Mascota",
+    "description": "Coleccion minima para probar el QR publico de una mascota. Usa el paciente demo Max creado por migraciones con codigo DEMO-MOBILE-001 cuando esta disponible.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Login admin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login admin exitoso', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('La respuesta contiene accessToken', function () {",
+              "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+              "});",
+              "",
+              "pm.collectionVariables.set('adminToken', body.accessToken);",
+              "if (body.refreshToken) {",
+              "  pm.collectionVariables.set('adminRefreshToken', body.refreshToken);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Autentica al admin seed: admin@safepet.com / Admin123!."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Buscar mascota demo para obtener ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Busqueda de mascota respondio OK', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Existe al menos una mascota demo con ese nombre', function () {",
+              "  pm.expect(body).to.be.an('array').that.is.not.empty;",
+              "});",
+              "",
+              "const selected = body.find((item) => String(item.patientName || '').toLowerCase() === String(pm.collectionVariables.get('demoPatientSearch')).toLowerCase()) || body[0];",
+              "pm.collectionVariables.set('demoPatientId', selected.patientId);",
+              "pm.collectionVariables.set('demoPatientName', selected.patientName);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/patients/admin/search-summary?search={{demoPatientSearch}}&limit=5",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "admin",
+            "search-summary"
+          ],
+          "query": [
+            {
+              "key": "search",
+              "value": "{{demoPatientSearch}}"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Busca la mascota demo. Por defecto usa Max, creada por la migracion MobileClientDemoData con codigo DEMO-MOBILE-001."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Obtener detalle admin y guardar qrToken",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Detalle admin respondio OK', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('El detalle contiene qrToken', function () {",
+              "  pm.expect(body.qrToken).to.be.a('string').and.not.empty;",
+              "});",
+              "",
+              "pm.collectionVariables.set('qrToken', body.qrToken);",
+              "pm.collectionVariables.set('demoPatientId', body.id);",
+              "pm.collectionVariables.set('demoPatientName', body.name);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/patients/admin/{{demoPatientId}}/basic",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients",
+            "admin",
+            "{{demoPatientId}}",
+            "basic"
+          ]
+        },
+        "description": "Obtiene el detalle basico admin de la mascota y guarda qrToken para simular el escaneo del QR."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Escanear QR - perfil publico de mascota",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('QR publico respondio OK', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Perfil publico contiene datos principales', function () {",
+              "  pm.expect(body.id).to.eql(Number(pm.collectionVariables.get('demoPatientId')));",
+              "  pm.expect(body.name).to.be.a('string').and.not.empty;",
+              "  pm.expect(body).to.have.property('species');",
+              "  pm.expect(body).to.have.property('owner');",
+              "});",
+              "",
+              "pm.test('El endpoint publico no expone qrToken', function () {",
+              "  pm.expect(body).to.not.have.property('qrToken');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/public/patients/{{qrToken}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "public",
+            "patients",
+            "{{qrToken}}"
+          ]
+        },
+        "description": "Endpoint publico usado cuando alguien escanea el QR de la mascota."
+      },
+      "response": []
+    },
+    {
+      "name": "5. QR invalido devuelve 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('QR inexistente devuelve 404', function () {",
+              "  pm.response.to.have.status(404);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Mensaje de mascota no encontrada', function () {",
+              "  pm.expect(String(body.message)).to.include('Mascota no encontrada');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/public/patients/{{invalidQrToken}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "public",
+            "patients",
+            "{{invalidQrToken}}"
+          ]
+        },
+        "description": "Caso negativo para validar que un token no existente no revela informacion."
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@safepet.com",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "Admin123!",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminRefreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "demoPatientSearch",
+      "value": "Max",
+      "type": "string"
+    },
+    {
+      "key": "demoPatientId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "demoPatientName",
+      "value": "Max",
+      "type": "string"
+    },
+    {
+      "key": "qrToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invalidQrToken",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "string"
+    }
+  ]
+}

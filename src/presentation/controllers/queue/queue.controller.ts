@@ -37,6 +37,30 @@ export class QueueController {
   }
 
   /**
+   * GET /queue/by-encounter/:encounterId
+   * Devuelve la entrada operativa asociada a una consulta.
+   */
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get('by-encounter/:encounterId')
+  getByEncounter(
+    @Param('encounterId', ParseIntPipe) encounterId: number,
+  ): Promise<QueueEntryRecordDto> {
+    return this.queueService.findByEncounter(encounterId);
+  }
+
+  /**
+   * GET /queue/:id
+   * Devuelve una entrada específica de cola.
+   */
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Get(':id')
+  getOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<QueueEntryRecordDto> {
+    return this.queueService.findOne(id);
+  }
+
+  /**
    * POST /queue
    * Registra la llegada de un paciente (entrada en cola).
    */

@@ -48,6 +48,7 @@ export class UserMapper {
       roles: user.userRoles?.map((ur) => ur.role.name) || [],
       firstName: user.person.firstName,
       lastName: user.person.lastName,
+      phone: user.person.phone ?? null,
       isVet: false,
       requiresPasswordChange,
     };

@@ -5,6 +5,7 @@ import { EncounterConsultationReason } from '../../domain/entities/encounters/en
 import { EncounterEnvironmentalData } from '../../domain/entities/encounters/encounter-environmental-data.entity.js';
 import { EncounterClinicalImpression } from '../../domain/entities/encounters/encounter-clinical-impression.entity.js';
 import { EncounterPlan } from '../../domain/entities/encounters/encounter-plan.entity.js';
+import { EncounterFollowUpConfig } from '../../domain/entities/encounters/encounter-follow-up-config.entity.js';
 import { VaccinationEvent } from '../../domain/entities/encounters/vaccination-event.entity.js';
 import { DewormingEvent } from '../../domain/entities/encounters/deworming-event.entity.js';
 import { Treatment } from '../../domain/entities/encounters/treatment.entity.js';
@@ -15,6 +16,8 @@ import { EncounterVaccinationDraft } from '../../domain/entities/encounters/enco
 import { EncounterTreatmentDraft } from '../../domain/entities/encounters/encounter-treatment-draft.entity.js';
 import { EncounterTreatmentDraftItem } from '../../domain/entities/encounters/encounter-treatment-draft-item.entity.js';
 import { EncounterProcedureDraft } from '../../domain/entities/encounters/encounter-procedure-draft.entity.js';
+import { EncounterTreatmentReviewDraft } from '../../domain/entities/encounters/encounter-treatment-review-draft.entity.js';
+import { TreatmentEvolutionEvent } from '../../domain/entities/encounters/treatment-evolution-event.entity.js';
 import { ENCOUNTER_REACTIVATION_GRACE_MINUTES } from '../../domain/constants/encounter.constants.js';
 import { EncounterStatusEnum } from '../../domain/enums/index.js';
 import {
@@ -27,6 +30,7 @@ import {
   EnvironmentalDataResponseDto,
   ClinicalImpressionResponseDto,
   PlanResponseDto,
+  FollowUpConfigResponseDto,
   VaccinationEventResponseDto,
   VaccinationDraftResponseDto,
   DewormingEventResponseDto,
@@ -34,6 +38,8 @@ import {
   TreatmentItemResponseDto,
   TreatmentDraftResponseDto,
   TreatmentDraftItemResponseDto,
+  TreatmentReviewDraftResponseDto,
+  TreatmentEvolutionEventResponseDto,
   SurgeryResponseDto,
   ProcedureResponseDto,
   ProcedureDraftResponseDto,
@@ -138,9 +144,13 @@ export class EncounterMapper {
   static toPlanDto(e: EncounterPlan): PlanResponseDto {
     return {
       clinicalPlan: e.clinicalPlan ?? null,
-      requiresFollowUp: e.requiresFollowUp,
-      suggestedFollowUpDate: e.suggestedFollowUpDate ? toDate(e.suggestedFollowUpDate) : null,
       planNotes: e.planNotes ?? null,
+    };
+  }
+
+  static toFollowUpConfigDto(e: EncounterFollowUpConfig): FollowUpConfigResponseDto {
+    return {
+      action: e.action,
     };
   }
 
@@ -211,6 +221,7 @@ export class EncounterMapper {
       startDate: toDate(e.startDate)!,
       endDate: e.endDate ? toDate(e.endDate) : null,
       generalInstructions: e.generalInstructions ?? null,
+      replacesTreatmentId: e.replacesTreatmentId ?? null,
       items: (e.items ?? []).map((i) => this.toTreatmentItemDto(i)),
     };
   }
@@ -221,7 +232,55 @@ export class EncounterMapper {
       startDate: toDate(e.startDate)!,
       endDate: e.endDate ? toDate(e.endDate) : null,
       generalInstructions: e.generalInstructions ?? null,
+      replacesTreatmentId: e.replacesTreatmentId ?? null,
       items: (e.items ?? []).map((item) => this.toTreatmentDraftItemDto(item)),
+    };
+  }
+
+  private static treatmentSummary(treatment: Treatment | null | undefined): string {
+    if (!treatment) {
+      return 'Tratamiento';
+    }
+
+    const medicationNames = (treatment.items ?? [])
+      .map((item) => item.medication?.trim())
+      .filter((value): value is string => Boolean(value));
+
+    if (medicationNames.length === 1) {
+      return medicationNames[0];
+    }
+
+    if (medicationNames.length > 1) {
+      return `${medicationNames[0]} + ${medicationNames.length - 1} más`;
+    }
+
+    return treatment.generalInstructions?.trim() || `Tratamiento #${treatment.id}`;
+  }
+
+  static toTreatmentReviewDraftDto(
+    e: EncounterTreatmentReviewDraft,
+  ): TreatmentReviewDraftResponseDto {
+    return {
+      id: e.id,
+      sourceTreatmentId: e.sourceTreatmentId,
+      sourceTreatmentSummary: this.treatmentSummary(e.sourceTreatment),
+      action: e.action,
+      notes: e.notes ?? null,
+    };
+  }
+
+  static toTreatmentEvolutionEventDto(
+    e: TreatmentEvolutionEvent,
+  ): TreatmentEvolutionEventResponseDto {
+    return {
+      id: e.id,
+      treatmentId: e.treatmentId,
+      treatmentSummary: this.treatmentSummary(e.treatment),
+      eventType: e.eventType,
+      notes: e.notes ?? null,
+      replacementTreatmentId: e.replacementTreatmentId ?? null,
+      replacementTreatmentSummary: this.treatmentSummary(e.replacementTreatment),
+      createdAt: toDate(e.createdAt)!,
     };
   }
 
@@ -291,6 +350,8 @@ export class EncounterMapper {
         ? this.toClinicalImpressionDto(enc.clinicalImpression)
         : null,
       plan: enc.plan ? this.toPlanDto(enc.plan) : null,
+      followUpConfig: enc.followUpConfig ? this.toFollowUpConfigDto(enc.followUpConfig) : null,
+      clinicalCaseSummary: null,
 
       vaccinationEvents: (enc.vaccinationEvents ?? []).map((v) => this.toVaccinationEventDto(v)),
       vaccinationDrafts: (enc.vaccinationDrafts ?? []).map((draft) =>
@@ -299,6 +360,12 @@ export class EncounterMapper {
       dewormingEvents: (enc.dewormingEvents ?? []).map((d) => this.toDewormingEventDto(d)),
       treatments: (enc.treatments ?? []).map((t) => this.toTreatmentDto(t)),
       treatmentDrafts: (enc.treatmentDrafts ?? []).map((draft) => this.toTreatmentDraftDto(draft)),
+      treatmentReviewDrafts: (enc.treatmentReviewDrafts ?? []).map((draft) =>
+        this.toTreatmentReviewDraftDto(draft),
+      ),
+      treatmentEvolutionEvents: (enc.treatmentEvolutionEvents ?? []).map((event) =>
+        this.toTreatmentEvolutionEventDto(event),
+      ),
       surgeries: (enc.surgeries ?? []).map((s) => this.toSurgeryDto(s)),
       procedures: (enc.procedures ?? []).map((p) => this.toProcedureDto(p)),
       procedureDrafts: (enc.procedureDrafts ?? []).map((draft) =>

@@ -17,6 +17,7 @@ import { EncounterStatusEnum, QueueStatusEnum } from '../../../domain/enums/inde
 import { EncounterSharedService } from './encounter-shared.service.js';
 import { EncounterTreatmentService } from './encounter-treatment.service.js';
 import { EncounterActionDraftService } from './encounter-action-draft.service.js';
+import { ClinicalCasesService } from '../clinical-cases/clinical-cases.service.js';
 
 @Injectable()
 export class EncounterCoreService {
@@ -31,6 +32,7 @@ export class EncounterCoreService {
     private readonly sharedService: EncounterSharedService,
     private readonly treatmentService: EncounterTreatmentService,
     private readonly draftService: EncounterActionDraftService,
+    private readonly clinicalCasesService: ClinicalCasesService,
   ) {}
 
   /**
@@ -126,7 +128,22 @@ export class EncounterCoreService {
       createdByUserId: userId,
     });
 
-    const saved = await this.encounterRepo.save(encounter);
+    const saved = await this.dataSource.transaction(async (manager) => {
+      const savedEncounter = await manager.getRepository(Encounter).save(encounter);
+
+      if (appointmentId) {
+        const clinicalCaseId = await this.clinicalCasesService.attachCaseFromFollowUpAppointment(
+          appointmentId,
+          savedEncounter.id,
+          manager,
+        );
+        if (clinicalCaseId) {
+          savedEncounter.clinicalCaseId = clinicalCaseId;
+        }
+      }
+
+      return savedEncounter;
+    });
     return this.findOne(saved.id);
   }
 
@@ -168,7 +185,11 @@ export class EncounterCoreService {
   async findOne(id: number): Promise<EncounterResponseDto> {
     await this.treatmentService.syncEncounterTreatmentStatuses(id);
     const encounter = await this.sharedService.findEncounterOrFail(id);
-    return EncounterMapper.toResponseDto(encounter);
+    const response = EncounterMapper.toResponseDto(encounter);
+    response.clinicalCaseSummary = await this.clinicalCasesService.buildEncounterClinicalCaseSummary(
+      encounter.id,
+    );
+    return response;
   }
 
   /**
@@ -196,12 +217,27 @@ export class EncounterCoreService {
     }
 
     await this.dataSource.transaction(async (manager) => {
+      const clinicalCase = await this.clinicalCasesService.prepareEncounterFinalization(
+        encounter,
+        manager,
+      );
+      if (clinicalCase) {
+        encounter.clinicalCaseId = clinicalCase.id;
+      }
+
       await this.draftService.materializeDrafts(encounter, manager);
+      await this.clinicalCasesService.finalizeEncounterClinicalCase(
+        encounter,
+        endTime,
+        dto.controlAppointment,
+        manager,
+      );
 
       await manager.update(Encounter, id, {
         status: EncounterStatusEnum.FINALIZADA,
         endTime,
         generalNotes: dto.generalNotes ?? encounter.generalNotes,
+        clinicalCaseId: encounter.clinicalCaseId ?? null,
         updatedAt: new Date(),
       });
 
@@ -227,6 +263,11 @@ export class EncounterCoreService {
 
     await this.dataSource.transaction(async (manager) => {
       await this.draftService.restoreDraftsFromMaterializedActions(encounter, userId, manager);
+      await this.clinicalCasesService.reactivateEncounterClinicalCaseEffects(
+        encounter,
+        userId,
+        manager,
+      );
 
       await manager.update(Encounter, id, {
         status: EncounterStatusEnum.REACTIVADA,

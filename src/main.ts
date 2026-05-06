@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './infra/filters/http-exception.filter.js';
 import { getCorsConfig } from './infra/config/cors.config.js';
@@ -29,6 +30,7 @@ async function bootstrap() {
     isProduction ? '30d' : '0',
   );
 
+  app.useWebSocketAdapter(new IoAdapter(app));
   app.enableCors(getCorsConfig(configService));
   app.useBodyParser('json', { limit: jsonLimit });
   app.useBodyParser('urlencoded', {

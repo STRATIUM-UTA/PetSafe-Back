@@ -1,4 +1,12 @@
-import { EncounterStatusEnum, TreatmentStatusEnum, SurgeryStatusEnum } from '../../../domain/enums/index.js';
+import {
+  EncounterFollowUpActionEnum,
+  EncounterStatusEnum,
+  SurgeryStatusEnum,
+  TreatmentStatusEnum,
+} from '../../../domain/enums/index.js';
+import {
+  ClinicalCaseSummaryDto,
+} from '../clinical-cases/clinical-case-response.dto.js';
 
 // ── Sub-response types ──────────────────────────────────────────────────────
 
@@ -59,9 +67,11 @@ export class ClinicalImpressionResponseDto {
 
 export class PlanResponseDto {
   clinicalPlan!: string | null;
-  requiresFollowUp!: boolean;
-  suggestedFollowUpDate!: string | null;
   planNotes!: string | null;
+}
+
+export class FollowUpConfigResponseDto {
+  action!: EncounterFollowUpActionEnum;
 }
 
 export class VaccinationEventResponseDto {
@@ -120,6 +130,7 @@ export class TreatmentResponseDto {
   startDate!: string;
   endDate!: string | null;
   generalInstructions!: string | null;
+  replacesTreatmentId!: number | null;
   items!: TreatmentItemResponseDto[];
 }
 
@@ -128,7 +139,27 @@ export class TreatmentDraftResponseDto {
   startDate!: string;
   endDate!: string | null;
   generalInstructions!: string | null;
+  replacesTreatmentId!: number | null;
   items!: TreatmentDraftItemResponseDto[];
+}
+
+export class TreatmentReviewDraftResponseDto {
+  id!: number;
+  sourceTreatmentId!: number;
+  sourceTreatmentSummary!: string;
+  action!: string;
+  notes!: string | null;
+}
+
+export class TreatmentEvolutionEventResponseDto {
+  id!: number;
+  treatmentId!: number;
+  treatmentSummary!: string;
+  eventType!: string;
+  notes!: string | null;
+  replacementTreatmentId!: number | null;
+  replacementTreatmentSummary!: string | null;
+  createdAt!: string;
 }
 
 export class SurgeryResponseDto {
@@ -167,6 +198,16 @@ export class EncounterPatientResponseDto {
   breed!: string;
 }
 
+export class EncounterAttachmentResponseDto {
+  id!: number;
+  url!: string;
+  originalName!: string;
+  mimeType!: string | null;
+  sizeBytes!: number | null;
+  mediaType!: string;
+  createdAt!: string;
+}
+
 // ── Main response ──────────────────────────────────────────────────────────
 
 export class EncounterResponseDto {
@@ -191,12 +232,16 @@ export class EncounterResponseDto {
   environmentalData!: EnvironmentalDataResponseDto | null;
   clinicalImpression!: ClinicalImpressionResponseDto | null;
   plan!: PlanResponseDto | null;
+  followUpConfig!: FollowUpConfigResponseDto | null;
+  clinicalCaseSummary!: ClinicalCaseSummaryDto | null;
 
   vaccinationEvents!: VaccinationEventResponseDto[];
   vaccinationDrafts!: VaccinationDraftResponseDto[];
   dewormingEvents!: DewormingEventResponseDto[];
   treatments!: TreatmentResponseDto[];
   treatmentDrafts!: TreatmentDraftResponseDto[];
+  treatmentReviewDrafts!: TreatmentReviewDraftResponseDto[];
+  treatmentEvolutionEvents!: TreatmentEvolutionEventResponseDto[];
   surgeries!: SurgeryResponseDto[];
   procedures!: ProcedureResponseDto[];
   procedureDrafts!: ProcedureDraftResponseDto[];

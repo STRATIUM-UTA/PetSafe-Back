@@ -49,7 +49,7 @@ export class ReportsController {
    * GET /reports/patients/:patientId/clinical-history/pdf
    * Descarga el historial clinico consolidado del paciente.
    */
-  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA)
+  @Roles(RoleEnum.ADMIN, RoleEnum.MVZ, RoleEnum.RECEPCIONISTA, RoleEnum.CLIENTE_APP)
   @Get('patients/:patientId/clinical-history/pdf')
   async clinicalHistoryPdf(
     @Param('patientId', ParseIntPipe) patientId: number,

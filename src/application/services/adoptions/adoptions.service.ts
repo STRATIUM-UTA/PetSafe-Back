@@ -123,7 +123,10 @@ export class AdoptionsService {
       speciesName: adoption.patient.species?.name ?? null,
       breedName: adoption.patient.breed?.name ?? null,
       contactPhone: adoption.contactPhone ?? null,
+      contactName: adoption.contactName ?? null,
+      contactEmail: adoption.contactEmail ?? null,
       story: adoption.story ?? null,
+      requirements: adoption.requirements ?? null,
       tags: (adoption.tags ?? []).map((tag) => ({
         id: tag.id,
         name: tag.name,

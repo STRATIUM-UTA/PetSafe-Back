@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
+  ManyToOne,
 } from 'typeorm';
 import type { Encounter } from './encounter.entity.js';
 
@@ -21,12 +22,6 @@ export class EncounterPlan {
 
   @Column({ name: 'clinical_plan', type: 'text', nullable: true })
   clinicalPlan!: string | null;
-
-  @Column({ name: 'requires_follow_up', type: 'boolean', default: false })
-  requiresFollowUp!: boolean;
-
-  @Column({ name: 'suggested_follow_up_date', type: 'date', nullable: true })
-  suggestedFollowUpDate!: Date | null;
 
   @Column({ name: 'plan_notes', type: 'text', nullable: true })
   planNotes!: string | null;

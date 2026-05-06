@@ -17,12 +17,16 @@ import { DashboardModule } from './application/modules/dashboard/dashboard.modul
 import { AdoptionsModule } from './application/modules/adoptions/adoptions.module.js';
 import { MetadataModule } from './application/modules/metadata/metadata.module.js';
 import { VaccinationModule } from './application/modules/vaccinations/vaccination.module.js';
+import { ClinicalCasesModule } from './application/modules/clinical-cases/clinical-cases.module.js';
 
 import { UsersModule } from './application/modules/users/users.module.js';
 import { ProcedureSurgeryCatalogModule } from './application/modules/catalogs/procedure-surgery-catalog.module.js';
 import { TreatmentsModule } from './application/modules/treatments/treatments.module.js';
 import { ProceduresModule } from './application/modules/procedures/procedures.module.js';
 import { HealthController } from './presentation/controllers/health/health.controller.js';
+import { PublicPatientsModule } from './application/modules/public/public-patients.module.js';
+import { NotificationsModule } from './application/modules/notifications/notifications.module.js';
+import { AppointmentRequestsModule } from './application/modules/appointment-requests/appointment-requests.module.js';
 
 @Module({
   imports: [
@@ -44,9 +48,13 @@ import { HealthController } from './presentation/controllers/health/health.contr
     AdoptionsModule,
     MetadataModule,
     VaccinationModule,
+    ClinicalCasesModule,
     ProcedureSurgeryCatalogModule,
     TreatmentsModule,
     ProceduresModule,
+    PublicPatientsModule,
+    NotificationsModule,
+    AppointmentRequestsModule,
   ],
   controllers: [HealthController],
   providers: [],

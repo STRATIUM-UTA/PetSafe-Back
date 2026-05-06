@@ -8,7 +8,10 @@ export type AdoptionCatalogResponse = {
   speciesName: string | null;
   breedName: string | null;
   contactPhone: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
   story: string | null;
+  requirements: string | null;
   tags: {
     id: number;
     name: string;

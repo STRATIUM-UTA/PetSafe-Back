@@ -10,6 +10,7 @@ import { Encounter } from '../../../domain/entities/encounters/encounter.entity.
 import { EncounterVaccinationDraft } from '../../../domain/entities/encounters/encounter-vaccination-draft.entity.js';
 import { EncounterTreatmentDraft } from '../../../domain/entities/encounters/encounter-treatment-draft.entity.js';
 import { EncounterTreatmentDraftItem } from '../../../domain/entities/encounters/encounter-treatment-draft-item.entity.js';
+import { EncounterTreatmentReviewDraft } from '../../../domain/entities/encounters/encounter-treatment-review-draft.entity.js';
 import { EncounterProcedureDraft } from '../../../domain/entities/encounters/encounter-procedure-draft.entity.js';
 import { VaccinationEvent } from '../../../domain/entities/encounters/vaccination-event.entity.js';
 import { Treatment } from '../../../domain/entities/encounters/treatment.entity.js';
@@ -22,12 +23,14 @@ import { PatientVaccinationPlanDose } from '../../../domain/entities/vaccination
 import {
   PatientVaccinationPlanDoseStatusEnum,
   PatientVaccinationPlanStatusEnum,
+  TreatmentEvolutionEventTypeEnum,
   TreatmentItemStatusEnum,
   TreatmentStatusEnum,
 } from '../../../domain/enums/index.js';
 import { UpsertVaccinationDraftDto } from '../../../presentation/dto/encounters/upsert-vaccination-draft.dto.js';
 import { CreateTreatmentDto } from '../../../presentation/dto/encounters/create-treatment.dto.js';
 import { CreateProcedureDto } from '../../../presentation/dto/encounters/create-procedure.dto.js';
+import { UpsertTreatmentReviewDraftDto } from '../../../presentation/dto/encounters/upsert-treatment-review-draft.dto.js';
 import { EncounterSharedService } from './encounter-shared.service.js';
 import { VaccinationPlanService } from '../vaccinations/vaccination-plan.service.js';
 
@@ -40,6 +43,8 @@ export class EncounterActionDraftService {
     private readonly treatmentDraftRepo: Repository<EncounterTreatmentDraft>,
     @InjectRepository(EncounterTreatmentDraftItem)
     private readonly treatmentDraftItemRepo: Repository<EncounterTreatmentDraftItem>,
+    @InjectRepository(EncounterTreatmentReviewDraft)
+    private readonly treatmentReviewDraftRepo: Repository<EncounterTreatmentReviewDraft>,
     @InjectRepository(EncounterProcedureDraft)
     private readonly procedureDraftRepo: Repository<EncounterProcedureDraft>,
     @InjectRepository(VaccinationEvent)
@@ -116,6 +121,73 @@ export class EncounterActionDraftService {
 
     await this.findTreatmentDraftOrFail(encounterId, draftId);
     await this.treatmentDraftRepo.delete(draftId);
+  }
+
+  async upsertTreatmentReviewDraft(
+    encounterId: number,
+    dto: UpsertTreatmentReviewDraftDto,
+  ): Promise<void> {
+    const encounter = await this.sharedService.findEncounterOrFail(encounterId);
+    this.sharedService.ensureActive(encounter);
+
+    if (!encounter.clinicalCaseId) {
+      throw new BadRequestException(
+        'La consulta debe estar vinculada a un caso clínico para revisar tratamientos activos.',
+      );
+    }
+
+    if (
+      dto.action === TreatmentEvolutionEventTypeEnum.REEMPLAZA
+    ) {
+      throw new BadRequestException(
+        'El reemplazo de tratamientos se maneja creando un nuevo tratamiento asociado al anterior.',
+      );
+    }
+
+    const sourceTreatment = await this.treatmentRepo.findOne({
+      where: { id: dto.sourceTreatmentId },
+    });
+
+    if (!sourceTreatment || sourceTreatment.deletedAt || !sourceTreatment.isActive) {
+      throw new NotFoundException('Tratamiento activo no encontrado para revisión.');
+    }
+
+    if (sourceTreatment.clinicalCaseId !== encounter.clinicalCaseId) {
+      throw new BadRequestException(
+        'Solo puedes revisar tratamientos que pertenezcan al mismo caso clínico.',
+      );
+    }
+
+    if (sourceTreatment.status !== TreatmentStatusEnum.ACTIVO) {
+      throw new BadRequestException(
+        'Solo puedes revisar tratamientos que actualmente se encuentren activos.',
+      );
+    }
+
+    const existing = await this.treatmentReviewDraftRepo.findOne({
+      where: { encounterId, sourceTreatmentId: dto.sourceTreatmentId },
+    });
+
+    const draft = existing ?? this.treatmentReviewDraftRepo.create({ encounterId });
+    draft.sourceTreatmentId = dto.sourceTreatmentId;
+    draft.action = dto.action;
+    draft.notes = dto.notes?.trim() || null;
+    await this.treatmentReviewDraftRepo.save(draft);
+  }
+
+  async deleteTreatmentReviewDraft(encounterId: number, draftId: number): Promise<void> {
+    const encounter = await this.sharedService.findEncounterOrFail(encounterId);
+    this.sharedService.ensureActive(encounter);
+
+    const draft = await this.treatmentReviewDraftRepo.findOne({
+      where: { id: draftId, encounterId },
+    });
+
+    if (!draft) {
+      throw new NotFoundException('Revisión terapéutica pendiente no encontrada.');
+    }
+
+    await this.treatmentReviewDraftRepo.delete(draftId);
   }
 
   async createProcedureDraft(encounterId: number, dto: CreateProcedureDto): Promise<void> {
@@ -197,6 +269,13 @@ export class EncounterActionDraftService {
     await this.getRepo(EncounterTreatmentDraft, this.treatmentDraftRepo, manager).delete({
       encounterId,
     });
+    await this.getRepo(
+      EncounterTreatmentReviewDraft,
+      this.treatmentReviewDraftRepo,
+      manager,
+    ).delete({
+      encounterId,
+    });
     await this.getRepo(EncounterProcedureDraft, this.procedureDraftRepo, manager).delete({
       encounterId,
     });
@@ -248,6 +327,45 @@ export class EncounterActionDraftService {
       );
     }
 
+    let replacesTreatmentId: number | null = existing?.replacesTreatmentId ?? null;
+    if (dto.replacesTreatmentId !== undefined) {
+      replacesTreatmentId = null;
+    }
+
+    if (dto.replacesTreatmentId !== undefined && dto.replacesTreatmentId !== null) {
+      const sourceTreatment = await this.treatmentRepo.findOne({
+        where: { id: dto.replacesTreatmentId },
+      });
+
+      if (!sourceTreatment || sourceTreatment.deletedAt || !sourceTreatment.isActive) {
+        throw new NotFoundException('El tratamiento que intentas reemplazar no existe.');
+      }
+
+      if (!encounter.clinicalCaseId || sourceTreatment.clinicalCaseId !== encounter.clinicalCaseId) {
+        throw new BadRequestException(
+          'Solo puedes reemplazar tratamientos que pertenezcan al mismo caso clínico.',
+        );
+      }
+
+      if (sourceTreatment.status !== TreatmentStatusEnum.ACTIVO) {
+        throw new BadRequestException(
+          'Solo puedes reemplazar tratamientos que se encuentren activos.',
+        );
+      }
+
+      const existingReview = await this.treatmentReviewDraftRepo.findOne({
+        where: { encounterId: encounter.id, sourceTreatmentId: sourceTreatment.id },
+      });
+
+      if (existingReview) {
+        throw new BadRequestException(
+          'No puedes reemplazar un tratamiento que ya tiene otra revisión pendiente en esta consulta.',
+        );
+      }
+
+      replacesTreatmentId = sourceTreatment.id;
+    }
+
     await this.dataSource.transaction(async (manager) => {
       const draftRepo = this.getRepo(EncounterTreatmentDraft, this.treatmentDraftRepo, manager);
       const itemRepo = this.getRepo(
@@ -265,6 +383,7 @@ export class EncounterActionDraftService {
       draft.startDate = startDate;
       draft.endDate = endDate;
       draft.generalInstructions = dto.generalInstructions?.trim() || null;
+      draft.replacesTreatmentId = replacesTreatmentId;
       const savedDraft = await draftRepo.save(draft);
 
       if (existing) {
@@ -397,10 +516,12 @@ export class EncounterActionDraftService {
 
     const treatment = treatmentRepo.create({
       encounterId: encounter.id,
+      clinicalCaseId: encounter.clinicalCaseId ?? null,
       status: treatmentStatus,
       startDate: new Date(draft.startDate),
       endDate: draft.endDate ? new Date(draft.endDate) : null,
       generalInstructions: draft.generalInstructions ?? null,
+      replacesTreatmentId: draft.replacesTreatmentId ?? null,
     });
     const savedTreatment = await treatmentRepo.save(treatment);
 
@@ -528,6 +649,7 @@ export class EncounterActionDraftService {
         startDate: new Date(treatment.startDate),
         endDate: treatment.endDate ? new Date(treatment.endDate) : null,
         generalInstructions: treatment.generalInstructions ?? null,
+        replacesTreatmentId: treatment.replacesTreatmentId ?? null,
       }),
     );
 

@@ -6,6 +6,8 @@ import { Breed } from '../catalogs/breed.entity.js';
 import { Color } from '../catalogs/color.entity.js';
 import type { PatientTutor } from './patient-tutor.entity.js';
 import type { PatientCondition } from './patient-condition.entity.js';
+import type { Surgery } from '../encounters/surgery.entity.js';
+import type { ClinicalCase } from '../encounters/clinical-case.entity.js';
 
 @Entity({ name: 'patients' })
 export class Patient extends BaseAuditEntity {
@@ -75,9 +77,18 @@ export class Patient extends BaseAuditEntity {
   @Column({ name: 'general_history', type: 'text', nullable: true })
   generalHistory!: string | null;
 
+  @Column({ name: 'qr_token', type: 'uuid', unique: true, nullable: true })
+  qrToken!: string | null;
+
   @OneToMany('PatientTutor', 'patient')
   tutors!: PatientTutor[];
 
   @OneToMany('PatientCondition', 'patient')
   conditions!: PatientCondition[];
+
+  @OneToMany('Surgery', 'patient')
+  surgeries!: Surgery[];
+
+  @OneToMany('ClinicalCase', 'patient')
+  clinicalCases!: ClinicalCase[];
 }

@@ -463,6 +463,50 @@ export class QueueService {
   }
 
   // ── POST /queue ──
+  async findOne(id: number): Promise<QueueEntryRecordDto> {
+    return this.findOneDto(id);
+  }
+
+  async findByEncounter(encounterId: number): Promise<QueueEntryRecordDto> {
+    const encounter = await this.encounterRepo.findOne({
+      where: { id: encounterId },
+      select: {
+        id: true,
+        queueEntryId: true,
+      },
+    });
+
+    if (!encounter) {
+      throw new NotFoundException('Consulta no encontrada.');
+    }
+
+    if (encounter.queueEntryId) {
+      return this.findOneDto(encounter.queueEntryId);
+    }
+
+    const queueEntry = await this.queueRepo
+      .createQueryBuilder('q')
+      .innerJoin(
+        Encounter,
+        'encounter',
+        'encounter.queueEntryId = q.id AND encounter.deletedAt IS NULL',
+      )
+      .where('encounter.id = :encounterId', { encounterId })
+      .andWhere('q.deleted_at IS NULL')
+      .orderBy('q.updated_at', 'DESC')
+      .addOrderBy('q.id', 'DESC')
+      .getOne();
+
+    if (!queueEntry) {
+      throw new NotFoundException(
+        'No se encontró una entrada operativa asociada a esta consulta.',
+      );
+    }
+
+    return this.findOneDto(queueEntry.id);
+  }
+
+  // ── POST /queue ──
   async create(dto: CreateQueueEntryDto, userId: number): Promise<QueueEntryRecordDto> {
     // 1) Validar paciente
     const patient = await this.patientRepo.findOne({ where: { id: dto.patientId } });
@@ -507,6 +551,11 @@ export class QueueService {
       if (formatDate(linkedAppointment.scheduledDate) !== formatDate(new Date())) {
         throw new BadRequestException(
           'Solo se puede registrar llegada en cola para citas del día actual.',
+        );
+      }
+      if (!linkedAppointment.scheduledTime || !linkedAppointment.endTime) {
+        throw new BadRequestException(
+          'La cita de control aún no tiene hora confirmada y no puede registrarse en cola.',
         );
       }
       if (

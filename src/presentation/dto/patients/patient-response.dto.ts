@@ -16,6 +16,7 @@ export class PaginatedPatientsResponseDto {
 export class PatientResponseDto {
   id!: number;
   code!: string;
+  qrToken!: string | null;
   name!: string;
   sex!: string;
   birthDate?: Date | null;

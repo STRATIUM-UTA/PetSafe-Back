@@ -60,6 +60,7 @@ export class PatientMapper {
     return {
       id: patient.id,
       code: patient.code ?? '',
+      qrToken: patient.qrToken ?? null,
       name: patient.name,
       sex: patient.sex,
       birthDate: patient.birthDate ?? null,

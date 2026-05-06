@@ -11,13 +11,24 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/webp',
 ]);
 
+const ALLOWED_ENCOUNTER_FILE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+]);
+
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_ENCOUNTER_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_FORM_FIELDS = 30;
 const MAX_FORM_PARTS = 32;
 
 export const ASSETS_ROOT = join(process.cwd(), 'assets');
 export const PATIENT_UPLOADS_DIR = join(ASSETS_ROOT, 'uploads', 'patients');
 export const PATIENT_UPLOADS_URL_PREFIX = '/assets/uploads/patients';
+export const ENCOUNTER_UPLOADS_DIR = join(ASSETS_ROOT, 'uploads', 'encounters');
+export const ENCOUNTER_UPLOADS_URL_PREFIX = '/assets/uploads/encounters';
 
 const ensureDirectory = (directory: string): void => {
   if (!existsSync(directory)) {
@@ -39,6 +50,8 @@ const sanitizeExtension = (fileName: string, mimeType?: string): string => {
       return '.png';
     case 'image/webp':
       return '.webp';
+    case 'application/pdf':
+      return '.pdf';
     default:
       return '';
   }
@@ -76,6 +89,40 @@ export const patientImageUploadOptions = {
   },
 };
 
+export const encounterFileUploadOptions = {
+  storage: diskStorage({
+    destination: (_req, _file, callback) => {
+      ensureDirectory(ENCOUNTER_UPLOADS_DIR);
+      callback(null, ENCOUNTER_UPLOADS_DIR);
+    },
+    filename: (_req, file, callback) => {
+      const extension = sanitizeExtension(file.originalname, file.mimetype);
+      callback(null, `${randomUUID()}${extension}`);
+    },
+  }),
+  limits: {
+    fileSize: MAX_ENCOUNTER_FILE_SIZE_BYTES,
+    files: 1,
+    fields: MAX_FORM_FIELDS,
+    parts: MAX_FORM_PARTS,
+  },
+  fileFilter: (_req: unknown, file: { mimetype: string }, callback: Function) => {
+    if (!ALLOWED_ENCOUNTER_FILE_MIME_TYPES.has(file.mimetype)) {
+      callback(
+        new BadRequestException(
+          'El archivo debe ser JPG, PNG, WEBP o PDF y no superar 10 MB.',
+        ),
+        false,
+      );
+      return;
+    }
+
+    callback(null, true);
+  },
+};
+
 export const ensureAssetsDirectories = (): void => {
   ensureDirectory(PATIENT_UPLOADS_DIR);
+  ensureDirectory(ENCOUNTER_UPLOADS_DIR);
 };
+

@@ -8,6 +8,7 @@ import { EncounterClinicalExam } from '../../../domain/entities/encounters/encou
 import { EncounterEnvironmentalData } from '../../../domain/entities/encounters/encounter-environmental-data.entity.js';
 import { EncounterClinicalImpression } from '../../../domain/entities/encounters/encounter-clinical-impression.entity.js';
 import { EncounterPlan } from '../../../domain/entities/encounters/encounter-plan.entity.js';
+import { EncounterFollowUpConfig } from '../../../domain/entities/encounters/encounter-follow-up-config.entity.js';
 import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { UpsertConsultationReasonDto } from '../../../presentation/dto/encounters/upsert-consultation-reason.dto.js';
 import { UpsertAnamnesisDto } from '../../../presentation/dto/encounters/upsert-anamnesis.dto.js';
@@ -15,7 +16,9 @@ import { UpsertClinicalExamDto } from '../../../presentation/dto/encounters/upse
 import { UpsertEnvironmentalDataDto } from '../../../presentation/dto/encounters/upsert-environmental-data.dto.js';
 import { UpsertClinicalImpressionDto } from '../../../presentation/dto/encounters/upsert-clinical-impression.dto.js';
 import { UpsertPlanDto } from '../../../presentation/dto/encounters/upsert-plan.dto.js';
+import { EncounterFollowUpActionEnum } from '../../../domain/enums/index.js';
 import { EncounterSharedService } from './encounter-shared.service.js';
+import { UpsertFollowUpConfigDto } from '../../../presentation/dto/encounters/upsert-follow-up-config.dto.js';
 
 @Injectable()
 export class EncounterRecordsService {
@@ -32,6 +35,8 @@ export class EncounterRecordsService {
     private readonly clinicalImpressionRepo: Repository<EncounterClinicalImpression>,
     @InjectRepository(EncounterPlan)
     private readonly planRepo: Repository<EncounterPlan>,
+    @InjectRepository(EncounterFollowUpConfig)
+    private readonly followUpConfigRepo: Repository<EncounterFollowUpConfig>,
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
     private readonly sharedService: EncounterSharedService,
@@ -156,27 +161,35 @@ export class EncounterRecordsService {
   }
 
   /**
-   * Registra o reemplaza el plan terapéutico y de seguimiento.
+   * Registra o reemplaza el plan clínico documentado.
    */
   async upsertPlan(encounterId: number, dto: UpsertPlanDto): Promise<void> {
     const encounter = await this.sharedService.findEncounterOrFail(encounterId);
     this.sharedService.ensureActive(encounter);
 
-    const requiresFollowUp = dto.requiresFollowUp ?? false;
-    if (requiresFollowUp && !dto.suggestedFollowUpDate) {
-      throw new BadRequestException(
-        'La fecha de seguimiento es obligatoria cuando se requiere seguimiento.',
-      );
-    }
-
     await this.planRepo.save({
       encounterId,
       clinicalPlan: dto.clinicalPlan ?? null,
-      requiresFollowUp,
-      suggestedFollowUpDate: dto.suggestedFollowUpDate
-        ? new Date(dto.suggestedFollowUpDate)
-        : null,
       planNotes: dto.planNotes ?? null,
+    });
+  }
+
+  async upsertFollowUpConfig(
+    encounterId: number,
+    dto: UpsertFollowUpConfigDto,
+  ): Promise<void> {
+    const encounter = await this.sharedService.findEncounterOrFail(encounterId);
+    this.sharedService.ensureActive(encounter);
+
+    if (dto.action !== EncounterFollowUpActionEnum.NONE && !encounter.clinicalCaseId) {
+      throw new BadRequestException(
+        'Debes vincular primero la consulta a un caso clínico antes de definir el seguimiento.',
+      );
+    }
+
+    await this.followUpConfigRepo.save({
+      encounterId,
+      action: dto.action,
     });
   }
 }

@@ -1,0 +1,1223 @@
+{
+  "info": {
+    "name": "PetSafe — Módulo de Adopción",
+    "description": "Pruebas de integración para adopciones y tags de adopción: CRUD completo, catálogo, búsqueda y transiciones de estado.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@safepet.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": "Admin123!"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "patientId",
+      "value": "1",
+      "description": "ID de paciente existente en seed"
+    },
+    {
+      "key": "patientIdForDelete",
+      "value": "2",
+      "description": "ID de otro paciente para la adopción que se eliminará"
+    },
+    {
+      "key": "adopterClientId",
+      "value": "1",
+      "description": "ID de cliente existente en seed para asignar como adoptante"
+    },
+    {
+      "key": "tagId",
+      "value": "",
+      "description": "ID del tag creado en pruebas de tags"
+    },
+    {
+      "key": "tagToDeleteId",
+      "value": "",
+      "description": "ID del tag creado para la prueba de eliminación"
+    },
+    {
+      "key": "adoptionId",
+      "value": "",
+      "description": "ID de adopción principal, usada en get/update"
+    },
+    {
+      "key": "adoptionToDeleteId",
+      "value": "",
+      "description": "ID de adopción creada para la prueba de eliminación"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Setup",
+      "item": [
+        {
+          "name": "✅ Login — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
+                  "  pm.test('Token capturado', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏷️ Tags de Adopción",
+      "item": [
+        {
+          "name": "✅ Crear tag válido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('tagId', body.id);",
+                  "  pm.test('ID capturado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "  pm.test('Nombre normalizado (Title Case)', function () {",
+                  "    pm.expect(body.name).to.match(/^[A-Z]/);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"juguetón y amigable\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear tag — nombre duplicado (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 409', function () {",
+                  "  pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Mensaje de conflicto presente', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "description": "Mismo nombre que el tag creado en el paso anterior.",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"juguetón y amigable\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear tag — sin nombre (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags"]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar tags (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Respuesta tiene data y meta', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags"]
+            }
+          }
+        },
+        {
+          "name": "✅ Buscar tags (search-summary)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Respuesta es array', function () {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags/search-summary?search=juguet&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags", "search-summary"],
+              "query": [
+                { "key": "search", "value": "juguet" },
+                { "key": "limit", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener tag por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('ID coincide', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.id).to.eql(parseInt(pm.collectionVariables.get('tagId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags/{{tagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags", "{{tagId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener tag — inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags", "999999"]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Nombre actualizado', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.name).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"sociable y activo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags/{{tagId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags", "{{tagId}}"]
+            }
+          }
+        },
+        {
+          "name": "🔧 Crear tag para eliminar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('tagToDeleteId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"tag para eliminar prueba\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags"]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Mensaje de eliminación', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags/{{tagToDeleteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags", "{{tagToDeleteId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener tag eliminado (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 — tag eliminado no visible', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoption-tags/{{tagToDeleteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoption-tags", "{{tagToDeleteId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🐾 Crear Adopción",
+      "item": [
+        {
+          "name": "✅ Crear adopción válida (con tag)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('adoptionId', body.id);",
+                  "  pm.test('ID capturado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "  pm.test('Estado inicial DISPONIBLE', function () {",
+                  "    pm.expect(body.status).to.eql('DISPONIBLE');",
+                  "  });",
+                  "  pm.test('adopterClientId es null', function () {",
+                  "    pm.expect(body.adopterClientId).to.be.null;",
+                  "  });",
+                  "  pm.test('adoptionDate es null', function () {",
+                  "    pm.expect(body.adoptionDate).to.be.null;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"story\": \"Cachorro encontrado en la calle, muy sociable y sano.\",\n  \"requirements\": \"Familia con espacio al aire libre.\",\n  \"notes\": \"Prueba de integración — adopción con tag.\",\n  \"contactName\": \"Clínica PetSafe\",\n  \"contactPhone\": \"0991234567\",\n  \"contactEmail\": \"adopcion@petsafe.com\",\n  \"tagIds\": [{{tagId}}]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear adopción — sin contactPhone (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Mensaje de error presente', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"notes\": \"Sin contactPhone\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear adopción — patientId inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Mensaje de paciente no encontrado', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message).to.include('aciente');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": 999999,\n  \"contactPhone\": \"0991234567\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear adopción — tagId inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Mensaje de tags no encontrados', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"contactPhone\": \"0991234567\",\n  \"tagIds\": [999999]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear adopción — email inválido (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"contactPhone\": \"0991234567\",\n  \"contactEmail\": \"no-es-un-email\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear adopción — sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"contactPhone\": \"0991234567\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Listar Adopciones",
+      "item": [
+        {
+          "name": "✅ Listar todas (findAll)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Respuesta es array', function () {",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "pm.test('Adopción creada está en la lista', function () {",
+                  "  const body = pm.response.json();",
+                  "  const id = parseInt(pm.collectionVariables.get('adoptionId'));",
+                  "  pm.expect(body.some(a => a.id === id)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions"]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar basic — paginado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Respuesta tiene data y meta', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('meta');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "});",
+                  "pm.test('Limit respetado', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.length).to.be.at.most(5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/basic?page=1&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "basic"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar basic — con búsqueda",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Resultado de búsqueda es array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/basic?search=prueba",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "basic"],
+              "query": [
+                { "key": "search", "value": "prueba" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Catálogo — solo DISPONIBLE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Solo registros DISPONIBLE', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "pm.test('Adopción creada (DISPONIBLE) aparece en catálogo', function () {",
+                  "  const body = pm.response.json();",
+                  "  const id = parseInt(pm.collectionVariables.get('adoptionId'));",
+                  "  pm.expect(body.data.some(a => a.id === id)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/catalog",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "catalog"]
+            }
+          }
+        },
+        {
+          "name": "✅ Catálogo — con búsqueda",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Respuesta válida', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/catalog?search=cachorro",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "catalog"],
+              "query": [
+                { "key": "search", "value": "cachorro" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Obtener Adopción",
+      "item": [
+        {
+          "name": "✅ Obtener adopción por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('ID coincide', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.id).to.eql(parseInt(pm.collectionVariables.get('adoptionId')));",
+                  "});",
+                  "pm.test('Relación patient presente', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.patient).to.exist;",
+                  "});",
+                  "pm.test('Tags presentes', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.tags).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "{{adoptionId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener adopción — inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "999999"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "✏️ Actualizar Adopción",
+      "item": [
+        {
+          "name": "✅ Actualizar datos básicos (notas, contacto)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Notas actualizadas', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.notes).to.eql('Notas actualizadas en prueba de integración.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Notas actualizadas en prueba de integración.\",\n  \"contactPhone\": \"0999876543\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "{{adoptionId}}"]
+            }
+          }
+        },
+        {
+          "name": "✅ Cambiar estado a EN_PROCESO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Estado cambia a EN_PROCESO', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('EN_PROCESO');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EN_PROCESO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "{{adoptionId}}"]
+            }
+          }
+        },
+        {
+          "name": "✅ Cambiar estado a ADOPTADO (adoptionDate se asigna)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Estado cambia a ADOPTADO', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('ADOPTADO');",
+                  "});",
+                  "pm.test('adoptionDate asignada automáticamente', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.adoptionDate).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ADOPTADO\",\n  \"adopterClientId\": {{adopterClientId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "{{adoptionId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Actualizar — adopterClientId inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"adopterClientId\": 999999\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "{{adoptionId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Actualizar — estado inválido (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ESTADO_INVALIDO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "{{adoptionId}}"]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar datos básicos con /basic",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Story actualizada', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.story).to.eql('Historia actualizada vía /basic.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "description": "Endpoint PATCH /basic acepta multipart/form-data. Este ejemplo envía solo campos de texto (sin imagen).",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "story", "value": "Historia actualizada vía /basic.", "type": "text" },
+                { "key": "requirements", "value": "Familia tranquila, sin niños pequeños.", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/{{adoptionId}}/basic",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "{{adoptionId}}", "basic"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗑️ Eliminar Adopción",
+      "description": "Crea una adopción nueva para eliminarla. No afecta adoptionId principal.",
+      "item": [
+        {
+          "name": "🔧 Crear adopción para eliminar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('adoptionToDeleteId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": {{patientIdForDelete}},\n  \"contactPhone\": \"0990000001\",\n  \"notes\": \"Adopción creada para prueba de eliminación\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adoptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions"]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar adopción (soft delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Eliminación exitosa (200 o 204)', function () {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/{{adoptionToDeleteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "{{adoptionToDeleteId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener adopción eliminada (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 — no visible tras eliminar', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/{{adoptionToDeleteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "{{adoptionToDeleteId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar adopción inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/adoptions/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["adoptions", "999999"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

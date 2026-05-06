@@ -19,6 +19,7 @@ import type { EncounterClinicalExam } from './encounter-clinical-exam.entity.js'
 import type { EncounterEnvironmentalData } from './encounter-environmental-data.entity.js';
 import type { EncounterClinicalImpression } from './encounter-clinical-impression.entity.js';
 import type { EncounterPlan } from './encounter-plan.entity.js';
+import type { EncounterFollowUpConfig } from './encounter-follow-up-config.entity.js';
 import type { Treatment } from './treatment.entity.js';
 import type { VaccinationEvent } from './vaccination-event.entity.js';
 import type { DewormingEvent } from './deworming-event.entity.js';
@@ -27,6 +28,9 @@ import type { Procedure } from './procedure.entity.js';
 import type { EncounterVaccinationDraft } from './encounter-vaccination-draft.entity.js';
 import type { EncounterTreatmentDraft } from './encounter-treatment-draft.entity.js';
 import type { EncounterProcedureDraft } from './encounter-procedure-draft.entity.js';
+import type { ClinicalCase } from './clinical-case.entity.js';
+import type { EncounterTreatmentReviewDraft } from './encounter-treatment-review-draft.entity.js';
+import type { TreatmentEvolutionEvent } from './treatment-evolution-event.entity.js';
 
 @Entity({ name: 'encounters' })
 export class Encounter extends BaseAuditEntity {
@@ -79,6 +83,13 @@ export class Encounter extends BaseAuditEntity {
   @Column({ name: 'general_notes', type: 'text', nullable: true })
   generalNotes!: string | null;
 
+  @Column({ name: 'clinical_case_id', type: 'int', nullable: true })
+  clinicalCaseId!: number | null;
+
+  @ManyToOne('ClinicalCase', 'encounters', { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'clinical_case_id' })
+  clinicalCase!: ClinicalCase | null;
+
   @Column({ name: 'created_by_user_id', type: 'int', nullable: true })
   createdByUserId!: number | null;
 
@@ -109,6 +120,9 @@ export class Encounter extends BaseAuditEntity {
   @OneToOne('EncounterPlan', 'encounter', { cascade: true })
   plan!: EncounterPlan | null;
 
+  @OneToOne('EncounterFollowUpConfig', 'encounter', { cascade: true })
+  followUpConfig!: EncounterFollowUpConfig | null;
+
   // ── Detail sub-entities (1:N) ──
   @OneToMany('Treatment', 'encounter', { cascade: true })
   treatments!: Treatment[];
@@ -131,6 +145,12 @@ export class Encounter extends BaseAuditEntity {
   @OneToMany('EncounterTreatmentDraft', 'encounter', { cascade: true })
   treatmentDrafts!: EncounterTreatmentDraft[];
 
+  @OneToMany('EncounterTreatmentReviewDraft', 'encounter', { cascade: true })
+  treatmentReviewDrafts!: EncounterTreatmentReviewDraft[];
+
   @OneToMany('EncounterProcedureDraft', 'encounter', { cascade: true })
   procedureDrafts!: EncounterProcedureDraft[];
+
+  @OneToMany('TreatmentEvolutionEvent', 'encounter', { cascade: true })
+  treatmentEvolutionEvents!: TreatmentEvolutionEvent[];
 }

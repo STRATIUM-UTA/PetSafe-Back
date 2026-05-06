@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Post,
   Put,
@@ -9,8 +10,11 @@ import {
   Query,
   ParseIntPipe,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Request,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { EncountersService } from '../../../application/services/encounters/encounters.service.js';
 import { CreateEncounterDto } from '../../dto/encounters/create-encounter.dto.js';
@@ -21,12 +25,19 @@ import { UpsertClinicalExamDto } from '../../dto/encounters/upsert-clinical-exam
 import { UpsertEnvironmentalDataDto } from '../../dto/encounters/upsert-environmental-data.dto.js';
 import { UpsertClinicalImpressionDto } from '../../dto/encounters/upsert-clinical-impression.dto.js';
 import { UpsertPlanDto } from '../../dto/encounters/upsert-plan.dto.js';
+import { UpsertClinicalCaseLinkDto } from '../../dto/encounters/upsert-clinical-case-link.dto.js';
+import { UpsertFollowUpConfigDto } from '../../dto/encounters/upsert-follow-up-config.dto.js';
 import { CreateVaccinationEventDto } from '../../dto/encounters/create-vaccination-event.dto.js';
 import { CreateDewormingEventDto } from '../../dto/encounters/create-deworming-event.dto.js';
 import { CreateTreatmentDto } from '../../dto/encounters/create-treatment.dto.js';
 import { CreateSurgeryDto } from '../../dto/encounters/create-surgery.dto.js';
 import { CreateProcedureDto } from '../../dto/encounters/create-procedure.dto.js';
 import { UpsertVaccinationDraftDto } from '../../dto/encounters/upsert-vaccination-draft.dto.js';
+import { UpsertTreatmentReviewDraftDto } from '../../dto/encounters/upsert-treatment-review-draft.dto.js';
+import {
+  encounterFileUploadOptions,
+  ENCOUNTER_UPLOADS_URL_PREFIX,
+} from '../../../infra/config/uploads.config.js';
 
 import { JwtAuthGuard } from '../../../infra/security/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../infra/security/guards/roles.guard.js';
@@ -160,6 +171,24 @@ export class EncountersController {
     return this.encountersService.upsertPlan(id, dto);
   }
 
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Put(':id/clinical-case')
+  upsertClinicalCaseLink(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertClinicalCaseLinkDto,
+  ) {
+    return this.encountersService.upsertClinicalCaseLink(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Put(':id/follow-up-config')
+  upsertFollowUpConfig(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertFollowUpConfigDto,
+  ) {
+    return this.encountersService.upsertFollowUpConfig(id, dto);
+  }
+
   // ── Eventos 1:N ────────────────────────────────────────────────────────────
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
@@ -264,6 +293,24 @@ export class EncountersController {
   }
 
   @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Post(':id/treatment-review-drafts')
+  upsertTreatmentReviewDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertTreatmentReviewDraftDto,
+  ) {
+    return this.encountersService.upsertTreatmentReviewDraft(id, dto);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Patch(':id/treatment-review-drafts/:draftId/delete')
+  deleteTreatmentReviewDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('draftId', ParseIntPipe) draftId: number,
+  ) {
+    return this.encountersService.deleteTreatmentReviewDraft(id, draftId);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
   @Post(':id/procedure-drafts')
   createProcedureDraft(
     @Param('id', ParseIntPipe) id: number,
@@ -289,5 +336,39 @@ export class EncountersController {
     @Param('draftId', ParseIntPipe) draftId: number,
   ) {
     return this.encountersService.deleteProcedureDraft(id, draftId);
+  }
+
+  // ── Attachments (archivos adjuntos) ────────────────────────────────────────
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Get(':id/attachments')
+  listAttachments(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}${ENCOUNTER_UPLOADS_URL_PREFIX}`;
+    return this.encountersService.listAttachments(id, baseUrl);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Post(':id/attachments')
+  @UseInterceptors(FileInterceptor('file', encounterFileUploadOptions))
+  uploadAttachment(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: any,
+    @Request() req: any,
+  ) {
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}${ENCOUNTER_UPLOADS_URL_PREFIX}`;
+    return this.encountersService.uploadAttachment(id, file, req.user?.userId ?? null, baseUrl);
+  }
+
+  @Roles(RoleEnum.MVZ, RoleEnum.ADMIN)
+  @Delete(':id/attachments/:fileId')
+  deleteAttachment(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('fileId', ParseIntPipe) fileId: number,
+  ) {
+    return this.encountersService.deleteAttachment(id, fileId);
   }
 }
