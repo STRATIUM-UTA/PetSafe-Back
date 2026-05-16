@@ -1,0 +1,575 @@
+{
+  "info": {
+    "name": "PetSafe — Notificaciones estado y dispositivo faltante",
+    "description": "Pruebas complementarias para endpoints de notificaciones no cubiertos: device-token, unread-count, mark read, read-all y delete. Genera una notificación real mediante una solicitud de cita rechazada.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "const envBaseUrl = pm.environment.get('baseUrl') || pm.environment.get('base_url');",
+          "if (envBaseUrl) {",
+          "  pm.collectionVariables.set('baseUrl', envBaseUrl);",
+          "  pm.collectionVariables.set('base_url', envBaseUrl);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@safepet.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": "Admin123!"
+    },
+    {
+      "key": "clientEmail",
+      "value": "cliente@safepet.com"
+    },
+    {
+      "key": "clientPassword",
+      "value": "Cliente123!"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "clientToken",
+      "value": ""
+    },
+    {
+      "key": "patientId",
+      "value": "1"
+    },
+    {
+      "key": "appointmentRequestId",
+      "value": ""
+    },
+    {
+      "key": "notificationId",
+      "value": ""
+    },
+    {
+      "key": "fcmToken",
+      "value": "postman-fcm-token-{{$timestamp}}"
+    },
+    {
+      "key": "preferredDate",
+      "value": "2026-06-16"
+    },
+    {
+      "key": "preferredTime",
+      "value": "11:00"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Setup",
+      "item": [
+        {
+          "name": "✅ Login — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  });",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Login — cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  });",
+                  "  pm.collectionVariables.set('clientToken', body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{clientPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📲 Device token",
+      "item": [
+        {
+          "name": "✅ Registrar token FCM",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200 o 201)', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcmToken\": \"{{fcmToken}}\",\n  \"platform\": \"postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/device-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "device-token"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Contador de no leídas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/my/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "my",
+                "unread-count"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔔 Estado de notificaciones",
+      "item": [
+        {
+          "name": "✅ Crear solicitud para generar notificación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200 o 201)', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const paths = [\"id\"];",
+                  "  const read = (obj, path) => path.split(\".\").reduce((acc, key) => acc && acc[key], obj);",
+                  "  let value;",
+                  "  for (const path of paths) {",
+                  "    value = read(body, path);",
+                  "    if (value !== undefined && value !== null && value !== \"\") break;",
+                  "  }",
+                  "  if (value !== undefined && value !== null && value !== \"\") {",
+                  "    pm.collectionVariables.set('appointmentRequestId', value);",
+                  "    pm.test('appointmentRequestId capturado', () => pm.expect(String(value)).to.not.equal(''));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"reason\": \"Solicitud para validar notificaciones desde Postman\",\n  \"preferredDate\": \"{{preferredDate}}\",\n  \"preferredTime\": \"{{preferredTime}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointment-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointment-requests"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Rechazar solicitud y disparar notificación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RECHAZADA\",\n  \"staffNotes\": \"Notificación generada por colección Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/appointment-requests/{{appointmentRequestId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointment-requests",
+                "{{appointmentRequestId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar mis notificaciones y capturar ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const paths = [\"data.0.id\",\"0.id\"];",
+                  "  const read = (obj, path) => path.split(\".\").reduce((acc, key) => acc && acc[key], obj);",
+                  "  let value;",
+                  "  for (const path of paths) {",
+                  "    value = read(body, path);",
+                  "    if (value !== undefined && value !== null && value !== \"\") break;",
+                  "  }",
+                  "  if (value !== undefined && value !== null && value !== \"\") {",
+                  "    pm.collectionVariables.set('notificationId', value);",
+                  "    pm.test('notificationId capturado', () => pm.expect(String(value)).to.not.equal(''));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/my",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "my"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Marcar notificación como leída",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Marcar todas como leídas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar notificación capturada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Remover token FCM",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcmToken\": \"{{fcmToken}}\",\n  \"platform\": \"postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/device-token/remove",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "device-token",
+                "remove"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

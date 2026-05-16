@@ -1,0 +1,1116 @@
+{
+  "info": {
+    "name": "PetSafe — Sistema y Catálogos faltantes",
+    "description": "Pruebas complementarias para módulos sin colección Postman dedicada: metadata, colors y catálogos de procedimientos/cirugías. No requiere configuración manual después de importar.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "const envBaseUrl = pm.environment.get('baseUrl') || pm.environment.get('base_url');",
+          "if (envBaseUrl) {",
+          "  pm.collectionVariables.set('baseUrl', envBaseUrl);",
+          "  pm.collectionVariables.set('base_url', envBaseUrl);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@safepet.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": "Admin123!"
+    },
+    {
+      "key": "clientEmail",
+      "value": "cliente@safepet.com"
+    },
+    {
+      "key": "clientPassword",
+      "value": "Cliente123!"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "clientToken",
+      "value": ""
+    },
+    {
+      "key": "colorId",
+      "value": ""
+    },
+    {
+      "key": "procedureCatalogId",
+      "value": ""
+    },
+    {
+      "key": "surgeryCatalogId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Setup",
+      "item": [
+        {
+          "name": "✅ Login — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  });",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧩 Metadata",
+      "item": [
+        {
+          "name": "✅ Listar enums públicos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('Respuesta es objeto de enums', () => pm.expect(pm.response.json()).to.be.an('object'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/metadata/enums",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metadata",
+                "enums"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎨 Colors",
+      "item": [
+        {
+          "name": "✅ Listar colores",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/colors?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "colors"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear color",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (201)', function () {",
+                  "  pm.expect([201]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const paths = [\"id\"];",
+                  "  const read = (obj, path) => path.split(\".\").reduce((acc, key) => acc && acc[key], obj);",
+                  "  let value;",
+                  "  for (const path of paths) {",
+                  "    value = read(body, path);",
+                  "    if (value !== undefined && value !== null && value !== \"\") break;",
+                  "  }",
+                  "  if (value !== undefined && value !== null && value !== \"\") {",
+                  "    pm.collectionVariables.set('colorId', value);",
+                  "    pm.test('colorId capturado', () => pm.expect(String(value)).to.not.equal(''));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Color Postman {{$timestamp}}\",\n  \"hexCode\": \"#1F8A70\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/colors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "colors"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear color sin nombre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (400)', function () {",
+                  "  pm.expect([400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hexCode\": \"#FFFFFF\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/colors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "colors"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener color por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/colors/{{colorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "colors",
+                "{{colorId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar color",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hexCode\": \"#2D6A4F\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/colors/{{colorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "colors",
+                "{{colorId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar color",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/colors/{{colorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "colors",
+                "{{colorId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener color eliminado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (404)', function () {",
+                  "  pm.expect([404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/colors/{{colorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "colors",
+                "{{colorId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧪 Catálogo de procedimientos",
+      "item": [
+        {
+          "name": "✅ Crear procedimiento de catálogo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (201)', function () {",
+                  "  pm.expect([201]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const paths = [\"id\"];",
+                  "  const read = (obj, path) => path.split(\".\").reduce((acc, key) => acc && acc[key], obj);",
+                  "  let value;",
+                  "  for (const path of paths) {",
+                  "    value = read(body, path);",
+                  "    if (value !== undefined && value !== null && value !== \"\") break;",
+                  "  }",
+                  "  if (value !== undefined && value !== null && value !== \"\") {",
+                  "    pm.collectionVariables.set('procedureCatalogId', value);",
+                  "    pm.test('procedureCatalogId capturado', () => pm.expect(String(value)).to.not.equal(''));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Procedimiento Postman {{$timestamp}}\",\n  \"description\": \"Procedimiento generado desde Runner\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/procedures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "procedures"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar procedimientos activos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/procedures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "procedures"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener procedimiento por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/procedures/{{procedureCatalogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "procedures",
+                "{{procedureCatalogId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar procedimiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Procedimiento actualizado desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/procedures/{{procedureCatalogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "procedures",
+                "{{procedureCatalogId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Desactivar procedimiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/procedures/{{procedureCatalogId}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "procedures",
+                "{{procedureCatalogId}}",
+                "deactivate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar procedimientos incluyendo inactivos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/procedures?includeInactive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "procedures"
+              ],
+              "query": [
+                {
+                  "key": "includeInactive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Reactivar procedimiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/procedures/{{procedureCatalogId}}/reactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "procedures",
+                "{{procedureCatalogId}}",
+                "reactivate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar procedimiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/procedures/{{procedureCatalogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "procedures",
+                "{{procedureCatalogId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏥 Catálogo de cirugías",
+      "item": [
+        {
+          "name": "✅ Crear cirugía de catálogo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (201)', function () {",
+                  "  pm.expect([201]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const body = pm.response.json();",
+                  "  const paths = [\"id\"];",
+                  "  const read = (obj, path) => path.split(\".\").reduce((acc, key) => acc && acc[key], obj);",
+                  "  let value;",
+                  "  for (const path of paths) {",
+                  "    value = read(body, path);",
+                  "    if (value !== undefined && value !== null && value !== \"\") break;",
+                  "  }",
+                  "  if (value !== undefined && value !== null && value !== \"\") {",
+                  "    pm.collectionVariables.set('surgeryCatalogId', value);",
+                  "    pm.test('surgeryCatalogId capturado', () => pm.expect(String(value)).to.not.equal(''));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cirugía Postman {{$timestamp}}\",\n  \"description\": \"Cirugía generada desde Runner\",\n  \"requiresAnesthesia\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/surgeries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "surgeries"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar cirugías activas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/surgeries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "surgeries"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener cirugía por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/surgeries/{{surgeryCatalogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "surgeries",
+                "{{surgeryCatalogId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar cirugía",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requiresAnesthesia\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/surgeries/{{surgeryCatalogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "surgeries",
+                "{{surgeryCatalogId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Desactivar cirugía",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/surgeries/{{surgeryCatalogId}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "surgeries",
+                "{{surgeryCatalogId}}",
+                "deactivate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar cirugías incluyendo inactivas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/surgeries?includeInactive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "surgeries"
+              ],
+              "query": [
+                {
+                  "key": "includeInactive",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Reactivar cirugía",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/surgeries/{{surgeryCatalogId}}/reactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "surgeries",
+                "{{surgeryCatalogId}}",
+                "reactivate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar cirugía",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status esperado (200)', function () {",
+                  "  pm.expect([200]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalogs/surgeries/{{surgeryCatalogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalogs",
+                "surgeries",
+                "{{surgeryCatalogId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
