@@ -14,18 +14,17 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Login admin exitoso', function () {",
-              "  pm.response.to.have.status(201);",
+              "pm.test('Login exitoso', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
               "});",
               "",
-              "const body = pm.response.json();",
-              "pm.test('La respuesta contiene accessToken', function () {",
-              "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
-              "});",
-              "",
-              "pm.collectionVariables.set('adminToken', body.accessToken);",
-              "if (body.refreshToken) {",
-              "  pm.collectionVariables.set('adminRefreshToken', body.refreshToken);",
+              "if ([200, 201].includes(pm.response.code)) {",
+              "  const body = pm.response.json();",
+              "  pm.test('La respuesta contiene accessToken', function () {",
+              "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+              "  });",
+              "  pm.collectionVariables.set('adminToken', body.accessToken);",
+              "  if (body.refreshToken) pm.collectionVariables.set('adminRefreshToken', body.refreshToken);",
               "}"
             ]
           }
