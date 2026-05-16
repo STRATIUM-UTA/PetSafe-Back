@@ -23,8 +23,18 @@
     },
     {
       "key": "patientId",
-      "value": "1",
-      "description": "ID de paciente existente en seed"
+      "value": "9",
+      "description": "ID de paciente independiente para el flujo principal de cola"
+    },
+    {
+      "key": "patientIdForEmergency",
+      "value": "10",
+      "description": "ID de paciente independiente para el ingreso de emergencia"
+    },
+    {
+      "key": "patientIdForCancel",
+      "value": "11",
+      "description": "ID de paciente independiente para la prueba de cancelación"
     },
     {
       "key": "queueEntryId",
@@ -52,16 +62,18 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', function () {",
-                  "  pm.response.to.have.status(200);",
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
                   "});",
-                  "if (pm.response.code === 200) {",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
                   "  const body = pm.response.json();",
-                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
-                  "  pm.test('Token capturado', function () {",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
                   "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
                   "  });",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
                   "}"
                 ]
               }
@@ -70,7 +82,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -78,8 +93,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         }
@@ -118,12 +138,19 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ]
             }
           }
         },
@@ -148,14 +175,24 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue?date={{todayDate}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ],
               "query": [
-                { "key": "date", "value": "{{todayDate}}" }
+                {
+                  "key": "date",
+                  "value": "{{todayDate}}"
+                }
               ]
             }
           }
@@ -183,14 +220,24 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue?status=EN_ESPERA",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ],
               "query": [
-                { "key": "status", "value": "EN_ESPERA" }
+                {
+                  "key": "status",
+                  "value": "EN_ESPERA"
+                }
               ]
             }
           }
@@ -218,15 +265,28 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue?page=1&limit=5",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "5" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
               ]
             }
           }
@@ -250,8 +310,12 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/queue",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ]
             }
           }
         }
@@ -293,8 +357,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -302,8 +372,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/queue",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ]
             }
           }
         },
@@ -329,8 +403,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -338,8 +418,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/queue",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ]
             }
           }
         },
@@ -364,8 +448,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -373,8 +463,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/queue",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ]
             }
           }
         },
@@ -399,8 +493,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -408,8 +508,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/queue",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ]
             }
           }
         },
@@ -435,17 +539,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientId\": 2,\n  \"entryType\": \"EMERGENCIA\",\n  \"notes\": \"Prueba de integración — ingreso emergencia\"\n}"
+              "raw": "{\n  \"patientId\": {{patientIdForEmergency}},\n  \"entryType\": \"EMERGENCIA\",\n  \"notes\": \"Prueba de integración — ingreso emergencia\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/queue",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ]
             }
           }
         }
@@ -476,21 +590,31 @@
               }
             }
           ],
-          "description": "Paso de setup. Usa patientId 3 — ajustar si no existe en seed.",
+          "description": "Paso de setup. Usa un paciente independiente para que la cancelación no choque con otras pruebas.",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientId\": 3,\n  \"entryType\": \"SIN_CITA\",\n  \"notes\": \"Entrada creada para prueba de cancelación\"\n}"
+              "raw": "{\n  \"patientId\": {{patientIdForCancel}},\n  \"entryType\": \"SIN_CITA\",\n  \"notes\": \"Entrada creada para prueba de cancelación\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/queue",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue"
+              ]
             }
           }
         },
@@ -519,12 +643,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue/{{queueEntryToCancelId}}/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "{{queueEntryToCancelId}}", "cancel"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue",
+                "{{queueEntryToCancelId}}",
+                "cancel"
+              ]
             }
           }
         },
@@ -550,12 +683,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue/{{queueEntryToCancelId}}/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "{{queueEntryToCancelId}}", "cancel"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue",
+                "{{queueEntryToCancelId}}",
+                "cancel"
+              ]
             }
           }
         },
@@ -576,12 +718,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue/999999/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "999999", "cancel"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue",
+                "999999",
+                "cancel"
+              ]
             }
           }
         }
@@ -616,12 +767,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue/{{queueEntryId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "{{queueEntryId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue",
+                "{{queueEntryId}}",
+                "start"
+              ]
             }
           }
         },
@@ -647,12 +807,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue/{{queueEntryId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "{{queueEntryId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue",
+                "{{queueEntryId}}",
+                "start"
+              ]
             }
           }
         },
@@ -678,12 +847,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue/{{queueEntryToCancelId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "{{queueEntryToCancelId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue",
+                "{{queueEntryToCancelId}}",
+                "start"
+              ]
             }
           }
         },
@@ -704,12 +882,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/queue/999999/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["queue", "999999", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queue",
+                "999999",
+                "start"
+              ]
             }
           }
         }

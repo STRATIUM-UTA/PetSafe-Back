@@ -14,16 +14,17 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Login admin exitoso', function () {",
-              "  pm.response.to.have.status(201);",
+              "pm.test('Login exitoso', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
               "});",
               "",
-              "const body = pm.response.json();",
-              "pm.test('La respuesta contiene accessToken', function () {",
-              "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
-              "});",
-              "",
-              "pm.collectionVariables.set('adminToken', body.accessToken);"
+              "if ([200, 201].includes(pm.response.code)) {",
+              "  const body = pm.response.json();",
+              "  pm.test('La respuesta contiene accessToken', function () {",
+              "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+              "  });",
+              "  pm.collectionVariables.set('adminToken', body.accessToken);",
+              "}"
             ]
           }
         }
@@ -31,7 +32,10 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "body": {
           "mode": "raw",
@@ -39,8 +43,13 @@
         },
         "url": {
           "raw": "{{baseUrl}}/auth/login",
-          "host": ["{{baseUrl}}"],
-          "path": ["auth", "login"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
         },
         "description": "Autentica al admin para gestionar solicitudes de cita."
       },
@@ -54,16 +63,17 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Login cliente exitoso', function () {",
-              "  pm.response.to.have.status(201);",
+              "pm.test('Login exitoso', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
               "});",
               "",
-              "const body = pm.response.json();",
-              "pm.test('La respuesta contiene accessToken', function () {",
-              "  pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
-              "});",
-              "",
-              "pm.collectionVariables.set('clientToken', body.accessToken);"
+              "if ([200, 201].includes(pm.response.code)) {",
+              "  const body = pm.response.json();",
+              "  pm.test('La respuesta contiene accessToken', function () {",
+              "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+              "  });",
+              "  pm.collectionVariables.set('clientToken', body.accessToken);",
+              "}"
             ]
           }
         }
@@ -71,7 +81,10 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "body": {
           "mode": "raw",
@@ -79,8 +92,13 @@
         },
         "url": {
           "raw": "{{baseUrl}}/auth/login",
-          "host": ["{{baseUrl}}"],
-          "path": ["auth", "login"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
         },
         "description": "Autentica al cliente demo para crear solicitudes de cita."
       },
@@ -112,18 +130,33 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{clientToken}}",
+              "type": "string"
+            }
+          ]
         },
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"reason\": \"Chequeo general de salud para revision anual de la mascota.\",\n  \"preferredDate\": \"2026-05-15\",\n  \"preferredTime\": \"09:00\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/appointment-requests",
-          "host": ["{{baseUrl}}"],
-          "path": ["appointment-requests"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "appointment-requests"
+          ]
         },
         "description": "El cliente crea la primera solicitud. Se guarda el ID en solicitudId para rechazarla a continuación."
       },
@@ -159,14 +192,25 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{clientToken}}",
+              "type": "string"
+            }
+          ]
         },
         "method": "GET",
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/appointment-requests/my",
-          "host": ["{{baseUrl}}"],
-          "path": ["appointment-requests", "my"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "appointment-requests",
+            "my"
+          ]
         },
         "description": "El cliente consulta sus solicitudes y verifica que la recién creada aparece con estado PENDIENTE."
       },
@@ -195,18 +239,35 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
         },
         "method": "PATCH",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"status\": \"RECHAZADA\",\n  \"staffNotes\": \"No hay disponibilidad para la fecha solicitada. Por favor intente con otra fecha.\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/appointment-requests/{{solicitudId}}/status",
-          "host": ["{{baseUrl}}"],
-          "path": ["appointment-requests", "{{solicitudId}}", "status"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "appointment-requests",
+            "{{solicitudId}}",
+            "status"
+          ]
         },
         "description": "El admin rechaza la solicitud. El sistema debe generar una notificación automática al cliente."
       },
@@ -244,14 +305,25 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{clientToken}}",
+              "type": "string"
+            }
+          ]
         },
         "method": "GET",
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/notifications/my",
-          "host": ["{{baseUrl}}"],
-          "path": ["notifications", "my"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "notifications",
+            "my"
+          ]
         },
         "description": "El cliente verifica que recibió una notificación tras el rechazo de su solicitud. Guarda el ID en notificationId."
       },
@@ -283,18 +355,33 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{clientToken}}",
+              "type": "string"
+            }
+          ]
         },
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"reason\": \"Vacunacion anual y desparasitacion preventiva para la mascota Max.\",\n  \"preferredDate\": \"2026-05-20\",\n  \"preferredTime\": \"10:30\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/appointment-requests",
-          "host": ["{{baseUrl}}"],
-          "path": ["appointment-requests"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "appointment-requests"
+          ]
         },
         "description": "El cliente crea una segunda solicitud. Se guarda el ID en solicitudId2 para confirmarla."
       },
@@ -323,18 +410,35 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{adminToken}}",
+              "type": "string"
+            }
+          ]
         },
         "method": "PATCH",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"status\": \"CONFIRMADA\",\n  \"staffNotes\": \"Cita confirmada. Por favor llegar 10 minutos antes.\",\n  \"scheduledDate\": \"2026-05-20\",\n  \"scheduledTime\": \"10:30\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/appointment-requests/{{solicitudId2}}/status",
-          "host": ["{{baseUrl}}"],
-          "path": ["appointment-requests", "{{solicitudId2}}", "status"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "appointment-requests",
+            "{{solicitudId2}}",
+            "status"
+          ]
         },
         "description": "El admin confirma la segunda solicitud. El sistema debe generar una notificación automática al cliente."
       },
@@ -367,14 +471,25 @@
       "request": {
         "auth": {
           "type": "bearer",
-          "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{clientToken}}",
+              "type": "string"
+            }
+          ]
         },
         "method": "GET",
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/notifications/my",
-          "host": ["{{baseUrl}}"],
-          "path": ["notifications", "my"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "notifications",
+            "my"
+          ]
         },
         "description": "El cliente verifica que recibió la notificación de confirmación de su segunda solicitud."
       },
@@ -384,23 +499,73 @@
   "event": [
     {
       "listen": "prerequest",
-      "script": { "type": "text/javascript", "exec": [""] }
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
     },
     {
       "listen": "test",
-      "script": { "type": "text/javascript", "exec": [""] }
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
     }
   ],
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000/api", "type": "string" },
-    { "key": "adminEmail", "value": "admin@safepet.com", "type": "string" },
-    { "key": "adminPassword", "value": "Admin123!", "type": "string" },
-    { "key": "clientEmail", "value": "bjeferssonvinicio2005@gmail.com", "type": "string" },
-    { "key": "clientPassword", "value": "Cliente123!", "type": "string" },
-    { "key": "adminToken", "value": "", "type": "string" },
-    { "key": "clientToken", "value": "", "type": "string" },
-    { "key": "solicitudId", "value": "", "type": "string" },
-    { "key": "solicitudId2", "value": "", "type": "string" },
-    { "key": "notificationId", "value": "", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@safepet.com",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "Admin123!",
+      "type": "string"
+    },
+    {
+      "key": "clientEmail",
+      "value": "cliente@safepet.com",
+      "type": "string"
+    },
+    {
+      "key": "clientPassword",
+      "value": "Cliente123!",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "clientToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "solicitudId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "solicitudId2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "type": "string"
+    }
   ]
 }

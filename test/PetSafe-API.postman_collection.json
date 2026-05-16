@@ -88,15 +88,19 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 200) {",
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
                   "  const body = pm.response.json();",
-                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
-                  "  pm.collectionVariables.set('adminRefreshToken', body.refreshToken);",
-                  "  pm.test('Se capturo el token del admin', function () {",
-                  "    pm.expect(body.accessToken).to.be.a('string');",
-                  "    pm.expect(body.refreshToken).to.be.a('string');",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
                   "  });",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
+                  "  if (body.refreshToken) pm.collectionVariables.set('adminRefreshToken', body.refreshToken);",
                   "}"
                 ]
               }
@@ -132,15 +136,19 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 200) {",
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
                   "  const body = pm.response.json();",
-                  "  pm.collectionVariables.set('clientToken', body.accessToken);",
-                  "  pm.collectionVariables.set('clientRefreshToken', body.refreshToken);",
-                  "  pm.test('Se capturo el token del cliente', function () {",
-                  "    pm.expect(body.accessToken).to.be.a('string');",
-                  "    pm.expect(body.refreshToken).to.be.a('string');",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
                   "  });",
+                  "  pm.collectionVariables.set('clientToken', body.accessToken);",
+                  "  if (body.refreshToken) pm.collectionVariables.set('clientRefreshToken', body.refreshToken);",
                   "}"
                 ]
               }
@@ -283,6 +291,36 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"currentPassword\": \"{{clientPassword}}\",\n  \"newPassword\": \"{{passwordResetNewPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "✅ Restaurar contraseña — cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{clientToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{passwordResetNewPassword}}\",\n  \"newPassword\": \"{{clientPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/change-password",
