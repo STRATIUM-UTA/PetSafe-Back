@@ -18,6 +18,10 @@ export class CreatePatientDto {
   @IsString({ message: 'El nombre debe ser un texto.' })
   name!: string;
 
+  @IsOptional()
+  @IsInt({ message: 'El grupo zootécnico proporcionado no es válido.' })
+  zootecnicalGroupId?: number;
+
   @IsNotEmpty({ message: 'La especie de la mascota es obligatoria.' })
   @IsInt({ message: 'La especie proporcionada no es válida.' })
   speciesId!: number;
