@@ -1,0 +1,17 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1500' height='700'>
+<rect width='100%' height='100%' fill='#f8fafc'/>
+<text x='20' y='50' fill='#0f172a' font-family='Arial' font-size='36'>Capture: prioritized collections summary</text>
+<text x='20' y='95' fill='#334155' font-family='monospace' font-size='22'>Source: test/evidence/tables/collection_summary.csv</text>
+<foreignObject x='20' y='120' width='1460' height='540'>
+<div xmlns='http://www.w3.org/1999/xhtml' style='font-family:monospace;font-size:22px;color:#111827;white-space:pre-wrap'>collection,requests,pm_test_declarations,execution
+PetSafe-API.postman_collection.json,81,12,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,59,14,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,15,23,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,21,30,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,28,48,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,15,31,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,11,17,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,9,21,BLOCKED_E403
+</div>
+</foreignObject>
+</svg>

@@ -1,7 +1,0 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='360'>
-<rect width='100%' height='100%' fill='#111827'/>
-<text x='20' y='40' fill='#e5e7eb' font-family='monospace' font-size='24'>Terminal evidence: npx newman -v</text>
-<text x='20' y='80' fill='#fca5a5' font-family='monospace' font-size='18'>npm ERR! code E403</text>
-<text x='20' y='110' fill='#fca5a5' font-family='monospace' font-size='18'>npm ERR! 403 Forbidden - GET https://registry.npmjs.org/newman</text>
-<text x='20' y='150' fill='#d1d5db' font-family='monospace' font-size='18'>Impact: Newman execution blocked in current environment.</text>
-</svg>

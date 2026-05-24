@@ -1,10 +1,8 @@
 {
-  "generatedAtUtc": "2026-05-24T16:16:11Z",
+  "generatedAtUtc": "2026-05-24T16:28:44Z",
   "branch": "docs/integration-test-evidence",
-  "expectedBaseBranch": "develop",
-  "actualLocalBaseNote": "develop ref not present in local clone; branch created from local 'work'",
-  "baseCommit": "f2e2500",
-  "collections": [
+  "baseCommit": "a0d18b4974f0a3c1928f4c61b2e36b4c172eed85",
+  "prioritizedCollections": [
     "test/PetSafe-API.postman_collection.json",
     "test/Encounters-Vaccinations.postman_collection.json",
     "test/PetSafe-Encounters-Attachments.postman_collection.json",
@@ -14,12 +12,21 @@
     "test/PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json",
     "test/PetSafe-Notificaciones.postman_collection.json"
   ],
-  "reportsGenerated": [],
-  "imagesGenerated": [],
-  "summaryByCollection": "See test/evidence/tables/collection_summary.md",
+  "reports": {
+    "newmanJson": [],
+    "newmanJunit": [],
+    "newmanHtml": []
+  },
+  "captures": [
+    "test/evidence/figures/01_capture_newman_command.svg",
+    "test/evidence/figures/02_capture_collection_summary.svg"
+  ],
+  "logs": [
+    "test/evidence/logs/newman_version_check.log",
+    "test/evidence/logs/npm_ls_newman.log",
+    "test/evidence/logs/backend_start_help.log",
+    "test/evidence/logs/execution_diagnosis.txt"
+  ],
   "executionStatus": "blocked",
-  "blockers": [
-    "npx newman -v => npm E403 Forbidden",
-    "No verified runtime DB/auth seeds for full E2E execution in this environment"
-  ]
+  "blocker": "npm E403 while attempting newman command"
 }

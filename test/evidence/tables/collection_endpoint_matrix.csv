@@ -1,240 +1,240 @@
-collection,request_name,method,url_raw,declared_pm_tests,execution_status
-PetSafe-API.postman_collection.json,✅ Login — admin (seed),POST,{{baseUrl}}/auth/login,2,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Login — cliente (seed),POST,{{baseUrl}}/auth/login,2,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Login — credenciales invalidas,POST,{{baseUrl}}/auth/login,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Refresh Token — cliente,POST,{{baseUrl}}/auth/refresh,1,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Refresh Token — token vacio,POST,{{baseUrl}}/auth/refresh,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Cambiar contraseña — cliente,PUT,{{baseUrl}}/auth/change-password,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Restaurar contraseña — cliente,PUT,{{baseUrl}}/auth/change-password,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Cambiar contraseña — sin token,PUT,{{baseUrl}}/auth/change-password,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Solicitar recuperacion de contraseña,POST,{{baseUrl}}/auth/password-reset/request,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Solicitar recuperacion — email invalido,POST,{{baseUrl}}/auth/password-reset/request,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Confirmar recuperacion de contraseña,POST,{{baseUrl}}/auth/password-reset/confirm,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Confirmar recuperacion — codigo invalido,POST,{{baseUrl}}/auth/password-reset/confirm,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Logout — cliente,POST,{{baseUrl}}/auth/logout,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Obtener mi perfil — cliente,GET,{{baseUrl}}/users/me,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Obtener mi perfil — admin,GET,{{baseUrl}}/users/me,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Obtener mi perfil — sin token,GET,{{baseUrl}}/users/me,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Actualizar mi perfil — cliente,PATCH,{{baseUrl}}/users/me,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Actualizar mi perfil — campo no permitido,PATCH,{{baseUrl}}/users/me,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Actualizar mi perfil — email invalido,PATCH,{{baseUrl}}/users/me,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Listar grupos zootecnicos — admin,GET,{{baseUrl}}/zootecnical-groups?page=1&limit=10,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Crear grupo zootecnico — admin,POST,{{baseUrl}}/zootecnical-groups,1,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear grupo zootecnico — validacion sin nombre,POST,{{baseUrl}}/zootecnical-groups,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear grupo zootecnico — duplicado,POST,{{baseUrl}}/zootecnical-groups,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Obtener grupo zootecnico por id,GET,{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Obtener grupo zootecnico por id — no existe,GET,{{baseUrl}}/zootecnical-groups/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Actualizar grupo zootecnico — admin,PATCH,{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Actualizar grupo zootecnico — campo no permitido,PATCH,{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Eliminar grupo zootecnico — admin,DELETE,{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Eliminar grupo zootecnico — no existe,DELETE,{{baseUrl}}/zootecnical-groups/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Listar especies — admin,GET,{{baseUrl}}/species?page=1&limit=10,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Crear especie — admin,POST,{{baseUrl}}/species,1,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear especie — sin grupo zootecnico,POST,{{baseUrl}}/species,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear especie — grupo zootecnico no existe,POST,{{baseUrl}}/species,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear especie — duplicada,POST,{{baseUrl}}/species,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Obtener especie por id,GET,{{baseUrl}}/species/{{speciesId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Obtener especie por id — no existe,GET,{{baseUrl}}/species/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Actualizar especie — admin,PATCH,{{baseUrl}}/species/{{speciesId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Actualizar especie — campo no permitido,PATCH,{{baseUrl}}/species/{{speciesId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Eliminar especie — admin,DELETE,{{baseUrl}}/species/{{speciesId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Eliminar especie — no existe,DELETE,{{baseUrl}}/species/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Listar razas — admin,GET,{{baseUrl}}/breeds?page=1&limit=10,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Crear raza — admin,POST,{{baseUrl}}/breeds,1,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear raza — sin especie,POST,{{baseUrl}}/breeds,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear raza — especie no existe,POST,{{baseUrl}}/breeds,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear raza — duplicada en la misma especie,POST,{{baseUrl}}/breeds,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Obtener raza por id,GET,{{baseUrl}}/breeds/{{breedId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Obtener raza por id — no existe,GET,{{baseUrl}}/breeds/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Actualizar raza — admin,PATCH,{{baseUrl}}/breeds/{{breedId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Actualizar raza — campo no permitido,PATCH,{{baseUrl}}/breeds/{{breedId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Eliminar raza — admin,DELETE,{{baseUrl}}/breeds/{{breedId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Eliminar raza — no existe,DELETE,{{baseUrl}}/breeds/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Listar clientes — admin,GET,{{baseUrl}}/clients?page=1&limit=10,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Crear cliente — admin,POST,{{baseUrl}}/clients,1,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Crear cliente con cuenta — admin,POST,{{baseUrl}}/clients,1,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Crear acceso para cliente existente — admin,POST,{{baseUrl}}/clients/{{clientId}}/access,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear cliente — validacion sin nombres,POST,{{baseUrl}}/clients,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear cliente — genero invalido,POST,{{baseUrl}}/clients,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Obtener cliente por id — admin,GET,{{baseUrl}}/clients/{{clientId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Obtener cliente por id — no existe,GET,{{baseUrl}}/clients/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Actualizar cliente — admin,PATCH,{{baseUrl}}/clients/{{clientId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Actualizar cliente — campo no permitido,PATCH,{{baseUrl}}/clients/{{clientId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Filtrar clientes — por firstName y documentId,GET,{{baseUrl}}/clients?page=1&limit=10&firstName=Maria&documentId=0912345678,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Filtrar clientes — por email,GET,{{baseUrl}}/clients?page=1&limit=10&email={{clientEmail}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Listar clientes — cliente app,GET,{{baseUrl}}/clients?page=1&limit=10,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Eliminar cliente — no existe,DELETE,{{baseUrl}}/clients/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Crear mascota — cliente app,POST,{{baseUrl}}/patients,1,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Crear mascota — admin asignando clientId,POST,{{baseUrl}}/patients,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear mascota — falta name,POST,{{baseUrl}}/patients,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear mascota — speciesId inexistente,POST,{{baseUrl}}/patients,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Crear mascota — admin sin clientId,POST,{{baseUrl}}/patients,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Listar mascotas — cliente app,GET,{{baseUrl}}/patients?page=1&limit=10&search=Luna,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Obtener mascota por id — cliente app,GET,{{baseUrl}}/patients/{{patientId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Obtener mascota por id — no existe,GET,{{baseUrl}}/patients/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Actualizar mascota — cliente app,PATCH,{{baseUrl}}/patients/{{patientId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Actualizar mascota — campo no permitido,PATCH,{{baseUrl}}/patients/{{patientId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Agregar condicion a mascota,POST,{{baseUrl}}/patients/{{patientId}}/conditions,1,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Agregar condicion — falta type,POST,{{baseUrl}}/patients/{{patientId}}/conditions,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Eliminar condicion de mascota,DELETE,{{baseUrl}}/patients/{{patientId}}/conditions/{{conditionId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Eliminar condicion — no existe,DELETE,{{baseUrl}}/patients/{{patientId}}/conditions/999999,0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,✅ Eliminar mascota — cliente app,DELETE,{{baseUrl}}/patients/{{patientId}},0,NOT_EXECUTED
-PetSafe-API.postman_collection.json,❌ Eliminar mascota — no existe,DELETE,{{baseUrl}}/patients/999999,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,2,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Login — MVZ (usar token del MVZ registrado),POST,{{baseUrl}}/auth/login,2,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Crear vacuna — obligatoria (Rabia),POST,{{baseUrl}}/vaccinations/catalog,2,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Crear vacuna — opcional (Leishmaniasis),POST,{{baseUrl}}/vaccinations/catalog,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Crear vacuna — sin nombre (400 Bad Request),POST,{{baseUrl}}/vaccinations/catalog,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Crear vacuna — duplicada (409 Conflict),POST,{{baseUrl}}/vaccinations/catalog,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Crear vacuna — sin token (401 Unauthorized),POST,{{baseUrl}}/vaccinations/catalog,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Listar catálogo (todas las especies),GET,{{baseUrl}}/vaccinations/catalog,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Listar catálogo filtrado por especie,GET,{{baseUrl}}/vaccinations/catalog?speciesId={{speciesId}},0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Obtener vacuna por ID,GET,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Obtener vacuna — ID inexistente (404),GET,{{baseUrl}}/vaccinations/catalog/999999,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Actualizar vacuna — cambiar nombre y dosis,PUT,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Marcar vacuna como NO obligatoria (PATCH),PATCH,{{baseUrl}}/vaccinations/catalog/{{vaccineId}}/mandatory,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Marcar vacuna como obligatoria de nuevo (PATCH),PATCH,{{baseUrl}}/vaccinations/catalog/{{vaccineId}}/mandatory,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Eliminar vacuna — con registros en vaccination_events (409 Conflict — bloqueado),DELETE,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,"❌ Eliminar vacuna — solo MVZ (403 Forbidden, requiere ADMIN)",DELETE,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Esquema de vacunación por especie,GET,{{baseUrl}}/vaccinations/scheme/{{speciesId}},0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Esquema por especie — especie inexistente (404),GET,{{baseUrl}}/vaccinations/scheme/999999,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Abrir atención (Encounter),POST,{{baseUrl}}/encounters,2,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Abrir atención — paciente inexistente (404),POST,{{baseUrl}}/encounters,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Abrir atención — campos obligatorios faltantes (400),POST,{{baseUrl}}/encounters,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Abrir atención — sin token (401),POST,{{baseUrl}}/encounters,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Listar atenciones (todas),GET,{{baseUrl}}/encounters?page=1&limit=10,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Listar atenciones filtradas por paciente,GET,{{baseUrl}}/encounters?patientId={{patientId}}&page=1&limit=10,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Obtener atención por ID,GET,{{baseUrl}}/encounters/{{encounterId}},0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Obtener atención — ID inexistente (404),GET,{{baseUrl}}/encounters/999999,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar razón de consulta,PUT,{{baseUrl}}/encounters/{{encounterId}}/consultation-reason,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Registrar razón de consulta — sin campo obligatorio (400),PUT,{{baseUrl}}/encounters/{{encounterId}}/consultation-reason,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar anamnesis,PUT,{{baseUrl}}/encounters/{{encounterId}}/anamnesis,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar examen clínico,PUT,{{baseUrl}}/encounters/{{encounterId}}/clinical-exam,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Registrar examen clínico — peso negativo (400),PUT,{{baseUrl}}/encounters/{{encounterId}}/clinical-exam,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar datos ambientales,PUT,{{baseUrl}}/encounters/{{encounterId}}/environmental-data,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar impresión clínica,PUT,{{baseUrl}}/encounters/{{encounterId}}/clinical-impression,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar plan médico,PUT,{{baseUrl}}/encounters/{{encounterId}}/plan,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Registrar plan — requiresFollowUp true sin fecha (400),PUT,{{baseUrl}}/encounters/{{encounterId}}/plan,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar vacunación en el encounter,POST,{{baseUrl}}/encounters/{{encounterId}}/vaccinations,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Registrar vacunación — vacuna inexistente (404),POST,{{baseUrl}}/encounters/{{encounterId}}/vaccinations,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar desparasitación,POST,{{baseUrl}}/encounters/{{encounterId}}/dewormings,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar tratamiento (con ítems),POST,{{baseUrl}}/encounters/{{encounterId}}/treatments,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Registrar tratamiento — duración < 1 día (400),POST,{{baseUrl}}/encounters/{{encounterId}}/treatments,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar cirugía programada,POST,{{baseUrl}}/encounters/{{encounterId}}/surgeries,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar procedimiento,POST,{{baseUrl}}/encounters/{{encounterId}}/procedures,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Ver atención completa (con todas las secciones),GET,{{baseUrl}}/encounters/{{encounterId}},0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Cerrar atención (FINALIZADA),PATCH,{{baseUrl}}/encounters/{{encounterId}}/close,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Cerrar atención — hora fin antes que inicio (400),PATCH,{{baseUrl}}/encounters/{{encounterId}}/close,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Modificar atención FINALIZADA — estado inválido (409 Conflict),PUT,{{baseUrl}}/encounters/{{encounterId}}/consultation-reason,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Abrir segunda atención (para probar cancelación),POST,{{baseUrl}}/encounters,1,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Cancelar atención (ANULADA),PATCH,{{baseUrl}}/encounters/{{encounterId}}/cancel,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Cancelar atención ya ANULADA (409 Conflict),PATCH,{{baseUrl}}/encounters/{{encounterId}}/cancel,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar vacuna EXTERNA (de otra clínica),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Registrar vacuna INTERNA (ligada al encounter),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Registrar vacuna — fecha próxima antes de aplicación (400),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Registrar vacuna — vacuna desactivada (404),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Registrar vacuna — paciente inexistente (404),POST,{{baseUrl}}/vaccinations/patients/999999/records,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Ver carnet completo del paciente,GET,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Ver cobertura vacunal del paciente,GET,{{baseUrl}}/vaccinations/patients/{{patientId}}/coverage,3,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Ver cobertura — paciente inexistente (404),GET,{{baseUrl}}/vaccinations/patients/999999/coverage,0,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,✅ Eliminar vacuna SIN registros — eliminación limpia,DELETE,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},2,NOT_EXECUTED
-Encounters-Vaccinations.postman_collection.json,❌ Eliminar vacuna ya eliminada (404),DELETE,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,🔧 Crear atención para pruebas de adjuntos,POST,{{baseUrl}}/encounters,1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,✅ Listar adjuntos — atención sin archivos (lista vacía),GET,{{baseUrl}}/encounters/{{encounterId}}/attachments,2,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,❌ Listar adjuntos — atención inexistente (404),GET,{{baseUrl}}/encounters/999999/attachments,1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,❌ Listar adjuntos — sin token (401),GET,{{baseUrl}}/encounters/{{encounterId}}/attachments,1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,✅ Subir imagen JPEG como adjunto,POST,{{baseUrl}}/encounters/{{encounterId}}/attachments,4,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,✅ Subir PDF como adjunto (resultados de laboratorio),POST,{{baseUrl}}/encounters/{{encounterId}}/attachments,3,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,❌ Subir archivo — sin campo 'file' (400),POST,{{baseUrl}}/encounters/{{encounterId}}/attachments,1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,❌ Subir archivo — encounter inexistente (404),POST,{{baseUrl}}/encounters/999999/attachments,1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,❌ Subir archivo — sin token (401),POST,{{baseUrl}}/encounters/{{encounterId}}/attachments,1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,✅ Listar adjuntos — con archivos subidos,GET,{{baseUrl}}/encounters/{{encounterId}}/attachments,3,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,✅ Eliminar adjunto por ID,DELETE,{{baseUrl}}/encounters/{{encounterId}}/attachments/{{attachmentFileId}},1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,❌ Eliminar adjunto inexistente (404),DELETE,{{baseUrl}}/encounters/{{encounterId}}/attachments/999999,1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,❌ Eliminar adjunto — encounter inexistente (404),DELETE,{{baseUrl}}/encounters/999999/attachments/1,1,NOT_EXECUTED
-PetSafe-Encounters-Attachments.postman_collection.json,❌ Eliminar adjunto — sin token (401),DELETE,{{baseUrl}}/encounters/{{encounterId}}/attachments/1,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,🔧 Crear atención para pruebas de borradores,POST,{{baseUrl}}/encounters,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Crear borrador de vacuna,POST,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts,3,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Actualizar borrador de vacuna,PUT,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts/{{vaccinationDraftId}},2,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,❌ Crear borrador — vaccineId inexistente (404),POST,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Eliminar borrador de vacuna (soft delete),PATCH,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts/{{vaccinationDraftId}}/delete,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,❌ Eliminar borrador inexistente (404),PATCH,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts/999999/delete,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Crear borrador de tratamiento,POST,{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts,2,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Actualizar borrador de tratamiento,PUT,{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts/{{treatmentDraftId}},2,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,❌ Crear borrador — duración menor a 1 día (400),POST,{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Eliminar borrador de tratamiento,PATCH,{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts/{{treatmentDraftId}}/delete,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Crear borrador de revisión de tratamiento,POST,{{baseUrl}}/encounters/{{encounterId}}/treatment-review-drafts,2,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Eliminar borrador de revisión de tratamiento,PATCH,{{baseUrl}}/encounters/{{encounterId}}/treatment-review-drafts/{{treatmentReviewDraftId}}/delete,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Crear borrador de procedimiento,POST,{{baseUrl}}/encounters/{{encounterId}}/procedure-drafts,2,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Actualizar borrador de procedimiento,PUT,{{baseUrl}}/encounters/{{encounterId}}/procedure-drafts/{{procedureDraftId}},2,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,❌ Crear borrador — encounter inexistente (404),POST,{{baseUrl}}/encounters/999999/procedure-drafts,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Eliminar borrador de procedimiento,PATCH,{{baseUrl}}/encounters/{{encounterId}}/procedure-drafts/{{procedureDraftId}}/delete,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Vincular caso clínico al encounter,PUT,{{baseUrl}}/encounters/{{encounterId}}/clinical-case,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Configurar seguimiento del encounter,PUT,{{baseUrl}}/encounters/{{encounterId}}/follow-up-config,1,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,✅ Reactivar atención (FINALIZADA → ABIERTA),PATCH,{{baseUrl}}/encounters/{{encounterId}}/reactivate,2,NOT_EXECUTED
-PetSafe-Encounters-Drafts.postman_collection.json,❌ Reactivar atención inexistente (404),PATCH,{{baseUrl}}/encounters/999999/reactivate,1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Crear vacuna obligatoria (Rabia),POST,{{baseUrl}}/vaccinations/products,3,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Crear vacuna opcional (Leishmaniasis),POST,{{baseUrl}}/vaccinations/products,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Crear vacuna — sin nombre (400),POST,{{baseUrl}}/vaccinations/products,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Crear vacuna — sin token (401),POST,{{baseUrl}}/vaccinations/products,1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Listar catálogo de vacunas (todas las especies),GET,{{baseUrl}}/vaccinations/products,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Listar catálogo filtrado por especie,GET,{{baseUrl}}/vaccinations/products?speciesId={{speciesId}},2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Obtener vacuna por ID,GET,{{baseUrl}}/vaccinations/products/{{vaccineId}},2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Obtener vacuna — ID inexistente (404),GET,{{baseUrl}}/vaccinations/products/999999,1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Actualizar vacuna (cambiar nombre y dosis),PUT,{{baseUrl}}/vaccinations/products/{{vaccineId}},2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Desactivar vacuna (soft delete),DELETE,{{baseUrl}}/vaccinations/products/{{vaccineIdForDelete}},1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Obtener vacuna desactivada (404),GET,{{baseUrl}}/vaccinations/products/{{vaccineIdForDelete}},1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Reactivar vacuna desactivada,PATCH,{{baseUrl}}/vaccinations/products/{{vaccineIdForDelete}}/reactivate,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Listar esquemas (todos),GET,{{baseUrl}}/vaccinations/schemes,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Listar esquemas filtrado por especie,GET,{{baseUrl}}/vaccinations/schemes?speciesId={{speciesId}},1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Crear esquema de vacunación,POST,{{baseUrl}}/vaccinations/schemes,3,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Obtener esquema por ID,GET,{{baseUrl}}/vaccinations/schemes/{{schemeId}},2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Crear versión del esquema (con dosis),POST,{{baseUrl}}/vaccinations/schemes/{{schemeId}}/versions,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Obtener versión del esquema por ID,GET,{{baseUrl}}/vaccinations/schemes/versions/{{schemeVersionId}},2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Desactivar versión del esquema,PATCH,{{baseUrl}}/vaccinations/schemes/versions/{{schemeVersionId}}/status,1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Reactivar versión del esquema,PATCH,{{baseUrl}}/vaccinations/schemes/versions/{{schemeVersionId}}/status,1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Registrar aplicación de vacuna (externa),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Registrar aplicación ligada a una atención,POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Registrar aplicación — fecha próxima antes de aplicación (400),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Registrar aplicación — vacuna inexistente (404),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Registrar aplicación — paciente inexistente (404),POST,{{baseUrl}}/vaccinations/patients/999999/applications,1,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Ver historial de aplicaciones del paciente,GET,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,2,NOT_EXECUTED
-PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Ver plan de vacunación del paciente,GET,{{baseUrl}}/vaccinations/patients/{{patientId}}/plan,2,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,2,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,✅ Crear cita válida,POST,{{baseUrl}}/appointments,4,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,❌ Crear cita — sin patientId (400),POST,{{baseUrl}}/appointments,2,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,❌ Crear cita — endTime antes de scheduledTime (400),POST,{{baseUrl}}/appointments,2,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,❌ Crear cita — sin token (401),POST,{{baseUrl}}/appointments,1,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,❌ Crear cita — solapamiento de horario (409),POST,{{baseUrl}}/appointments,2,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,✅ Listar citas por rango de fechas,GET,{{baseUrl}}/appointments?from={{appointmentRangeFrom}}&to={{appointmentRangeTo}},3,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,❌ Listar citas — sin parámetro 'from' (400),GET,{{baseUrl}}/appointments?to=2026-05-31,1,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,✅ Confirmar cita (registrar llegada),PATCH,{{baseUrl}}/appointments/{{appointmentId}}/confirm,3,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,❌ Confirmar cita ya confirmada (400),PATCH,{{baseUrl}}/appointments/{{appointmentId}}/confirm,2,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,❌ Confirmar cita inexistente (404),PATCH,{{baseUrl}}/appointments/999999/confirm,1,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,🔧 Crear cita para cancelar,POST,{{baseUrl}}/appointments,2,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,✅ Cancelar cita válida,PATCH,{{baseUrl}}/appointments/{{appointmentToCancelId}}/cancel,3,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,❌ Cancelar cita ya cancelada (400),PATCH,{{baseUrl}}/appointments/{{appointmentToCancelId}}/cancel,2,NOT_EXECUTED
-PetSafe-Appointments.postman_collection.json,❌ Cancelar cita inexistente (404),PATCH,{{baseUrl}}/appointments/999999/cancel,1,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,1,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,🔧 Crear cita para probar inasistencia,POST,{{baseUrl}}/appointments,2,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,✅ Marcar cita como inasistencia (NO_SHOW),PATCH,{{baseUrl}}/appointments/{{appointmentForNoShowId}}/no-show,3,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Marcar inasistencia — cita ya marcada como NO_SHOW (400),PATCH,{{baseUrl}}/appointments/{{appointmentForNoShowId}}/no-show,2,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Marcar inasistencia — cita inexistente (404),PATCH,{{baseUrl}}/appointments/999999/no-show,1,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Marcar inasistencia — sin token (401),PATCH,{{baseUrl}}/appointments/{{appointmentForNoShowId}}/no-show,1,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,✅ Agendar control de seguimiento para caso clínico,POST,{{baseUrl}}/clinical-cases/{{clinicalCaseId}}/follow-ups,2,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Agendar control — caso clínico inexistente (404),POST,{{baseUrl}}/clinical-cases/999999/follow-ups,1,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Agendar control — campos obligatorios faltantes (400),POST,{{baseUrl}}/clinical-cases/{{clinicalCaseId}}/follow-ups,1,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Agendar control — sin token (401),POST,{{baseUrl}}/clinical-cases/{{clinicalCaseId}}/follow-ups,1,NOT_EXECUTED
-PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,✅ Ver controles de seguimiento del caso clínico,GET,{{baseUrl}}/clinical-cases/{{clinicalCaseId}}/follow-ups,2,NOT_EXECUTED
-PetSafe-Notificaciones.postman_collection.json,1. Login Admin,POST,{{baseUrl}}/auth/login,2,NOT_EXECUTED
-PetSafe-Notificaciones.postman_collection.json,2. Login Cliente App,POST,{{baseUrl}}/auth/login,2,NOT_EXECUTED
-PetSafe-Notificaciones.postman_collection.json,3. Crear solicitud de cita (para rechazar),POST,{{baseUrl}}/appointment-requests,2,NOT_EXECUTED
-PetSafe-Notificaciones.postman_collection.json,4. Ver mis solicitudes (solicitud recién creada),GET,{{baseUrl}}/appointment-requests/my,3,NOT_EXECUTED
-PetSafe-Notificaciones.postman_collection.json,5. Rechazar solicitud (Admin),PATCH,{{baseUrl}}/appointment-requests/{{solicitudId}}/status,2,NOT_EXECUTED
-PetSafe-Notificaciones.postman_collection.json,6. Ver notificaciones cliente - rechazo,GET,{{baseUrl}}/notifications/my,3,NOT_EXECUTED
-PetSafe-Notificaciones.postman_collection.json,7. Crear segunda solicitud de cita (para aceptar),POST,{{baseUrl}}/appointment-requests,2,NOT_EXECUTED
-PetSafe-Notificaciones.postman_collection.json,8. Aceptar solicitud (Admin),PATCH,{{baseUrl}}/appointment-requests/{{solicitudId2}}/status,2,NOT_EXECUTED
-PetSafe-Notificaciones.postman_collection.json,9. Ver notificaciones cliente - aceptación,GET,{{baseUrl}}/notifications/my,3,NOT_EXECUTED
+collection,request_name,method,url,pm_test_count,execution
+PetSafe-API.postman_collection.json,✅ Login — admin (seed),POST,{{baseUrl}}/auth/login,2,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Login — cliente (seed),POST,{{baseUrl}}/auth/login,2,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Login — credenciales invalidas,POST,{{baseUrl}}/auth/login,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Refresh Token — cliente,POST,{{baseUrl}}/auth/refresh,1,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Refresh Token — token vacio,POST,{{baseUrl}}/auth/refresh,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Cambiar contraseña — cliente,PUT,{{baseUrl}}/auth/change-password,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Restaurar contraseña — cliente,PUT,{{baseUrl}}/auth/change-password,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Cambiar contraseña — sin token,PUT,{{baseUrl}}/auth/change-password,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Solicitar recuperacion de contraseña,POST,{{baseUrl}}/auth/password-reset/request,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Solicitar recuperacion — email invalido,POST,{{baseUrl}}/auth/password-reset/request,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Confirmar recuperacion de contraseña,POST,{{baseUrl}}/auth/password-reset/confirm,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Confirmar recuperacion — codigo invalido,POST,{{baseUrl}}/auth/password-reset/confirm,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Logout — cliente,POST,{{baseUrl}}/auth/logout,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Obtener mi perfil — cliente,GET,{{baseUrl}}/users/me,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Obtener mi perfil — admin,GET,{{baseUrl}}/users/me,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Obtener mi perfil — sin token,GET,{{baseUrl}}/users/me,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Actualizar mi perfil — cliente,PATCH,{{baseUrl}}/users/me,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Actualizar mi perfil — campo no permitido,PATCH,{{baseUrl}}/users/me,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Actualizar mi perfil — email invalido,PATCH,{{baseUrl}}/users/me,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Listar grupos zootecnicos — admin,GET,{{baseUrl}}/zootecnical-groups?page=1&limit=10,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Crear grupo zootecnico — admin,POST,{{baseUrl}}/zootecnical-groups,1,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear grupo zootecnico — validacion sin nombre,POST,{{baseUrl}}/zootecnical-groups,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear grupo zootecnico — duplicado,POST,{{baseUrl}}/zootecnical-groups,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Obtener grupo zootecnico por id,GET,{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Obtener grupo zootecnico por id — no existe,GET,{{baseUrl}}/zootecnical-groups/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Actualizar grupo zootecnico — admin,PATCH,{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Actualizar grupo zootecnico — campo no permitido,PATCH,{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Eliminar grupo zootecnico — admin,DELETE,{{baseUrl}}/zootecnical-groups/{{zootecnicalGroupId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Eliminar grupo zootecnico — no existe,DELETE,{{baseUrl}}/zootecnical-groups/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Listar especies — admin,GET,{{baseUrl}}/species?page=1&limit=10,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Crear especie — admin,POST,{{baseUrl}}/species,1,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear especie — sin grupo zootecnico,POST,{{baseUrl}}/species,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear especie — grupo zootecnico no existe,POST,{{baseUrl}}/species,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear especie — duplicada,POST,{{baseUrl}}/species,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Obtener especie por id,GET,{{baseUrl}}/species/{{speciesId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Obtener especie por id — no existe,GET,{{baseUrl}}/species/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Actualizar especie — admin,PATCH,{{baseUrl}}/species/{{speciesId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Actualizar especie — campo no permitido,PATCH,{{baseUrl}}/species/{{speciesId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Eliminar especie — admin,DELETE,{{baseUrl}}/species/{{speciesId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Eliminar especie — no existe,DELETE,{{baseUrl}}/species/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Listar razas — admin,GET,{{baseUrl}}/breeds?page=1&limit=10,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Crear raza — admin,POST,{{baseUrl}}/breeds,1,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear raza — sin especie,POST,{{baseUrl}}/breeds,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear raza — especie no existe,POST,{{baseUrl}}/breeds,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear raza — duplicada en la misma especie,POST,{{baseUrl}}/breeds,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Obtener raza por id,GET,{{baseUrl}}/breeds/{{breedId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Obtener raza por id — no existe,GET,{{baseUrl}}/breeds/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Actualizar raza — admin,PATCH,{{baseUrl}}/breeds/{{breedId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Actualizar raza — campo no permitido,PATCH,{{baseUrl}}/breeds/{{breedId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Eliminar raza — admin,DELETE,{{baseUrl}}/breeds/{{breedId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Eliminar raza — no existe,DELETE,{{baseUrl}}/breeds/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Listar clientes — admin,GET,{{baseUrl}}/clients?page=1&limit=10,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Crear cliente — admin,POST,{{baseUrl}}/clients,1,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Crear cliente con cuenta — admin,POST,{{baseUrl}}/clients,1,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Crear acceso para cliente existente — admin,POST,{{baseUrl}}/clients/{{clientId}}/access,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear cliente — validacion sin nombres,POST,{{baseUrl}}/clients,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear cliente — genero invalido,POST,{{baseUrl}}/clients,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Obtener cliente por id — admin,GET,{{baseUrl}}/clients/{{clientId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Obtener cliente por id — no existe,GET,{{baseUrl}}/clients/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Actualizar cliente — admin,PATCH,{{baseUrl}}/clients/{{clientId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Actualizar cliente — campo no permitido,PATCH,{{baseUrl}}/clients/{{clientId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Filtrar clientes — por firstName y documentId,GET,{{baseUrl}}/clients?page=1&limit=10&firstName=Maria&documentId=0912345678,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Filtrar clientes — por email,GET,{{baseUrl}}/clients?page=1&limit=10&email={{clientEmail}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Listar clientes — cliente app,GET,{{baseUrl}}/clients?page=1&limit=10,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Eliminar cliente — no existe,DELETE,{{baseUrl}}/clients/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Crear mascota — cliente app,POST,{{baseUrl}}/patients,1,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Crear mascota — admin asignando clientId,POST,{{baseUrl}}/patients,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear mascota — falta name,POST,{{baseUrl}}/patients,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear mascota — speciesId inexistente,POST,{{baseUrl}}/patients,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Crear mascota — admin sin clientId,POST,{{baseUrl}}/patients,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Listar mascotas — cliente app,GET,{{baseUrl}}/patients?page=1&limit=10&search=Luna,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Obtener mascota por id — cliente app,GET,{{baseUrl}}/patients/{{patientId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Obtener mascota por id — no existe,GET,{{baseUrl}}/patients/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Actualizar mascota — cliente app,PATCH,{{baseUrl}}/patients/{{patientId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Actualizar mascota — campo no permitido,PATCH,{{baseUrl}}/patients/{{patientId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Agregar condicion a mascota,POST,{{baseUrl}}/patients/{{patientId}}/conditions,1,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Agregar condicion — falta type,POST,{{baseUrl}}/patients/{{patientId}}/conditions,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Eliminar condicion de mascota,DELETE,{{baseUrl}}/patients/{{patientId}}/conditions/{{conditionId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Eliminar condicion — no existe,DELETE,{{baseUrl}}/patients/{{patientId}}/conditions/999999,0,BLOCKED_E403
+PetSafe-API.postman_collection.json,✅ Eliminar mascota — cliente app,DELETE,{{baseUrl}}/patients/{{patientId}},0,BLOCKED_E403
+PetSafe-API.postman_collection.json,❌ Eliminar mascota — no existe,DELETE,{{baseUrl}}/patients/999999,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,2,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Login — MVZ (usar token del MVZ registrado),POST,{{baseUrl}}/auth/login,2,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Crear vacuna — obligatoria (Rabia),POST,{{baseUrl}}/vaccinations/catalog,2,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Crear vacuna — opcional (Leishmaniasis),POST,{{baseUrl}}/vaccinations/catalog,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Crear vacuna — sin nombre (400 Bad Request),POST,{{baseUrl}}/vaccinations/catalog,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Crear vacuna — duplicada (409 Conflict),POST,{{baseUrl}}/vaccinations/catalog,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Crear vacuna — sin token (401 Unauthorized),POST,{{baseUrl}}/vaccinations/catalog,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Listar catálogo (todas las especies),GET,{{baseUrl}}/vaccinations/catalog,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Listar catálogo filtrado por especie,GET,{{baseUrl}}/vaccinations/catalog?speciesId={{speciesId}},0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Obtener vacuna por ID,GET,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Obtener vacuna — ID inexistente (404),GET,{{baseUrl}}/vaccinations/catalog/999999,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Actualizar vacuna — cambiar nombre y dosis,PUT,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Marcar vacuna como NO obligatoria (PATCH),PATCH,{{baseUrl}}/vaccinations/catalog/{{vaccineId}}/mandatory,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Marcar vacuna como obligatoria de nuevo (PATCH),PATCH,{{baseUrl}}/vaccinations/catalog/{{vaccineId}}/mandatory,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Eliminar vacuna — con registros en vaccination_events (409 Conflict — bloqueado),DELETE,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,"❌ Eliminar vacuna — solo MVZ (403 Forbidden, requiere ADMIN)",DELETE,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Esquema de vacunación por especie,GET,{{baseUrl}}/vaccinations/scheme/{{speciesId}},0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Esquema por especie — especie inexistente (404),GET,{{baseUrl}}/vaccinations/scheme/999999,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Abrir atención (Encounter),POST,{{baseUrl}}/encounters,2,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Abrir atención — paciente inexistente (404),POST,{{baseUrl}}/encounters,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Abrir atención — campos obligatorios faltantes (400),POST,{{baseUrl}}/encounters,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Abrir atención — sin token (401),POST,{{baseUrl}}/encounters,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Listar atenciones (todas),GET,{{baseUrl}}/encounters?page=1&limit=10,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Listar atenciones filtradas por paciente,GET,{{baseUrl}}/encounters?patientId={{patientId}}&page=1&limit=10,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Obtener atención por ID,GET,{{baseUrl}}/encounters/{{encounterId}},0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Obtener atención — ID inexistente (404),GET,{{baseUrl}}/encounters/999999,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar razón de consulta,PUT,{{baseUrl}}/encounters/{{encounterId}}/consultation-reason,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Registrar razón de consulta — sin campo obligatorio (400),PUT,{{baseUrl}}/encounters/{{encounterId}}/consultation-reason,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar anamnesis,PUT,{{baseUrl}}/encounters/{{encounterId}}/anamnesis,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar examen clínico,PUT,{{baseUrl}}/encounters/{{encounterId}}/clinical-exam,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Registrar examen clínico — peso negativo (400),PUT,{{baseUrl}}/encounters/{{encounterId}}/clinical-exam,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar datos ambientales,PUT,{{baseUrl}}/encounters/{{encounterId}}/environmental-data,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar impresión clínica,PUT,{{baseUrl}}/encounters/{{encounterId}}/clinical-impression,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar plan médico,PUT,{{baseUrl}}/encounters/{{encounterId}}/plan,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Registrar plan — requiresFollowUp true sin fecha (400),PUT,{{baseUrl}}/encounters/{{encounterId}}/plan,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar vacunación en el encounter,POST,{{baseUrl}}/encounters/{{encounterId}}/vaccinations,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Registrar vacunación — vacuna inexistente (404),POST,{{baseUrl}}/encounters/{{encounterId}}/vaccinations,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar desparasitación,POST,{{baseUrl}}/encounters/{{encounterId}}/dewormings,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar tratamiento (con ítems),POST,{{baseUrl}}/encounters/{{encounterId}}/treatments,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Registrar tratamiento — duración < 1 día (400),POST,{{baseUrl}}/encounters/{{encounterId}}/treatments,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar cirugía programada,POST,{{baseUrl}}/encounters/{{encounterId}}/surgeries,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar procedimiento,POST,{{baseUrl}}/encounters/{{encounterId}}/procedures,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Ver atención completa (con todas las secciones),GET,{{baseUrl}}/encounters/{{encounterId}},0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Cerrar atención (FINALIZADA),PATCH,{{baseUrl}}/encounters/{{encounterId}}/close,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Cerrar atención — hora fin antes que inicio (400),PATCH,{{baseUrl}}/encounters/{{encounterId}}/close,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Modificar atención FINALIZADA — estado inválido (409 Conflict),PUT,{{baseUrl}}/encounters/{{encounterId}}/consultation-reason,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Abrir segunda atención (para probar cancelación),POST,{{baseUrl}}/encounters,1,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Cancelar atención (ANULADA),PATCH,{{baseUrl}}/encounters/{{encounterId}}/cancel,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Cancelar atención ya ANULADA (409 Conflict),PATCH,{{baseUrl}}/encounters/{{encounterId}}/cancel,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar vacuna EXTERNA (de otra clínica),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Registrar vacuna INTERNA (ligada al encounter),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Registrar vacuna — fecha próxima antes de aplicación (400),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Registrar vacuna — vacuna desactivada (404),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Registrar vacuna — paciente inexistente (404),POST,{{baseUrl}}/vaccinations/patients/999999/records,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Ver carnet completo del paciente,GET,{{baseUrl}}/vaccinations/patients/{{patientId}}/records,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Ver cobertura vacunal del paciente,GET,{{baseUrl}}/vaccinations/patients/{{patientId}}/coverage,3,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Ver cobertura — paciente inexistente (404),GET,{{baseUrl}}/vaccinations/patients/999999/coverage,0,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,✅ Eliminar vacuna SIN registros — eliminación limpia,DELETE,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},2,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,❌ Eliminar vacuna ya eliminada (404),DELETE,{{baseUrl}}/vaccinations/catalog/{{vaccineId}},0,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,🔧 Crear atención para pruebas de adjuntos,POST,{{baseUrl}}/encounters,1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,✅ Listar adjuntos — atención sin archivos (lista vacía),GET,{{baseUrl}}/encounters/{{encounterId}}/attachments,2,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,❌ Listar adjuntos — atención inexistente (404),GET,{{baseUrl}}/encounters/999999/attachments,1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,❌ Listar adjuntos — sin token (401),GET,{{baseUrl}}/encounters/{{encounterId}}/attachments,1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,✅ Subir imagen JPEG como adjunto,POST,{{baseUrl}}/encounters/{{encounterId}}/attachments,4,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,✅ Subir PDF como adjunto (resultados de laboratorio),POST,{{baseUrl}}/encounters/{{encounterId}}/attachments,3,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,❌ Subir archivo — sin campo 'file' (400),POST,{{baseUrl}}/encounters/{{encounterId}}/attachments,1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,❌ Subir archivo — encounter inexistente (404),POST,{{baseUrl}}/encounters/999999/attachments,1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,❌ Subir archivo — sin token (401),POST,{{baseUrl}}/encounters/{{encounterId}}/attachments,1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,✅ Listar adjuntos — con archivos subidos,GET,{{baseUrl}}/encounters/{{encounterId}}/attachments,3,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,✅ Eliminar adjunto por ID,DELETE,{{baseUrl}}/encounters/{{encounterId}}/attachments/{{attachmentFileId}},1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,❌ Eliminar adjunto inexistente (404),DELETE,{{baseUrl}}/encounters/{{encounterId}}/attachments/999999,1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,❌ Eliminar adjunto — encounter inexistente (404),DELETE,{{baseUrl}}/encounters/999999/attachments/1,1,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,❌ Eliminar adjunto — sin token (401),DELETE,{{baseUrl}}/encounters/{{encounterId}}/attachments/1,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,🔧 Crear atención para pruebas de borradores,POST,{{baseUrl}}/encounters,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Crear borrador de vacuna,POST,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts,3,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Actualizar borrador de vacuna,PUT,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts/{{vaccinationDraftId}},2,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,❌ Crear borrador — vaccineId inexistente (404),POST,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Eliminar borrador de vacuna (soft delete),PATCH,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts/{{vaccinationDraftId}}/delete,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,❌ Eliminar borrador inexistente (404),PATCH,{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts/999999/delete,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Crear borrador de tratamiento,POST,{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts,2,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Actualizar borrador de tratamiento,PUT,{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts/{{treatmentDraftId}},2,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,❌ Crear borrador — duración menor a 1 día (400),POST,{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Eliminar borrador de tratamiento,PATCH,{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts/{{treatmentDraftId}}/delete,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Crear borrador de revisión de tratamiento,POST,{{baseUrl}}/encounters/{{encounterId}}/treatment-review-drafts,2,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Eliminar borrador de revisión de tratamiento,PATCH,{{baseUrl}}/encounters/{{encounterId}}/treatment-review-drafts/{{treatmentReviewDraftId}}/delete,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Crear borrador de procedimiento,POST,{{baseUrl}}/encounters/{{encounterId}}/procedure-drafts,2,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Actualizar borrador de procedimiento,PUT,{{baseUrl}}/encounters/{{encounterId}}/procedure-drafts/{{procedureDraftId}},2,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,❌ Crear borrador — encounter inexistente (404),POST,{{baseUrl}}/encounters/999999/procedure-drafts,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Eliminar borrador de procedimiento,PATCH,{{baseUrl}}/encounters/{{encounterId}}/procedure-drafts/{{procedureDraftId}}/delete,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Vincular caso clínico al encounter,PUT,{{baseUrl}}/encounters/{{encounterId}}/clinical-case,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Configurar seguimiento del encounter,PUT,{{baseUrl}}/encounters/{{encounterId}}/follow-up-config,1,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,✅ Reactivar atención (FINALIZADA → ABIERTA),PATCH,{{baseUrl}}/encounters/{{encounterId}}/reactivate,2,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,❌ Reactivar atención inexistente (404),PATCH,{{baseUrl}}/encounters/999999/reactivate,1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Crear vacuna obligatoria (Rabia),POST,{{baseUrl}}/vaccinations/products,3,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Crear vacuna opcional (Leishmaniasis),POST,{{baseUrl}}/vaccinations/products,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Crear vacuna — sin nombre (400),POST,{{baseUrl}}/vaccinations/products,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Crear vacuna — sin token (401),POST,{{baseUrl}}/vaccinations/products,1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Listar catálogo de vacunas (todas las especies),GET,{{baseUrl}}/vaccinations/products,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Listar catálogo filtrado por especie,GET,{{baseUrl}}/vaccinations/products?speciesId={{speciesId}},2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Obtener vacuna por ID,GET,{{baseUrl}}/vaccinations/products/{{vaccineId}},2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Obtener vacuna — ID inexistente (404),GET,{{baseUrl}}/vaccinations/products/999999,1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Actualizar vacuna (cambiar nombre y dosis),PUT,{{baseUrl}}/vaccinations/products/{{vaccineId}},2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Desactivar vacuna (soft delete),DELETE,{{baseUrl}}/vaccinations/products/{{vaccineIdForDelete}},1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Obtener vacuna desactivada (404),GET,{{baseUrl}}/vaccinations/products/{{vaccineIdForDelete}},1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Reactivar vacuna desactivada,PATCH,{{baseUrl}}/vaccinations/products/{{vaccineIdForDelete}}/reactivate,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Listar esquemas (todos),GET,{{baseUrl}}/vaccinations/schemes,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Listar esquemas filtrado por especie,GET,{{baseUrl}}/vaccinations/schemes?speciesId={{speciesId}},1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Crear esquema de vacunación,POST,{{baseUrl}}/vaccinations/schemes,3,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Obtener esquema por ID,GET,{{baseUrl}}/vaccinations/schemes/{{schemeId}},2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Crear versión del esquema (con dosis),POST,{{baseUrl}}/vaccinations/schemes/{{schemeId}}/versions,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Obtener versión del esquema por ID,GET,{{baseUrl}}/vaccinations/schemes/versions/{{schemeVersionId}},2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Desactivar versión del esquema,PATCH,{{baseUrl}}/vaccinations/schemes/versions/{{schemeVersionId}}/status,1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Reactivar versión del esquema,PATCH,{{baseUrl}}/vaccinations/schemes/versions/{{schemeVersionId}}/status,1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Registrar aplicación de vacuna (externa),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Registrar aplicación ligada a una atención,POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Registrar aplicación — fecha próxima antes de aplicación (400),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Registrar aplicación — vacuna inexistente (404),POST,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,❌ Registrar aplicación — paciente inexistente (404),POST,{{baseUrl}}/vaccinations/patients/999999/applications,1,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Ver historial de aplicaciones del paciente,GET,{{baseUrl}}/vaccinations/patients/{{patientId}}/applications,2,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,✅ Ver plan de vacunación del paciente,GET,{{baseUrl}}/vaccinations/patients/{{patientId}}/plan,2,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,2,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,✅ Crear cita válida,POST,{{baseUrl}}/appointments,4,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,❌ Crear cita — sin patientId (400),POST,{{baseUrl}}/appointments,2,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,❌ Crear cita — endTime antes de scheduledTime (400),POST,{{baseUrl}}/appointments,2,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,❌ Crear cita — sin token (401),POST,{{baseUrl}}/appointments,1,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,❌ Crear cita — solapamiento de horario (409),POST,{{baseUrl}}/appointments,2,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,✅ Listar citas por rango de fechas,GET,{{baseUrl}}/appointments?from={{appointmentRangeFrom}}&to={{appointmentRangeTo}},3,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,❌ Listar citas — sin parámetro 'from' (400),GET,{{baseUrl}}/appointments?to=2026-05-31,1,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,✅ Confirmar cita (registrar llegada),PATCH,{{baseUrl}}/appointments/{{appointmentId}}/confirm,3,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,❌ Confirmar cita ya confirmada (400),PATCH,{{baseUrl}}/appointments/{{appointmentId}}/confirm,2,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,❌ Confirmar cita inexistente (404),PATCH,{{baseUrl}}/appointments/999999/confirm,1,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,🔧 Crear cita para cancelar,POST,{{baseUrl}}/appointments,2,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,✅ Cancelar cita válida,PATCH,{{baseUrl}}/appointments/{{appointmentToCancelId}}/cancel,3,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,❌ Cancelar cita ya cancelada (400),PATCH,{{baseUrl}}/appointments/{{appointmentToCancelId}}/cancel,2,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,❌ Cancelar cita inexistente (404),PATCH,{{baseUrl}}/appointments/999999/cancel,1,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,✅ Login — admin,POST,{{baseUrl}}/auth/login,1,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,🔧 Crear cita para probar inasistencia,POST,{{baseUrl}}/appointments,2,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,✅ Marcar cita como inasistencia (NO_SHOW),PATCH,{{baseUrl}}/appointments/{{appointmentForNoShowId}}/no-show,3,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Marcar inasistencia — cita ya marcada como NO_SHOW (400),PATCH,{{baseUrl}}/appointments/{{appointmentForNoShowId}}/no-show,2,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Marcar inasistencia — cita inexistente (404),PATCH,{{baseUrl}}/appointments/999999/no-show,1,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Marcar inasistencia — sin token (401),PATCH,{{baseUrl}}/appointments/{{appointmentForNoShowId}}/no-show,1,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,✅ Agendar control de seguimiento para caso clínico,POST,{{baseUrl}}/clinical-cases/{{clinicalCaseId}}/follow-ups,2,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Agendar control — caso clínico inexistente (404),POST,{{baseUrl}}/clinical-cases/999999/follow-ups,1,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Agendar control — campos obligatorios faltantes (400),POST,{{baseUrl}}/clinical-cases/{{clinicalCaseId}}/follow-ups,1,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,❌ Agendar control — sin token (401),POST,{{baseUrl}}/clinical-cases/{{clinicalCaseId}}/follow-ups,1,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,✅ Ver controles de seguimiento del caso clínico,GET,{{baseUrl}}/clinical-cases/{{clinicalCaseId}}/follow-ups,2,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,1. Login Admin,POST,{{baseUrl}}/auth/login,2,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,2. Login Cliente App,POST,{{baseUrl}}/auth/login,2,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,3. Crear solicitud de cita (para rechazar),POST,{{baseUrl}}/appointment-requests,2,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,4. Ver mis solicitudes (solicitud recién creada),GET,{{baseUrl}}/appointment-requests/my,3,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,5. Rechazar solicitud (Admin),PATCH,{{baseUrl}}/appointment-requests/{{solicitudId}}/status,2,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,6. Ver notificaciones cliente - rechazo,GET,{{baseUrl}}/notifications/my,3,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,7. Crear segunda solicitud de cita (para aceptar),POST,{{baseUrl}}/appointment-requests,2,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,8. Aceptar solicitud (Admin),PATCH,{{baseUrl}}/appointment-requests/{{solicitudId2}}/status,2,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,9. Ver notificaciones cliente - aceptación,GET,{{baseUrl}}/notifications/my,3,BLOCKED_E403

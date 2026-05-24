@@ -1,0 +1,9 @@
+collection,requests,pm_test_declarations,execution
+PetSafe-API.postman_collection.json,81,12,BLOCKED_E403
+Encounters-Vaccinations.postman_collection.json,59,14,BLOCKED_E403
+PetSafe-Encounters-Attachments.postman_collection.json,15,23,BLOCKED_E403
+PetSafe-Encounters-Drafts.postman_collection.json,21,30,BLOCKED_E403
+PetSafe-Vaccinations-Fixed.postman_collection.json,28,48,BLOCKED_E403
+PetSafe-Appointments.postman_collection.json,15,31,BLOCKED_E403
+PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json,11,17,BLOCKED_E403
+PetSafe-Notificaciones.postman_collection.json,9,21,BLOCKED_E403

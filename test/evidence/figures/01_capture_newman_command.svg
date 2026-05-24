@@ -1,0 +1,15 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1300' height='520'>
+<rect width='100%' height='100%' fill='#0b1020'/>
+<text x='20' y='40' fill='#e5e7eb' font-family='monospace' font-size='32'>Capture: Newman version command output</text>
+<text x='20' y='90' fill='#93c5fd' font-family='monospace' font-size='22'>$ npx --no-install newman -v</text>
+<foreignObject x='20' y='120' width='1240' height='360'>
+<div xmlns='http://www.w3.org/1999/xhtml' style='font-family:monospace;font-size:24px;color:#fca5a5;white-space:pre-wrap'>npm warn Unknown env config &quot;http-proxy&quot;. This will stop working in the next major version of npm.
+npm error code E403
+npm error 403 403 Forbidden - GET https://registry.npmjs.org/newman
+npm error 403 In most cases, you or one of your dependencies are requesting
+npm error 403 a package version that is forbidden by your security policy, or
+npm error 403 on a server you do not have access to.
+npm error A complete log of this run can be found in: /root/.npm/_logs/2026-05-24T16_28_45_213Z-debug-0.log
+</div>
+</foreignObject>
+</svg>
