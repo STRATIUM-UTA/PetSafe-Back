@@ -1,0 +1,690 @@
+{
+  "info": {
+    "name": "PetSafe — Encounters Borradores (Drafts)",
+    "description": "Pruebas de integración para los endpoints de borradores en atenciones clínicas: vacunas borrador, tratamientos borrador, revisiones de tratamiento y procedimientos borrador. Todos estos endpoints permiten al MVZ guardar un estado parcial mientras construye la ficha clínica.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
+    { "key": "adminEmail", "value": "admin@safepet.com" },
+    { "key": "adminPassword", "value": "Admin123!" },
+    { "key": "adminToken", "value": "" },
+    { "key": "encounterId", "value": "1", "description": "ID de atención ABIERTA (estado EN_ATENCION). Ajustar según seed." },
+    { "key": "patientId", "value": "1", "description": "ID de paciente para la atención" },
+    { "key": "vaccineId", "value": "1", "description": "ID de vacuna del catálogo para el borrador" },
+    { "key": "procedureCatalogId", "value": "1", "description": "ID del catálogo de procedimientos" },
+    { "key": "vaccinationDraftId", "value": "", "description": "ID del borrador de vacuna creado" },
+    { "key": "treatmentDraftId", "value": "", "description": "ID del borrador de tratamiento creado" },
+    { "key": "treatmentReviewDraftId", "value": "", "description": "ID del borrador de revisión de tratamiento creado" },
+    { "key": "procedureDraftId", "value": "", "description": "ID del borrador de procedimiento creado" }
+  ],
+  "item": [
+    {
+      "name": "🔐 Setup",
+      "item": [
+        {
+          "name": "✅ Login — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "🔧 Crear atención para pruebas de borradores",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('encounterId', body.id);",
+                  "  pm.test('Atención creada', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"startTime\": \"2026-05-24T10:00:00\",\n  \"reason\": \"Consulta de prueba para borradores\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💉 Borradores de Vacunas",
+      "description": "POST /encounters/:id/vaccination-drafts — PUT — PATCH delete",
+      "item": [
+        {
+          "name": "✅ Crear borrador de vacuna",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('vaccinationDraftId', body.id);",
+                  "  pm.test('ID de borrador capturado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "  pm.test('Tiene vaccineId', function () {",
+                  "    pm.expect(body.vaccineId || body.vaccine).to.exist;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"batchNumber\": \"LOTE-DRAFT-001\",\n  \"appliedAt\": \"2026-05-24\",\n  \"nextDoseDate\": \"2027-05-24\",\n  \"notes\": \"Borrador de vacuna para prueba de integración\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "vaccination-drafts"]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar borrador de vacuna",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Borrador actualizado', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.id).to.eql(parseInt(pm.collectionVariables.get('vaccinationDraftId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"batchNumber\": \"LOTE-DRAFT-002-UPDATED\",\n  \"appliedAt\": \"2026-05-24\",\n  \"nextDoseDate\": \"2027-06-24\",\n  \"notes\": \"Borrador actualizado correctamente\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts/{{vaccinationDraftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "vaccination-drafts", "{{vaccinationDraftId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear borrador — vaccineId inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 — vacuna no existe', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccineId\": 999999,\n  \"appliedAt\": \"2026-05-24\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "vaccination-drafts"]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar borrador de vacuna (soft delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 204 — borrador eliminado', function () {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts/{{vaccinationDraftId}}/delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "vaccination-drafts", "{{vaccinationDraftId}}", "delete"]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar borrador inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/vaccination-drafts/999999/delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "vaccination-drafts", "999999", "delete"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💊 Borradores de Tratamientos",
+      "description": "POST /encounters/:id/treatment-drafts — PUT — PATCH delete",
+      "item": [
+        {
+          "name": "✅ Crear borrador de tratamiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('treatmentDraftId', body.id);",
+                  "  pm.test('ID de borrador capturado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tratamiento Borrador — Antibiótico\",\n  \"durationDays\": 7,\n  \"instructions\": \"Administrar con comida\",\n  \"items\": [\n    {\n      \"drugName\": \"Amoxicilina 250mg\",\n      \"dose\": \"1 cápsula\",\n      \"frequency\": \"cada 12 horas\",\n      \"durationDays\": 7\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "treatment-drafts"]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar borrador de tratamiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Borrador de tratamiento actualizado', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.id).to.eql(parseInt(pm.collectionVariables.get('treatmentDraftId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tratamiento Borrador Actualizado — Antibiótico\",\n  \"durationDays\": 10,\n  \"instructions\": \"Administrar con comida y agua\",\n  \"items\": [\n    {\n      \"drugName\": \"Amoxicilina 500mg\",\n      \"dose\": \"1 cápsula\",\n      \"frequency\": \"cada 8 horas\",\n      \"durationDays\": 10\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts/{{treatmentDraftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "treatment-drafts", "{{treatmentDraftId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear borrador — duración menor a 1 día (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 — duración inválida', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tratamiento inválido\",\n  \"durationDays\": 0,\n  \"items\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "treatment-drafts"]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar borrador de tratamiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 204', function () {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/treatment-drafts/{{treatmentDraftId}}/delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "treatment-drafts", "{{treatmentDraftId}}", "delete"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 Borradores de Revisión de Tratamientos",
+      "description": "POST /encounters/:id/treatment-review-drafts — PATCH delete",
+      "item": [
+        {
+          "name": "✅ Crear borrador de revisión de tratamiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('treatmentReviewDraftId', body.id);",
+                  "  pm.test('ID de revisión capturado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatmentId\": 1,\n  \"reviewedAt\": \"2026-05-24\",\n  \"compliance\": \"BUENA\",\n  \"notes\": \"El paciente ha seguido correctamente el tratamiento\",\n  \"continuesTreatment\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/treatment-review-drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "treatment-review-drafts"]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar borrador de revisión de tratamiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 204', function () {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/treatment-review-drafts/{{treatmentReviewDraftId}}/delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "treatment-review-drafts", "{{treatmentReviewDraftId}}", "delete"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🩺 Borradores de Procedimientos",
+      "description": "POST /encounters/:id/procedure-drafts — PUT — PATCH delete",
+      "item": [
+        {
+          "name": "✅ Crear borrador de procedimiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('procedureDraftId', body.id);",
+                  "  pm.test('ID de borrador capturado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catalogId\": {{procedureCatalogId}},\n  \"performedAt\": \"2026-05-24T10:30:00\",\n  \"notes\": \"Procedimiento borrador para prueba de integración\",\n  \"durationMinutes\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/procedure-drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "procedure-drafts"]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar borrador de procedimiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Borrador actualizado', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.id).to.eql(parseInt(pm.collectionVariables.get('procedureDraftId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catalogId\": {{procedureCatalogId}},\n  \"performedAt\": \"2026-05-24T11:00:00\",\n  \"notes\": \"Procedimiento actualizado — tarda más de lo esperado\",\n  \"durationMinutes\": 45\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/procedure-drafts/{{procedureDraftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "procedure-drafts", "{{procedureDraftId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear borrador — encounter inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catalogId\": {{procedureCatalogId}},\n  \"performedAt\": \"2026-05-24T10:30:00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/999999/procedure-drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "999999", "procedure-drafts"]
+            }
+          }
+        },
+        {
+          "name": "✅ Eliminar borrador de procedimiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 204', function () {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/procedure-drafts/{{procedureDraftId}}/delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "procedure-drafts", "{{procedureDraftId}}", "delete"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔗 Subentidades Adicionales del Encounter",
+      "description": "Endpoints de upsert adicionales sin cobertura previa: clinical-case link y follow-up config.",
+      "item": [
+        {
+          "name": "✅ Vincular caso clínico al encounter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 201', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clinicalCaseId\": null,\n  \"isNewCase\": true,\n  \"caseName\": \"Dermatitis crónica\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/clinical-case",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "clinical-case"]
+            }
+          }
+        },
+        {
+          "name": "✅ Configurar seguimiento del encounter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 201', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requiresFollowUp\": true,\n  \"followUpDate\": \"2026-06-24\",\n  \"followUpNotes\": \"Control en 30 días para verificar evolución\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/follow-up-config",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "follow-up-config"]
+            }
+          }
+        },
+        {
+          "name": "✅ Reactivar atención (FINALIZADA → ABIERTA)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Atención reactivada', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.not.eql('FINALIZADA');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/reactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "reactivate"]
+            }
+          }
+        },
+        {
+          "name": "❌ Reactivar atención inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/999999/reactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "999999", "reactivate"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

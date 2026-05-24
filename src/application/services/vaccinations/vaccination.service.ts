@@ -580,6 +580,7 @@ export class VaccinationService {
           isExternal,
           batchNumber: dto.batchNumber?.trim() ?? null,
           nextDoseDate,
+          weightKg: dto.weightKg ?? null,
           notes: dto.notes?.trim() ?? null,
           encounterId: dto.encounterId ?? null,
           createdByUserId: userId,
@@ -593,6 +594,12 @@ export class VaccinationService {
         record.id,
         manager,
       );
+
+      if (dto.weightKg !== undefined && dto.weightKg !== null) {
+        await manager.update(Patient, patientId, {
+          currentWeight: dto.weightKg,
+        });
+      }
 
       return {
         recordId: record.id,

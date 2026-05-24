@@ -62,6 +62,10 @@ export class CreatePatientDto {
   microchipCode?: string;
 
   @IsOptional()
+  @IsString({ message: 'La identificación de la mascota debe ser un texto.' })
+  code?: string;
+
+  @IsOptional()
   @IsString({ message: 'Las marcas distintivas deben ser un texto.' })
   distinguishingMarks?: string;
 

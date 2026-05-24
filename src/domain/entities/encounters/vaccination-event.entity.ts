@@ -29,6 +29,15 @@ export class VaccinationEvent extends BaseAuditEntity {
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 
+  @Column({
+    name: 'weight_kg',
+    type: 'numeric',
+    precision: 8,
+    scale: 2,
+    nullable: true,
+  })
+  weightKg!: number | null;
+
   @Column({ name: 'patient_vaccine_record_id', type: 'int', nullable: true })
   patientVaccineRecordId!: number | null;
 

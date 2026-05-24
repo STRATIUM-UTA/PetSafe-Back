@@ -169,6 +169,7 @@ export class PatientsService {
           currentWeight: dto.currentWeight ?? null,
           isSterilized: dto.sterilized ?? false,
           microchipCode: dto.microchipCode ?? null,
+          code: dto.code ?? null,
           distinguishingMarks: dto.distinguishingMarks ?? null,
           generalAllergies: dto.generalAllergies ?? null,
           generalHistory: dto.generalHistory ?? null,
@@ -213,6 +214,7 @@ export class PatientsService {
           currentWeight: dto.currentWeight ?? null,
           isSterilized: dto.sterilized ?? false,
           microchipCode: dto.microchipCode ?? null,
+          code: dto.code ?? null,
           distinguishingMarks: dto.distinguishingMarks ?? null,
           generalAllergies: dto.generalAllergies ?? null,
           generalHistory: dto.generalHistory ?? null,
@@ -327,6 +329,7 @@ export class PatientsService {
         if (dto.currentWeight !== undefined) updateData.currentWeight = dto.currentWeight ?? null;
         if (dto.sterilized !== undefined) updateData.isSterilized = dto.sterilized;
         if (dto.microchipCode !== undefined) updateData.microchipCode = dto.microchipCode ?? null;
+        if (dto.code !== undefined) updateData.code = dto.code ?? null;
         if (dto.distinguishingMarks !== undefined) updateData.distinguishingMarks = dto.distinguishingMarks ?? null;
         if (dto.generalAllergies !== undefined) updateData.generalAllergies = dto.generalAllergies ?? null;
         if (dto.generalHistory !== undefined) updateData.generalHistory = dto.generalHistory ?? null;
