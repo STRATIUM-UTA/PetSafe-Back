@@ -1152,6 +1152,7 @@ export class VaccinationPlanService {
       isExternal: record.isExternal,
       batchNumber: record.batchNumber ?? null,
       nextDoseDate: this.toDateString(record.nextDoseDate),
+      weightKg: record.weightKg !== undefined && record.weightKg !== null ? Number(record.weightKg) : null,
       notes: record.notes ?? null,
       encounterId: record.encounterId ?? null,
       planDoseId,

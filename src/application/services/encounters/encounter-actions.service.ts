@@ -68,6 +68,7 @@ export class EncounterActionsService {
       applicationDate: new Date(dto.applicationDate),
       suggestedNextDate: dto.suggestedNextDate ? new Date(dto.suggestedNextDate) : null,
       notes: dto.notes ?? null,
+      weightKg: dto.weightKg ?? null,
     });
 
     const carnetRecord = this.patientVaccineRecordRepo.create({
@@ -80,6 +81,7 @@ export class EncounterActionsService {
       notes: dto.notes ?? 'Aplicada en consulta médica',
       encounterId: encounter.id,
       createdByUserId: encounter.createdByUserId,
+      weightKg: dto.weightKg ?? null,
     });
 
     await this.dataSource.transaction(async (manager: EntityManager) => {
@@ -93,6 +95,12 @@ export class EncounterActionsService {
         savedRecord.id,
         manager,
       );
+
+      if (dto.weightKg !== undefined && dto.weightKg !== null) {
+        await manager.update('Patient', encounter.patientId, {
+          currentWeight: dto.weightKg,
+        });
+      }
     });
   }
 

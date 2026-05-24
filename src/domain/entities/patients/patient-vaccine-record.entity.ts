@@ -58,6 +58,15 @@ export class PatientVaccineRecord {
   @Column({ name: 'next_dose_date', type: 'date', nullable: true })
   nextDoseDate!: Date | null;
 
+  @Column({
+    name: 'weight_kg',
+    type: 'numeric',
+    precision: 8,
+    scale: 2,
+    nullable: true,
+  })
+  weightKg!: number | null;
+
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 

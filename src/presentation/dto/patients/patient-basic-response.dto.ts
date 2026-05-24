@@ -25,6 +25,7 @@ export type PatientBasicByClientResponse = {
   species: {
     id: number;
     name: string;
+    zootecnicalGroupId?: number | null;
   } | null;
   breed: {
     id: number;
@@ -56,6 +57,7 @@ export type PatientAdminBasicResponse = {
   species: {
     id: number;
     name: string;
+    zootecnicalGroupId?: number | null;
   } | null;
   breed: {
     id: number;

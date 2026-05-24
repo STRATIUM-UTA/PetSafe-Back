@@ -161,6 +161,7 @@ export class EncounterMapper {
       vaccineName: e.vaccine?.name ?? null,
       applicationDate: toDate(e.applicationDate)!,
       suggestedNextDate: e.suggestedNextDate ? toDate(e.suggestedNextDate) : null,
+      weightKg: e.weightKg !== undefined && e.weightKg !== null ? Number(e.weightKg) : null,
       notes: e.notes ?? null,
     };
   }
@@ -173,6 +174,7 @@ export class EncounterMapper {
       vaccineName: e.vaccine?.name ?? null,
       applicationDate: toDate(e.applicationDate)!,
       suggestedNextDate: e.suggestedNextDate ? toDate(e.suggestedNextDate) : null,
+      weightKg: e.weightKg !== undefined && e.weightKg !== null ? Number(e.weightKg) : null,
       notes: e.notes ?? null,
     };
   }

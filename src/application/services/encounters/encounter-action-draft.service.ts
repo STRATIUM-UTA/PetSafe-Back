@@ -19,6 +19,7 @@ import { Procedure } from '../../../domain/entities/encounters/procedure.entity.
 import { Vaccine } from '../../../domain/entities/catalogs/vaccine.entity.js';
 import { ProcedureCatalog } from '../../../domain/entities/catalogs/procedure-catalog.entity.js';
 import { PatientVaccineRecord } from '../../../domain/entities/patients/patient-vaccine-record.entity.js';
+import { Patient } from '../../../domain/entities/patients/patient.entity.js';
 import { PatientVaccinationPlanDose } from '../../../domain/entities/vaccinations/patient-vaccination-plan-dose.entity.js';
 import {
   PatientVaccinationPlanDoseStatusEnum,
@@ -303,6 +304,7 @@ export class EncounterActionDraftService {
     draft.vaccineId = dto.vaccineId;
     draft.applicationDate = new Date(dto.applicationDate);
     draft.suggestedNextDate = dto.suggestedNextDate ? new Date(dto.suggestedNextDate) : null;
+    draft.weightKg = dto.weightKg ?? null;
     draft.notes = dto.notes?.trim() || null;
     await this.vaccinationDraftRepo.save(draft);
   }
@@ -471,6 +473,7 @@ export class EncounterActionDraftService {
       notes: draft.notes ?? 'Aplicada en consulta médica',
       encounterId: encounter.id,
       createdByUserId: encounter.createdByUserId,
+      weightKg: draft.weightKg ?? null,
     });
     const savedRecord = await recordRepo.save(carnetRecord);
 
@@ -481,8 +484,15 @@ export class EncounterActionDraftService {
       suggestedNextDate,
       notes: draft.notes ?? null,
       patientVaccineRecordId: savedRecord.id,
+      weightKg: draft.weightKg ?? null,
     });
     await eventRepo.save(event);
+
+    if (draft.weightKg !== undefined && draft.weightKg !== null) {
+      await manager.update(Patient, encounter.patientId, {
+        currentWeight: draft.weightKg,
+      });
+    }
 
     if (draft.planDoseId) {
       await this.vaccinationPlanService.registerApplicationForPlanDose(
@@ -605,6 +615,7 @@ export class EncounterActionDraftService {
         vaccineId: event.vaccineId,
         applicationDate: new Date(event.applicationDate),
         suggestedNextDate: event.suggestedNextDate ? new Date(event.suggestedNextDate) : null,
+        weightKg: event.weightKg ?? null,
         notes: event.notes ?? null,
       }),
     );
