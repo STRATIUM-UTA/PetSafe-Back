@@ -1,0 +1,25 @@
+{
+  "generatedAtUtc": "2026-05-24T16:16:11Z",
+  "branch": "docs/integration-test-evidence",
+  "expectedBaseBranch": "develop",
+  "actualLocalBaseNote": "develop ref not present in local clone; branch created from local 'work'",
+  "baseCommit": "f2e2500",
+  "collections": [
+    "test/PetSafe-API.postman_collection.json",
+    "test/Encounters-Vaccinations.postman_collection.json",
+    "test/PetSafe-Encounters-Attachments.postman_collection.json",
+    "test/PetSafe-Encounters-Drafts.postman_collection.json",
+    "test/PetSafe-Vaccinations-Fixed.postman_collection.json",
+    "test/PetSafe-Appointments.postman_collection.json",
+    "test/PetSafe-Appointments-NoShow-ClinicalFollowUps.postman_collection.json",
+    "test/PetSafe-Notificaciones.postman_collection.json"
+  ],
+  "reportsGenerated": [],
+  "imagesGenerated": [],
+  "summaryByCollection": "See test/evidence/tables/collection_summary.md",
+  "executionStatus": "blocked",
+  "blockers": [
+    "npx newman -v => npm E403 Forbidden",
+    "No verified runtime DB/auth seeds for full E2E execution in this environment"
+  ]
+}
