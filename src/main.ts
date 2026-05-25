@@ -7,6 +7,7 @@ import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './infra/filters/http-exception.filter.js';
 import { getCorsConfig } from './infra/config/cors.config.js';
 import { ASSETS_ROOT, ensureAssetsDirectories } from './infra/config/uploads.config.js';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   ensureAssetsDirectories();
@@ -65,6 +66,16 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
   app.setGlobalPrefix('api');
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('PetSafe API')
+    .setDescription('Documentacion de la API de PetSafe')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, swaggerDocument);
 
   await app.listen(process.env.PORT ?? 3000);
   const server = app.getHttpServer() as {
