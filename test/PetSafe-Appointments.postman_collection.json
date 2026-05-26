@@ -35,6 +35,26 @@
       "key": "appointmentToCancelId",
       "value": "",
       "description": "ID de cita creada en 'Crear Cita para Cancelar'"
+    },
+    {
+      "key": "appointmentDate",
+      "value": "",
+      "description": "Fecha dinámica para las citas principales de la corrida"
+    },
+    {
+      "key": "appointmentCancelDate",
+      "value": "",
+      "description": "Fecha dinámica para la cita de cancelación"
+    },
+    {
+      "key": "appointmentRangeFrom",
+      "value": "",
+      "description": "Inicio dinámico del rango de listado"
+    },
+    {
+      "key": "appointmentRangeTo",
+      "value": "",
+      "description": "Fin dinámico del rango de listado"
     }
   ],
   "item": [
@@ -47,16 +67,18 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', function () {",
-                  "  pm.response.to.have.status(200);",
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
                   "});",
-                  "if (pm.response.code === 200) {",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
                   "  const body = pm.response.json();",
-                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
-                  "  pm.test('Token capturado', function () {",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
                   "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
                   "  });",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
                   "}"
                 ]
               }
@@ -65,7 +87,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -73,8 +98,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         }
@@ -113,17 +143,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientId\": {{patientId}},\n  \"scheduledDate\": \"2026-05-15\",\n  \"scheduledTime\": \"09:00\",\n  \"endTime\": \"09:30\",\n  \"reason\": \"CONSULTA_GENERAL\",\n  \"notes\": \"Prueba de integración — cita válida\"\n}"
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"scheduledDate\": \"{{appointmentDate}}\",\n  \"scheduledTime\": \"09:00\",\n  \"endTime\": \"09:30\",\n  \"reason\": \"CONSULTA_GENERAL\",\n  \"notes\": \"Prueba de integración — cita válida\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/appointments",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
             }
           }
         },
@@ -148,17 +188,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"scheduledDate\": \"2026-05-15\",\n  \"scheduledTime\": \"10:00\",\n  \"endTime\": \"10:30\",\n  \"reason\": \"CONSULTA_GENERAL\"\n}"
+              "raw": "{\n  \"scheduledDate\": \"{{appointmentDate}}\",\n  \"scheduledTime\": \"10:00\",\n  \"endTime\": \"10:30\",\n  \"reason\": \"CONSULTA_GENERAL\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/appointments",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
             }
           }
         },
@@ -183,17 +233,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientId\": {{patientId}},\n  \"scheduledDate\": \"2026-05-15\",\n  \"scheduledTime\": \"11:30\",\n  \"endTime\": \"11:00\",\n  \"reason\": \"VACUNACION\"\n}"
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"scheduledDate\": \"{{appointmentDate}}\",\n  \"scheduledTime\": \"11:30\",\n  \"endTime\": \"11:00\",\n  \"reason\": \"VACUNACION\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/appointments",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
             }
           }
         },
@@ -214,7 +274,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -222,8 +285,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/appointments",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
             }
           }
         },
@@ -249,17 +316,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientId\": {{patientId}},\n  \"scheduledDate\": \"2026-05-15\",\n  \"scheduledTime\": \"09:00\",\n  \"endTime\": \"09:30\",\n  \"reason\": \"CONSULTA_GENERAL\",\n  \"notes\": \"Intento solapamiento\"\n}"
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"scheduledDate\": \"{{appointmentDate}}\",\n  \"scheduledTime\": \"09:00\",\n  \"endTime\": \"09:30\",\n  \"reason\": \"CONSULTA_GENERAL\",\n  \"notes\": \"Intento solapamiento\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/appointments",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
             }
           }
         }
@@ -295,15 +372,28 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
-              "raw": "{{baseUrl}}/appointments?from=2026-05-01&to=2026-05-31",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments"],
+              "raw": "{{baseUrl}}/appointments?from={{appointmentRangeFrom}}&to={{appointmentRangeTo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ],
               "query": [
-                { "key": "from", "value": "2026-05-01" },
-                { "key": "to", "value": "2026-05-31" }
+                {
+                  "key": "from",
+                  "value": "{{appointmentRangeFrom}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{appointmentRangeTo}}"
+                }
               ]
             }
           }
@@ -325,14 +415,24 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/appointments?to=2026-05-31",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ],
               "query": [
-                { "key": "to", "value": "2026-05-31" }
+                {
+                  "key": "to",
+                  "value": "2026-05-31"
+                }
               ]
             }
           }
@@ -368,12 +468,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/appointments/{{appointmentId}}/confirm",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments", "{{appointmentId}}", "confirm"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{appointmentId}}",
+                "confirm"
+              ]
             }
           }
         },
@@ -399,12 +508,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/appointments/{{appointmentId}}/confirm",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments", "{{appointmentId}}", "confirm"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{appointmentId}}",
+                "confirm"
+              ]
             }
           }
         },
@@ -425,12 +543,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/appointments/999999/confirm",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments", "999999", "confirm"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "999999",
+                "confirm"
+              ]
             }
           }
         }
@@ -465,17 +592,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientId\": {{patientId}},\n  \"scheduledDate\": \"2026-05-20\",\n  \"scheduledTime\": \"14:00\",\n  \"endTime\": \"14:30\",\n  \"reason\": \"TRATAMIENTO\",\n  \"notes\": \"Cita creada para prueba de cancelación\"\n}"
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"scheduledDate\": \"{{appointmentCancelDate}}\",\n  \"scheduledTime\": \"14:00\",\n  \"endTime\": \"14:30\",\n  \"reason\": \"TRATAMIENTO\",\n  \"notes\": \"Cita creada para prueba de cancelación\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/appointments",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
             }
           }
         },
@@ -504,12 +641,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/appointments/{{appointmentToCancelId}}/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments", "{{appointmentToCancelId}}", "cancel"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{appointmentToCancelId}}",
+                "cancel"
+              ]
             }
           }
         },
@@ -535,12 +681,21 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/appointments/{{appointmentToCancelId}}/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments", "{{appointmentToCancelId}}", "cancel"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{appointmentToCancelId}}",
+                "cancel"
+              ]
             }
           }
         },
@@ -561,16 +716,45 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/appointments/999999/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["appointments", "999999", "cancel"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "999999",
+                "cancel"
+              ]
             }
           }
         }
       ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('appointmentDate')) {",
+          "  const runDay = 1 + (Math.floor(Date.now() / 1000) % 7000);",
+          "  const mainDate = new Date(Date.UTC(2035, 0, runDay));",
+          "  const cancelDate = new Date(Date.UTC(2035, 0, runDay + 1));",
+          "  const fmt = d => d.toISOString().slice(0, 10);",
+          "  pm.collectionVariables.set('appointmentDate', fmt(mainDate));",
+          "  pm.collectionVariables.set('appointmentCancelDate', fmt(cancelDate));",
+          "  pm.collectionVariables.set('appointmentRangeFrom', fmt(mainDate));",
+          "  pm.collectionVariables.set('appointmentRangeTo', fmt(cancelDate));",
+          "}"
+        ]
+      }
     }
   ]
 }

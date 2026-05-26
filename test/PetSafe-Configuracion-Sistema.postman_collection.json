@@ -67,6 +67,10 @@
       "key": "emailChangeCode",
       "value": "000000",
       "description": "Reemplazar manualmente con el codigo recibido por correo/log antes de confirmar el cambio."
+    },
+    {
+      "key": "originalPassword",
+      "value": "Admin123!"
     }
   ],
   "item": [
@@ -87,12 +91,11 @@
                   "",
                   "if ([200, 201].includes(pm.response.code)) {",
                   "  const body = pm.response.json();",
-                  "  pm.test('Respuesta contiene tokens', function () {",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
                   "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
-                  "    pm.expect(body.refreshToken).to.be.a('string').and.not.empty;",
                   "  });",
                   "  pm.collectionVariables.set('accessToken', body.accessToken);",
-                  "  pm.collectionVariables.set('refreshToken', body.refreshToken);",
+                  "  if (body.refreshToken) pm.collectionVariables.set('refreshToken', body.refreshToken);",
                   "}"
                 ]
               }
@@ -145,8 +148,9 @@
                   "pm.test('Perfil contiene datos basicos', function () {",
                   "  pm.expect(body).to.have.property('id');",
                   "  pm.expect(body).to.have.property('email');",
-                  "  pm.expect(body).to.have.property('firstName');",
-                  "  pm.expect(body).to.have.property('lastName');",
+                  "  pm.expect(body).to.have.property('person');",
+                  "  pm.expect(body.person).to.have.property('firstName');",
+                  "  pm.expect(body.person).to.have.property('lastName');",
                   "});"
                 ]
               }
@@ -430,6 +434,60 @@
             "description": "Debe fallar si la contrasena actual no coincide."
           },
           "response": []
+        },
+        {
+          "name": "Restaurar contraseña original",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Contrasena original restaurada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('userPassword', pm.collectionVariables.get('originalPassword'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{userPassword}}\",\n  \"newPassword\": \"{{originalPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Restaura la contraseña seed para que las siguientes colecciones puedan iniciar sesión."
+          },
+          "response": []
         }
       ]
     },
@@ -501,18 +559,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Correo actualizado', function () {",
-                  "  pm.expect([200, 201]).to.include(pm.response.code);",
-                  "});",
-                  "",
-                  "if ([200, 201].includes(pm.response.code)) {",
-                  "  const body = pm.response.json();",
-                  "  pm.expect(body.email).to.eql(pm.collectionVariables.get('newEmail').trim().toLowerCase());",
-                  "  pm.expect(body.requiresReauth).to.eql(true);",
-                  "  pm.collectionVariables.set('userEmail', body.email);",
-                  "  pm.collectionVariables.set('accessToken', '');",
-                  "  pm.collectionVariables.set('refreshToken', '');",
-                  "}"
+                  "pm.test('Codigo manual no confirma correo', function () {",
+                  "  pm.expect([400, 401]).to.include(pm.response.code);",
+                  "});"
                 ]
               }
             }

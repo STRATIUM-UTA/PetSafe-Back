@@ -1,0 +1,861 @@
+{
+  "info": {
+    "name": "PetSafe — Vacunación (Corregida y Completa)",
+    "description": "Colección CORREGIDA de pruebas de integración para el módulo de Vacunación. Se actualizaron las rutas obsoletas: /catalog→/products, /scheme→/schemes, /records→/applications. Incluye flujos de catálogo de vacunas (productos), esquemas de vacunación, carnet del paciente y gestión de dosis del plan.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
+    { "key": "adminEmail", "value": "admin@safepet.com" },
+    { "key": "adminPassword", "value": "Admin123!" },
+    { "key": "adminToken", "value": "" },
+    { "key": "speciesId", "value": "1", "description": "ID de especie (ej: Canino). Ajustar según seed." },
+    { "key": "vaccineId", "value": "", "description": "ID del producto vacuna creada en la prueba" },
+    { "key": "vaccineIdForDelete", "value": "", "description": "ID de vacuna sin aplicaciones para probar eliminación limpia" },
+    { "key": "patientId", "value": "1", "description": "ID de paciente existente con especie registrada" },
+    { "key": "encounterId", "value": "1", "description": "ID de atención existente para registrar vacunación ligada" },
+    { "key": "schemeId", "value": "", "description": "ID de esquema de vacunación creado" },
+    { "key": "schemeVersionId", "value": "", "description": "ID de versión del esquema creada" },
+    { "key": "patientPlanDoseId", "value": "", "description": "ID de dosis del plan del paciente" }
+  ],
+  "item": [
+    {
+      "name": "🔐 Setup — Login",
+      "item": [
+        {
+          "name": "✅ Login — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "  });",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💊 Catálogo de Vacunas (Productos)",
+      "description": "CRUD completo para el catálogo de vacunas. Ruta correcta: /vaccinations/products (no /vaccinations/catalog)",
+      "item": [
+        {
+          "name": "✅ Crear vacuna obligatoria (Rabia)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('vaccineId', body.id);",
+                  "  pm.test('ID capturado', function () { pm.expect(body.id).to.be.a('number'); });",
+                  "  pm.test('Nombre correcto', function () { pm.expect(body.name).to.include('Rabia'); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rabia Anti-rábica (Prueba Integration)\",\n  \"description\": \"Vacuna obligatoria contra la rabia\",\n  \"speciesId\": {{speciesId}},\n  \"isRequired\": true,\n  \"recommendedDosesCount\": 1,\n  \"recommendedIntervalDays\": 365\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products"]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear vacuna opcional (Leishmaniasis)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('vaccineIdForDelete', body.id);",
+                  "  pm.test('isRequired es false', function () { pm.expect(body.isRequired).to.eql(false); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Leishmaniasis Preventiva (Prueba Integration)\",\n  \"description\": \"Vacuna opcional para perros en zonas endémicas\",\n  \"speciesId\": {{speciesId}},\n  \"isRequired\": false,\n  \"recommendedDosesCount\": 3,\n  \"recommendedIntervalDays\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear vacuna — sin nombre (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 por validación', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Mensaje de error presente', function () {",
+                  "  pm.expect(pm.response.json().message).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speciesId\": {{speciesId}},\n  \"isRequired\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products"]
+            }
+          }
+        },
+        {
+          "name": "❌ Crear vacuna — sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test\",\n  \"speciesId\": {{speciesId}},\n  \"isRequired\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products"]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar catálogo de vacunas (todas las especies)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta es array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(Array.isArray(body) || Array.isArray(body.data)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products"]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar catálogo filtrado por especie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta es array', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(Array.isArray(body) || Array.isArray(body.data)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products?speciesId={{speciesId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products"],
+              "query": [{ "key": "speciesId", "value": "{{speciesId}}" }]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener vacuna por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('ID correcto', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.id).to.eql(parseInt(pm.collectionVariables.get('vaccineId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products/{{vaccineId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products", "{{vaccineId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener vacuna — ID inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products", "999999"]
+            }
+          }
+        },
+        {
+          "name": "✅ Actualizar vacuna (cambiar nombre y dosis)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Nombre actualizado', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.name).to.include('Actualizada');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rabia Anti-rábica Actualizada\",\n  \"recommendedDosesCount\": 2,\n  \"recommendedIntervalDays\": 180\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products/{{vaccineId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products", "{{vaccineId}}"]
+            }
+          }
+        },
+        {
+          "name": "✅ Desactivar vacuna (soft delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 204', function () {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products/{{vaccineIdForDelete}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products", "{{vaccineIdForDelete}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Obtener vacuna desactivada (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 — eliminada no se puede obtener', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products/{{vaccineIdForDelete}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products", "{{vaccineIdForDelete}}"]
+            }
+          }
+        },
+        {
+          "name": "✅ Reactivar vacuna desactivada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Vacuna reactivada', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.isActive !== false).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/products/{{vaccineIdForDelete}}/reactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "products", "{{vaccineIdForDelete}}", "reactivate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Esquemas de Vacunación",
+      "description": "Gestión de esquemas de vacunación y sus versiones. Endpoints nuevos sin cobertura previa.",
+      "item": [
+        {
+          "name": "✅ Listar esquemas (todos)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta es array', function () {",
+                  "  pm.expect(Array.isArray(pm.response.json())).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/schemes",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "schemes"]
+            }
+          }
+        },
+        {
+          "name": "✅ Listar esquemas filtrado por especie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/schemes?speciesId={{speciesId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "schemes"],
+              "query": [{ "key": "speciesId", "value": "{{speciesId}}" }]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear esquema de vacunación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('schemeId', body.id);",
+                  "  pm.test('ID de esquema capturado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "  pm.test('Nombre correcto', function () {",
+                  "    pm.expect(body.name).to.include('Canino Básico');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Esquema Canino Básico (Prueba Integration)\",\n  \"description\": \"Esquema estándar de vacunación para perros\",\n  \"speciesId\": {{speciesId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/schemes",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "schemes"]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener esquema por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('ID correcto', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.id).to.eql(parseInt(pm.collectionVariables.get('schemeId')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/schemes/{{schemeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "schemes", "{{schemeId}}"]
+            }
+          }
+        },
+        {
+          "name": "✅ Crear versión del esquema (con dosis)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('schemeVersionId', body.id);",
+                  "  pm.test('ID de versión capturado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"v1.0\",\n  \"notes\": \"Primera versión del esquema canino básico\",\n  \"doses\": [\n    {\n      \"vaccineId\": {{vaccineId}},\n      \"doseNumber\": 1,\n      \"recommendedAgeWeeksMin\": 6,\n      \"recommendedAgeWeeksMax\": 8,\n      \"notes\": \"Primera dosis\"\n    },\n    {\n      \"vaccineId\": {{vaccineId}},\n      \"doseNumber\": 2,\n      \"recommendedAgeWeeksMin\": 10,\n      \"recommendedAgeWeeksMax\": 12,\n      \"notes\": \"Segunda dosis de refuerzo\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/schemes/{{schemeId}}/versions",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "schemes", "{{schemeId}}", "versions"]
+            }
+          }
+        },
+        {
+          "name": "✅ Obtener versión del esquema por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Tiene dosis', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.doses || body.items).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/schemes/versions/{{schemeVersionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "schemes", "versions", "{{schemeVersionId}}"]
+            }
+          }
+        },
+        {
+          "name": "✅ Desactivar versión del esquema",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"INACTIVA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/schemes/versions/{{schemeVersionId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "schemes", "versions", "{{schemeVersionId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "✅ Reactivar versión del esquema",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/schemes/versions/{{schemeVersionId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "schemes", "versions", "{{schemeVersionId}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🐾 Carnet de Vacunación del Paciente",
+      "description": "Ruta correcta: /vaccinations/patients/:id/applications (no /records). Incluye listar y registrar aplicaciones.",
+      "item": [
+        {
+          "name": "✅ Registrar aplicación de vacuna (externa)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Aplicación registrada', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.id).to.be.a('number');",
+                  "  pm.expect(body.source || body.type).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"appliedAt\": \"2026-01-15\",\n  \"batchNumber\": \"LOTE-001-2026\",\n  \"nextDoseDate\": \"2027-01-15\",\n  \"notes\": \"Vacuna aplicada externamente antes de registrarse en la clínica\",\n  \"source\": \"EXTERNA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "patients", "{{patientId}}", "applications"]
+            }
+          }
+        },
+        {
+          "name": "✅ Registrar aplicación ligada a una atención",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Tiene ID de atención vinculado', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.encounterId || body.encounter).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"appliedAt\": \"2026-05-24\",\n  \"batchNumber\": \"LOTE-002-2026\",\n  \"nextDoseDate\": \"2027-05-24\",\n  \"notes\": \"Aplicada en consulta de control\",\n  \"source\": \"INTERNA\",\n  \"encounterId\": {{encounterId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "patients", "{{patientId}}", "applications"]
+            }
+          }
+        },
+        {
+          "name": "❌ Registrar aplicación — fecha próxima antes de aplicación (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 por validación de fechas', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"appliedAt\": \"2026-05-24\",\n  \"nextDoseDate\": \"2025-01-01\",\n  \"source\": \"EXTERNA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "patients", "{{patientId}}", "applications"]
+            }
+          }
+        },
+        {
+          "name": "❌ Registrar aplicación — vacuna inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 — vacuna no existe', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccineId\": 999999,\n  \"appliedAt\": \"2026-05-24\",\n  \"source\": \"EXTERNA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "patients", "{{patientId}}", "applications"]
+            }
+          }
+        },
+        {
+          "name": "❌ Registrar aplicación — paciente inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 — paciente no existe', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccineId\": {{vaccineId}},\n  \"appliedAt\": \"2026-05-24\",\n  \"source\": \"EXTERNA\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/patients/999999/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "patients", "999999", "applications"]
+            }
+          }
+        },
+        {
+          "name": "✅ Ver historial de aplicaciones del paciente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta es array', function () {",
+                  "  pm.expect(Array.isArray(pm.response.json())).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "patients", "{{patientId}}", "applications"]
+            }
+          }
+        },
+        {
+          "name": "✅ Ver plan de vacunación del paciente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Plan tiene doses o está vacío', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/vaccinations/patients/{{patientId}}/plan",
+              "host": ["{{baseUrl}}"],
+              "path": ["vaccinations", "patients", "{{patientId}}", "plan"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

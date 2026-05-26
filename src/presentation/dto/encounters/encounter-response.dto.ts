@@ -80,6 +80,7 @@ export class VaccinationEventResponseDto {
   vaccineName!: string | null;
   applicationDate!: string;
   suggestedNextDate!: string | null;
+  weightKg!: number | null;
   notes!: string | null;
 }
 
@@ -90,6 +91,7 @@ export class VaccinationDraftResponseDto {
   vaccineName!: string | null;
   applicationDate!: string;
   suggestedNextDate!: string | null;
+  weightKg!: number | null;
   notes!: string | null;
 }
 

@@ -23,6 +23,7 @@ export class PatientVaccineRecordResponseDto {
   isExternal!: boolean;
   batchNumber!: string | null;
   nextDoseDate!: string | null;
+  weightKg!: number | null;
   notes!: string | null;
   encounterId!: number | null;
   planDoseId!: number | null;

@@ -1,0 +1,509 @@
+{
+  "info": {
+    "name": "PetSafe — Encounters Adjuntos (Attachments)",
+    "description": "Pruebas de integración para la carga, listado y eliminación de archivos adjuntos en atenciones clínicas. Incluye pruebas de subida multipart/form-data, validación de tipos de archivo, URLs con base URL dinámica y eliminación segura.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
+    { "key": "adminEmail", "value": "admin@safepet.com" },
+    { "key": "adminPassword", "value": "Admin123!" },
+    { "key": "adminToken", "value": "" },
+    { "key": "encounterId", "value": "1", "description": "ID de atención ABIERTA. Ajustar según seed." },
+    { "key": "patientId", "value": "1", "description": "ID de paciente para crear la atención de prueba" },
+    { "key": "attachmentFileId", "value": "", "description": "ID del archivo subido (capturado dinámicamente)" }
+  ],
+  "item": [
+    {
+      "name": "🔐 Setup",
+      "item": [
+        {
+          "name": "✅ Login — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "🔧 Crear atención para pruebas de adjuntos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if ([200, 201].includes(pm.response.code)) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('encounterId', body.id);",
+                  "  pm.test('Atención creada correctamente', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": {{patientId}},\n  \"startTime\": \"2026-05-24T14:00:00\",\n  \"reason\": \"Consulta para prueba de adjuntos\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📎 Listado de Adjuntos",
+      "item": [
+        {
+          "name": "✅ Listar adjuntos — atención sin archivos (lista vacía)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Respuesta es array (puede estar vacía)', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(Array.isArray(body) || Array.isArray(body.data)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments"]
+            }
+          }
+        },
+        {
+          "name": "❌ Listar adjuntos — atención inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/999999/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "999999", "attachments"]
+            }
+          }
+        },
+        {
+          "name": "❌ Listar adjuntos — sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📤 Subida de Archivos (Multipart)",
+      "description": "IMPORTANTE: Para estas pruebas necesitas adjuntar un archivo real desde Postman UI. La variable 'file' en el form-data debe ser un archivo seleccionado manualmente.",
+      "item": [
+        {
+          "name": "✅ Subir imagen JPEG como adjunto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 — archivo subido exitosamente', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('attachmentFileId', body.id);",
+                  "  pm.test('ID de adjunto capturado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "  pm.test('URL del archivo presente', function () {",
+                  "    pm.expect(body.url || body.fileUrl || body.path).to.exist;",
+                  "  });",
+                  "  pm.test('MIME type correcto', function () {",
+                  "    pm.expect(body.mimeType || body.contentType || body.type).to.include('image');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "description": "Adjunta un archivo de imagen JPG/PNG en el campo 'file' del form-data.",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Seleccionar un archivo JPG o PNG para la prueba"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments"]
+            }
+          }
+        },
+        {
+          "name": "✅ Subir PDF como adjunto (resultados de laboratorio)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Adjunto PDF registrado', function () {",
+                  "    pm.expect(body.id).to.be.a('number');",
+                  "  });",
+                  "  pm.test('URL del PDF presente', function () {",
+                  "    pm.expect(body.url || body.fileUrl || body.path).to.exist;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "description": "Adjunta un archivo PDF en el campo 'file' del form-data.",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Seleccionar un archivo PDF para la prueba"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments"]
+            }
+          }
+        },
+        {
+          "name": "❌ Subir archivo — sin campo 'file' (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 — campo file obligatorio', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "description": "Envía form-data vacío sin adjuntar ningún archivo.",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": []
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments"]
+            }
+          }
+        },
+        {
+          "name": "❌ Subir archivo — encounter inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 — atención no existe', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "description": "Adjunta un archivo válido pero para un encounter que no existe.",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Seleccionar cualquier archivo"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/999999/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "999999", "attachments"]
+            }
+          }
+        },
+        {
+          "name": "❌ Subir archivo — sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Seleccionar cualquier archivo"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "✅ Listar Adjuntos Después de Subir",
+      "item": [
+        {
+          "name": "✅ Listar adjuntos — con archivos subidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Array con al menos un adjunto', function () {",
+                  "  const body = pm.response.json();",
+                  "  const list = Array.isArray(body) ? body : body.data;",
+                  "  pm.expect(list).to.be.an('array');",
+                  "  pm.expect(list.length).to.be.greaterThan(0);",
+                  "});",
+                  "pm.test('Cada adjunto tiene URL y ID', function () {",
+                  "  const body = pm.response.json();",
+                  "  const list = Array.isArray(body) ? body : body.data;",
+                  "  list.forEach(function(item) {",
+                  "    pm.expect(item.id).to.be.a('number');",
+                  "    pm.expect(item.url || item.fileUrl || item.path).to.exist;",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🗑️ Eliminación de Adjuntos",
+      "item": [
+        {
+          "name": "✅ Eliminar adjunto por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 o 204 — adjunto eliminado', function () {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments/{{attachmentFileId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments", "{{attachmentFileId}}"]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar adjunto inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 — adjunto no existe', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments/999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments", "999999"]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar adjunto — encounter inexistente (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 — atención no existe', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/999999/attachments/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "999999", "attachments", "1"]
+            }
+          }
+        },
+        {
+          "name": "❌ Eliminar adjunto — sin token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encounters/{{encounterId}}/attachments/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["encounters", "{{encounterId}}", "attachments", "1"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,9 @@ import {
   IsOptional,
   IsDateString,
   IsString,
+  IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import {
   IsAfterProperty,
@@ -32,6 +35,12 @@ export class CreateVaccinationEventDto {
     message: 'La fecha de próxima dosis debe ser posterior a la fecha de aplicación.',
   })
   suggestedNextDate?: string;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'El peso debe ser un número decimal válido.' })
+  @Min(0.01, { message: 'El peso debe ser mayor a 0.' })
+  @Max(999.99, { message: 'El peso no puede exceder los 999.99 kg.' })
+  weightKg?: number;
 
   @IsOptional()
   @IsString({ message: 'Las notas deben ser texto.' })

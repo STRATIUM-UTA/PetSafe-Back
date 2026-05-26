@@ -152,7 +152,12 @@ export class PatientsService {
           throw new NotFoundException('Mascota no encontrada');
         }
 
-        await this.ensurePatientTaxonomyIsValid(dto.speciesId, dto.breedId ?? null, manager);
+        await this.ensurePatientTaxonomyIsValid(
+          dto.speciesId,
+          dto.breedId ?? null,
+          manager,
+          dto.zootecnicalGroupId ?? null,
+        );
 
         const patient = manager.create(Patient, {
           name: dto.name,
@@ -164,6 +169,7 @@ export class PatientsService {
           currentWeight: dto.currentWeight ?? null,
           isSterilized: dto.sterilized ?? false,
           microchipCode: dto.microchipCode ?? null,
+          code: dto.code ?? null,
           distinguishingMarks: dto.distinguishingMarks ?? null,
           generalAllergies: dto.generalAllergies ?? null,
           generalHistory: dto.generalHistory ?? null,
@@ -191,7 +197,12 @@ export class PatientsService {
     try {
       return await this.dataSource.transaction(async (manager) => {
         const clientId = await this.resolveTargetClientId(dto, userId, roles, manager);
-        await this.ensurePatientTaxonomyIsValid(dto.speciesId, dto.breedId ?? null, manager);
+        await this.ensurePatientTaxonomyIsValid(
+          dto.speciesId,
+          dto.breedId ?? null,
+          manager,
+          dto.zootecnicalGroupId ?? null,
+        );
 
         const patient = manager.create(Patient, {
           name: dto.name,
@@ -203,6 +214,7 @@ export class PatientsService {
           currentWeight: dto.currentWeight ?? null,
           isSterilized: dto.sterilized ?? false,
           microchipCode: dto.microchipCode ?? null,
+          code: dto.code ?? null,
           distinguishingMarks: dto.distinguishingMarks ?? null,
           generalAllergies: dto.generalAllergies ?? null,
           generalHistory: dto.generalHistory ?? null,
@@ -298,7 +310,12 @@ export class PatientsService {
 
         const targetSpeciesId = dto.speciesId ?? existingPatient.speciesId;
         const targetBreedId = dto.breedId !== undefined ? (dto.breedId ?? null) : existingPatient.breedId;
-        await this.ensurePatientTaxonomyIsValid(targetSpeciesId, targetBreedId, manager);
+        await this.ensurePatientTaxonomyIsValid(
+          targetSpeciesId,
+          targetBreedId,
+          manager,
+          dto.zootecnicalGroupId ?? null,
+        );
 
         const updateData: Partial<Patient> = {};
         if (dto.name !== undefined) updateData.name = dto.name;
@@ -312,6 +329,7 @@ export class PatientsService {
         if (dto.currentWeight !== undefined) updateData.currentWeight = dto.currentWeight ?? null;
         if (dto.sterilized !== undefined) updateData.isSterilized = dto.sterilized;
         if (dto.microchipCode !== undefined) updateData.microchipCode = dto.microchipCode ?? null;
+        if (dto.code !== undefined) updateData.code = dto.code ?? null;
         if (dto.distinguishingMarks !== undefined) updateData.distinguishingMarks = dto.distinguishingMarks ?? null;
         if (dto.generalAllergies !== undefined) updateData.generalAllergies = dto.generalAllergies ?? null;
         if (dto.generalHistory !== undefined) updateData.generalHistory = dto.generalHistory ?? null;
@@ -648,6 +666,7 @@ export class PatientsService {
     speciesId: number,
     breedId: number | null,
     manager?: EntityManager,
+    zootecnicalGroupId?: number | null,
   ): Promise<void> {
     const speciesRepo: Repository<Species> = manager ? manager.getRepository(Species) : this.speciesRepo;
     const breedRepo: Repository<Breed> = manager ? manager.getRepository(Breed) : this.breedRepo;
@@ -655,6 +674,14 @@ export class PatientsService {
     const species = await speciesRepo.findOne({ where: { id: speciesId } });
     if (!species || species.deletedAt) {
       throw new NotFoundException('Especie no encontrada');
+    }
+
+    if (
+      zootecnicalGroupId !== undefined &&
+      zootecnicalGroupId !== null &&
+      species.zootecnicalGroupId !== zootecnicalGroupId
+    ) {
+      throw new BadRequestException('La especie seleccionada no pertenece al grupo zootécnico seleccionado');
     }
 
     if (breedId === null) return;
@@ -784,6 +811,7 @@ export class PatientsService {
           ? {
             id: patient.species.id,
             name: patient.species.name,
+            zootecnicalGroupId: patient.species.zootecnicalGroupId ?? null,
           }
           : null,
         breed: patient.breed
@@ -1247,7 +1275,12 @@ export class PatientsService {
         const targetSpeciesId = dto.speciesId ?? existingPatient.speciesId;
         const targetBreedId =
           dto.breedId !== undefined ? (dto.breedId ?? null) : existingPatient.breedId;
-        await this.ensurePatientTaxonomyIsValid(targetSpeciesId, targetBreedId, manager);
+        await this.ensurePatientTaxonomyIsValid(
+          targetSpeciesId,
+          targetBreedId,
+          manager,
+          dto.zootecnicalGroupId ?? null,
+        );
 
         const updateData: Partial<Patient> = {};
         if (dto.name !== undefined) updateData.name = dto.name;

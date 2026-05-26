@@ -33,6 +33,15 @@ export class EncounterVaccinationDraft extends BaseAuditEntity {
   @Column({ name: 'suggested_next_date', type: 'date', nullable: true })
   suggestedNextDate!: Date | null;
 
+  @Column({
+    name: 'weight_kg',
+    type: 'numeric',
+    precision: 8,
+    scale: 2,
+    nullable: true,
+  })
+  weightKg!: number | null;
+
   @Column({ type: 'text', nullable: true })
   notes!: string | null;
 }

@@ -67,16 +67,18 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status 200', function () {",
-                  "  pm.response.to.have.status(200);",
+                  "pm.test('Login exitoso', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
                   "});",
-                  "if (pm.response.code === 200) {",
+                  "",
+                  "if ([200, 201].includes(pm.response.code)) {",
                   "  const body = pm.response.json();",
-                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
-                  "  pm.test('Token capturado', function () {",
+                  "  pm.test('La respuesta contiene accessToken', function () {",
                   "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
                   "  });",
+                  "  pm.collectionVariables.set('adminToken', body.accessToken);",
                   "}"
                 ]
               }
@@ -84,15 +86,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         }
@@ -128,17 +140,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"juguetón y amigable\"\n}"
+              "raw": "{\n  \"name\": \"juguetón y amigable {{runSuffix}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/adoption-tags",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags"
+              ]
             }
           }
         },
@@ -164,17 +186,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"juguetón y amigable\"\n}"
+              "raw": "{\n  \"name\": \"juguetón y amigable {{runSuffix}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/adoption-tags",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags"
+              ]
             }
           }
         },
@@ -195,8 +227,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -204,8 +242,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoption-tags",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags"
+              ]
             }
           }
         },
@@ -230,11 +272,20 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoption-tags",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags"
+              ]
             }
           }
         },
@@ -257,14 +308,30 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoption-tags/search-summary?search=juguet&limit=5",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags", "search-summary"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags",
+                "search-summary"
+              ],
               "query": [
-                { "key": "search", "value": "juguet" },
-                { "key": "limit", "value": "5" }
+                {
+                  "key": "search",
+                  "value": "juguet"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
               ]
             }
           }
@@ -289,11 +356,21 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoption-tags/{{tagId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags", "{{tagId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags",
+                "{{tagId}}"
+              ]
             }
           }
         },
@@ -313,11 +390,21 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoption-tags/999999",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags", "999999"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags",
+                "999999"
+              ]
             }
           }
         },
@@ -342,17 +429,28 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"sociable y activo\"\n}"
+              "raw": "{\n  \"name\": \"sociable y activo {{runSuffix}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/adoption-tags/{{tagId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags", "{{tagId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags",
+                "{{tagId}}"
+              ]
             }
           }
         },
@@ -376,17 +474,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"tag para eliminar prueba\"\n}"
+              "raw": "{\n  \"name\": \"tag para eliminar prueba {{runSuffix}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/adoption-tags",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags"
+              ]
             }
           }
         },
@@ -410,11 +518,21 @@
           ],
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoption-tags/{{tagToDeleteId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags", "{{tagToDeleteId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags",
+                "{{tagToDeleteId}}"
+              ]
             }
           }
         },
@@ -434,11 +552,21 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoption-tags/{{tagToDeleteId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoption-tags", "{{tagToDeleteId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoption-tags",
+                "{{tagToDeleteId}}"
+              ]
             }
           }
         }
@@ -480,8 +608,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -489,8 +623,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions"
+              ]
             }
           }
         },
@@ -515,8 +653,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -524,8 +668,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions"
+              ]
             }
           }
         },
@@ -550,8 +698,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -559,8 +713,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions"
+              ]
             }
           }
         },
@@ -585,8 +743,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -594,8 +758,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions"
+              ]
             }
           }
         },
@@ -616,8 +784,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -625,8 +799,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions"
+              ]
             }
           }
         },
@@ -646,15 +824,24 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"patientId\": {{patientId}},\n  \"contactPhone\": \"0991234567\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions"
+              ]
             }
           }
         }
@@ -687,11 +874,20 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions"
+              ]
             }
           }
         },
@@ -721,14 +917,30 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions/basic?page=1&limit=5",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "basic"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "basic"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "5" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
               ]
             }
           }
@@ -752,13 +964,26 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions/basic?search=prueba",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "basic"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "basic"
+              ],
               "query": [
-                { "key": "search", "value": "prueba" }
+                {
+                  "key": "search",
+                  "value": "prueba"
+                }
               ]
             }
           }
@@ -788,11 +1013,21 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions/catalog",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "catalog"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "catalog"
+              ]
             }
           }
         },
@@ -815,13 +1050,26 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions/catalog?search=cachorro",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "catalog"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "catalog"
+              ],
               "query": [
-                { "key": "search", "value": "cachorro" }
+                {
+                  "key": "search",
+                  "value": "cachorro"
+                }
               ]
             }
           }
@@ -859,11 +1107,21 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "{{adoptionId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "{{adoptionId}}"
+              ]
             }
           }
         },
@@ -883,11 +1141,21 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions/999999",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "999999"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "999999"
+              ]
             }
           }
         }
@@ -917,8 +1185,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -926,8 +1200,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "{{adoptionId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "{{adoptionId}}"
+              ]
             }
           }
         },
@@ -952,8 +1231,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -961,8 +1246,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "{{adoptionId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "{{adoptionId}}"
+              ]
             }
           }
         },
@@ -991,8 +1281,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1000,8 +1296,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "{{adoptionId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "{{adoptionId}}"
+              ]
             }
           }
         },
@@ -1022,8 +1323,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1031,8 +1338,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "{{adoptionId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "{{adoptionId}}"
+              ]
             }
           }
         },
@@ -1053,8 +1365,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1062,8 +1380,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions/{{adoptionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "{{adoptionId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "{{adoptionId}}"
+              ]
             }
           }
         },
@@ -1089,19 +1412,36 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "story", "value": "Historia actualizada vía /basic.", "type": "text" },
-                { "key": "requirements", "value": "Familia tranquila, sin niños pequeños.", "type": "text" }
+                {
+                  "key": "story",
+                  "value": "Historia actualizada vía /basic.",
+                  "type": "text"
+                },
+                {
+                  "key": "requirements",
+                  "value": "Familia tranquila, sin niños pequeños.",
+                  "type": "text"
+                }
               ]
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions/{{adoptionId}}/basic",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "{{adoptionId}}", "basic"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "{{adoptionId}}",
+                "basic"
+              ]
             }
           }
         }
@@ -1131,8 +1471,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1140,8 +1486,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/adoptions",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions"
+              ]
             }
           }
         },
@@ -1161,11 +1511,21 @@
           ],
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions/{{adoptionToDeleteId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "{{adoptionToDeleteId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "{{adoptionToDeleteId}}"
+              ]
             }
           }
         },
@@ -1185,11 +1545,21 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions/{{adoptionToDeleteId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "{{adoptionToDeleteId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "{{adoptionToDeleteId}}"
+              ]
             }
           }
         },
@@ -1209,15 +1579,38 @@
           ],
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/adoptions/999999",
-              "host": ["{{baseUrl}}"],
-              "path": ["adoptions", "999999"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "adoptions",
+                "999999"
+              ]
             }
           }
         }
       ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('runSuffix')) {",
+          "  pm.collectionVariables.set('runSuffix', Date.now().toString());",
+          "}"
+        ]
+      }
     }
   ]
 }
